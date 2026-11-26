@@ -94,6 +94,7 @@
 
         <!-- Now playing -->
         <Border x:Name="NowPlayingCard" Grid.Row="2" Opacity="0"
+                MouseEnter="SurfaceCard_MouseEnter" MouseLeave="SurfaceCard_MouseLeave"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                 CornerRadius="20" Padding="21"
@@ -148,25 +149,24 @@
                             <StackPanel x:Name="PlaybackEqualizer" Orientation="Horizontal"
                                         Height="12" Margin="9,0,0,0"
                                         VerticalAlignment="Center" Visibility="Collapsed">
-                                <Border x:Name="EqualizerBar1" Width="2.5" Height="5" Margin="1,0"
+                                <Border x:Name="EqualizerBar1" Width="2.5" Height="5" Margin="1,0" RenderTransformOrigin="0.5,1"
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="2"
+                                        VerticalAlignment="Bottom">
+                                    <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
+                                                                    </Border>
+                                <Border x:Name="EqualizerBar2" Width="2.5" Height="10" Margin="1,0" RenderTransformOrigin="0.5,1"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="2"
                                         VerticalAlignment="Bottom">
                                     <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
                                     <Border.RenderTransformOrigin>0.5,1</Border.RenderTransformOrigin>
                                 </Border>
-                                <Border x:Name="EqualizerBar2" Width="2.5" Height="10" Margin="1,0"
+                                <Border x:Name="EqualizerBar3" Width="2.5" Height="7" Margin="1,0" RenderTransformOrigin="0.5,1"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="2"
                                         VerticalAlignment="Bottom">
                                     <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
                                     <Border.RenderTransformOrigin>0.5,1</Border.RenderTransformOrigin>
                                 </Border>
-                                <Border x:Name="EqualizerBar3" Width="2.5" Height="7" Margin="1,0"
-                                        Background="{DynamicResource AccentBrush}" CornerRadius="2"
-                                        VerticalAlignment="Bottom">
-                                    <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
-                                    <Border.RenderTransformOrigin>0.5,1</Border.RenderTransformOrigin>
-                                </Border>
-                                <Border x:Name="EqualizerBar4" Width="2.5" Height="11" Margin="1,0"
+                                <Border x:Name="EqualizerBar4" Width="2.5" Height="11" Margin="1,0" RenderTransformOrigin="0.5,1"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="2"
                                         VerticalAlignment="Bottom">
                                     <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
@@ -219,6 +219,7 @@
             </Grid>
 
             <Border x:Name="LyricsCard" Grid.Row="2" Opacity="0"
+                    MouseEnter="SurfaceCard_MouseEnter" MouseLeave="SurfaceCard_MouseLeave"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                     CornerRadius="20" Padding="24"
