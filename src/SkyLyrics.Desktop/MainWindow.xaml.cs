@@ -389,12 +389,16 @@ public partial class MainWindow : Window
             var accent = ThemeColor("AccentBrush", Color.FromRgb(103, 215, 176));
             var accentSoft = ThemeColor("AccentSoftBrush", Color.FromRgb(29, 56, 46));
             var muted = MutedLyricsColor();
+            var previousActiveIndex = _activeLineIndex;
 
             for (var index = 0; index < _lyricLineBlocks.Count; index++)
             {
                 var block = _lyricLineBlocks[index];
                 var surface = _lyricLineSurfaces[index];
                 var isActive = activeIndex == index;
+                var wasActive = previousActiveIndex == index;
+                var shouldAnimate = animate && (isActive || wasActive);
+                var shouldUpdateColor = !animate || isActive || wasActive;
                 var targetOpacity = isActive ? 1.0 : activeIndex is not null && index < activeIndex ? 0.48 : 0.68;
                 var targetFontSize = isActive ? 23.0 : 17.0;
                 var targetOffset = isActive ? 0.0 : 4.0;
@@ -403,21 +407,17 @@ public partial class MainWindow : Window
                     ? Color.FromArgb(_isDark ? (byte)48 : (byte)92, accentSoft.R, accentSoft.G, accentSoft.B)
                     : Color.FromArgb(0, accentSoft.R, accentSoft.G, accentSoft.B);
 
-                var currentOpacity = block.Opacity;
                 var transform = block.RenderTransform as TranslateTransform ?? new TranslateTransform();
                 block.RenderTransform = transform;
 
-                if (animate)
+                if (shouldAnimate)
                 {
                     block.BeginAnimation(UIElement.OpacityProperty,
-                        new DoubleAnimation(currentOpacity, targetOpacity, duration) { EasingFunction = easing });
+                        new DoubleAnimation(block.Opacity, targetOpacity, duration) { EasingFunction = easing });
                     block.BeginAnimation(TextBlock.FontSizeProperty,
                         new DoubleAnimation(block.FontSize, targetFontSize, duration) { EasingFunction = easing });
                     transform.BeginAnimation(TranslateTransform.YProperty,
                         new DoubleAnimation(transform.Y, targetOffset, duration) { EasingFunction = easing });
-
-                    TransitionTextColor(block, targetTextColor, duration, easing);
-                    TransitionSurfaceColor(surface, targetSurfaceColor, duration, easing);
                 }
                 else
                 {
@@ -427,9 +427,21 @@ public partial class MainWindow : Window
                     block.Opacity = targetOpacity;
                     block.FontSize = targetFontSize;
                     transform.Y = targetOffset;
-                    block.Foreground = new SolidColorBrush(targetTextColor);
-                    surface.Background = new SolidColorBrush(targetSurfaceColor);
-                    surface.BorderBrush = new SolidColorBrush(Color.FromArgb(isActive ? (byte)75 : (byte)0, accent.R, accent.G, accent.B));
+                }
+
+                if (shouldUpdateColor)
+                {
+                    if (shouldAnimate)
+                    {
+                        TransitionTextColor(block, targetTextColor, duration, easing);
+                        TransitionSurfaceColor(surface, targetSurfaceColor, duration, easing);
+                    }
+                    else
+                    {
+                        block.Foreground = new SolidColorBrush(targetTextColor);
+                        surface.Background = new SolidColorBrush(targetSurfaceColor);
+                        surface.BorderBrush = new SolidColorBrush(Color.FromArgb(isActive ? (byte)75 : (byte)0, accent.R, accent.G, accent.B));
+                    }
                 }
 
                 block.FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal;
@@ -457,10 +469,11 @@ public partial class MainWindow : Window
         var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
 
         if (_activeWordLineIndex is int previousLine &&
-            previousLine >= 0 && previousLine < _lyricWordRuns.Count)
+            _activeWordIndex is int previousWord &&
+            previousLine >= 0 && previousLine < _lyricWordRuns.Count &&
+            previousWord >= 0 && previousWord < _lyricWordRuns[previousLine].Count)
         {
-            foreach (var run in _lyricWordRuns[previousLine])
-                TransitionRunColor(run, muted, duration, easing);
+            TransitionRunColor(_lyricWordRuns[previousLine][previousWord], muted, duration, easing);
         }
 
         if (activeLineIndex is int lineIndex &&
@@ -501,7 +514,7 @@ public partial class MainWindow : Window
             new ColorAnimation(current, target, duration) { EasingFunction = easing });
     }
 
-    private static void TransitionSurfaceColor(
+    private void TransitionSurfaceColor(
         Border surface,
         Color target,
         Duration duration,
@@ -513,7 +526,7 @@ public partial class MainWindow : Window
         background.BeginAnimation(SolidColorBrush.ColorProperty,
             new ColorAnimation(current, target, duration) { EasingFunction = easing });
 
-        var accent = Color.FromRgb(103, 215, 176);
+        var accent = ThemeColor("AccentBrush", Color.FromRgb(103, 215, 176));
         var currentBorder = BrushColor(surface.BorderBrush, Colors.Transparent);
         var border = new SolidColorBrush(currentBorder);
         surface.BorderBrush = border;
