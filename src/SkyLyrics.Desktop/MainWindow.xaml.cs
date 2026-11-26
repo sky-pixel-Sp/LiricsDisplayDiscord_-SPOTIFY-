@@ -10,12 +10,16 @@ using Microsoft.Win32;
 using SkyLyrics.Core.Lyrics;
 using SkyLyrics.Core.Models;
 using SkyLyrics.Windows;
+using SkyLyrics.Persistence;
 
 namespace SkyLyrics.Desktop;
 
 public partial class MainWindow : Window
 {
     private readonly SpotifySessionMonitor _spotify = new();
+    private readonly SqliteLyricsCache _lyricsCache = new(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SkyLyrics", "lyrics.db"));
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(12) };
     private readonly LrclibClient _lyricsClient;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(900) };
@@ -23,6 +27,7 @@ public partial class MainWindow : Window
     private readonly List<List<Run>> _lyricWordRuns = new();
 
     private string? _lastTrackKey;
+    private SpotifyTrackSnapshot? _currentTrack;
     private LyricsDocument? _lyrics;
     private LyricsDocument? _renderedLyrics;
     private int? _activeLineIndex;
@@ -47,6 +52,16 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        try
+        {
+            await _lyricsCache.InitializeAsync();
+            await _lyricsCache.RemoveExpiredAsync();
+        }
+        catch (Exception ex)
+        {
+            ConnectionText.Text = $"Local lyrics cache unavailable: {ex.Message}";
+        }
+
         try
         {
             await _spotify.InitializeAsync();
@@ -82,6 +97,7 @@ public partial class MainWindow : Window
                 return;
             }
 
+            _currentTrack = track;
             _lastPosition = track.Position;
             ConnectionText.Text = "Spotify Desktop connected";
             TrackTitle.Text = track.Title;
@@ -121,6 +137,27 @@ public partial class MainWindow : Window
         _lyricWordRuns.Clear();
         LyricsPanel.Children.Clear();
         LyricsStateText.Text = "SEARCHING";
+
+        try
+        {
+            var cached = await _lyricsCache.GetAsync(track);
+            if (cached is not null)
+            {
+                _lyrics = cached;
+                LyricsStateText.Text = cached.HasWordTimestamps
+                    ? "CACHED · WORD + LINE SYNC"
+                    : cached.HasLineTimestamps
+                        ? "CACHED · LINE SYNC"
+                        : "CACHED · UNSYNCED";
+                RenderLyrics(track.Position);
+                return;
+            }
+        }
+        catch
+        {
+            // A cache failure must not prevent live provider lookup.
+        }
+
         AddMessage("Looking for a verified LRCLIB match…");
 
         try
@@ -180,6 +217,7 @@ public partial class MainWindow : Window
                         ? "LINE SYNC"
                         : "UNSYNCED";
 
+            await SaveLyricsToCacheAsync(track, _lyrics);
             RenderLyrics(track.Position);
         }
         catch (HttpRequestException ex)
@@ -353,6 +391,20 @@ public partial class MainWindow : Window
             ? Color.FromRgb(170, 185, 178)
             : Color.FromRgb(93, 108, 101));
 
+    private async Task SaveLyricsToCacheAsync(SpotifyTrackSnapshot track, LyricsDocument lyrics)
+    {
+        try
+        {
+            await _lyricsCache.SetAsync(track, lyrics);
+        }
+        catch (Exception ex)
+        {
+            // Display/cache failure is non-fatal; the matched lyrics remain in memory.
+            LyricsStateText.Text += " · CACHE SAVE FAILED";
+            System.Diagnostics.Debug.WriteLine($"SkyLyrics cache write failed: {ex}");
+        }
+    }
+
     private void AddMessage(string message)
     {
         LyricsPanel.Children.Add(new TextBlock
@@ -398,6 +450,10 @@ public partial class MainWindow : Window
                 : _lyrics.HasLineTimestamps
                     ? "LOCAL · LINE SYNC"
                     : "LOCAL · UNSYNCED";
+
+            if (_currentTrack is not null)
+                await SaveLyricsToCacheAsync(_currentTrack, _lyrics);
+
             RenderLyrics(_lastPosition);
         }
         catch (Exception ex)
