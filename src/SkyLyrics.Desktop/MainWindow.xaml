@@ -278,7 +278,7 @@
                 <TextBlock Text="Lyrics are never fabricated · Unsynced sources stay labeled"
                            FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.2.0  /  WINDOWS 11"
+            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.3.0  /  WINDOWS 11"
                        FontSize="9" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextMutedBrush}"
                        VerticalAlignment="Center"/>
