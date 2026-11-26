@@ -779,7 +779,7 @@ public partial class MainWindow : Window
     private static void AnimateSurfaceEntrance(FrameworkElement surface, double delay, double duration)
     {
         surface.Opacity = 0;
-        surface.RenderTransform = new TranslateTransform(0, 11);
+        surface.RenderTransform = CreateSurfaceTransform(11);
         surface.RenderTransformOrigin = new Point(0.5, 0.5);
 
         var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
@@ -790,13 +790,44 @@ public partial class MainWindow : Window
                 EasingFunction = easing
             });
 
-        if (surface.RenderTransform is TranslateTransform transform)
+        if (surface.RenderTransform is TransformGroup group &&
+            group.Children.OfType<TranslateTransform>().FirstOrDefault() is { } transform)
+        {
             transform.BeginAnimation(TranslateTransform.YProperty,
                 new DoubleAnimation(11, 0, TimeSpan.FromMilliseconds(duration))
                 {
                     BeginTime = TimeSpan.FromMilliseconds(delay),
                     EasingFunction = easing
                 });
+        }
+    }
+
+    private static TransformGroup CreateSurfaceTransform(double initialOffset)
+    {
+        var group = new TransformGroup();
+        group.Children.Add(new ScaleTransform(1, 1));
+        group.Children.Add(new TranslateTransform(0, initialOffset));
+        return group;
+    }
+
+    private void SurfaceCard_MouseEnter(object sender, RoutedEventArgs e) =>
+        AnimateSurfaceScale(sender, 1.006);
+
+    private void SurfaceCard_MouseLeave(object sender, RoutedEventArgs e) =>
+        AnimateSurfaceScale(sender, 1.0);
+
+    private static void AnimateSurfaceScale(object sender, double targetScale)
+    {
+        if (sender is not FrameworkElement surface ||
+            surface.RenderTransform is not TransformGroup group ||
+            group.Children.OfType<ScaleTransform>().FirstOrDefault() is not { } scale)
+            return;
+
+        var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+            new DoubleAnimation(scale.ScaleX, targetScale, TimeSpan.FromMilliseconds(170)) { EasingFunction = easing });
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+            new DoubleAnimation(scale.ScaleY, targetScale, TimeSpan.FromMilliseconds(170)) { EasingFunction = easing });
     }
 
     private void AnimateTrackIdentity()
