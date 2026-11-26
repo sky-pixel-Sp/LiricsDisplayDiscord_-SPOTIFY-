@@ -212,7 +212,7 @@
                     </Border>
                 </StackPanel>
 
-                <Button Grid.Column="1" Content="Import lyrics"
+                <Button x:Name="ImportButton" Grid.Column="1" Content="Import lyrics"
                         Click="ImportLyrics_Click"
                         Style="{StaticResource AccentButtonStyle}"
                         Padding="16,9"/>
