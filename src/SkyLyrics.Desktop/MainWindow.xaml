@@ -1,7 +1,7 @@
 <Window x:Class="SkyLyrics.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SkyLyrics Desktop"
+        Title="SkyLyrics Desktop v0.4.0"
         Height="760" Width="1120"
         MinHeight="620" MinWidth="900"
         WindowStartupLocation="CenterScreen"
@@ -226,10 +226,20 @@
                     </Border>
                 </StackPanel>
 
-                <Button x:Name="ImportButton" Grid.Column="1" Content="Import lyrics"
-                        Click="ImportLyrics_Click"
-                        Style="{StaticResource AccentButtonStyle}"
-                        Padding="16,9"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="CustomizeButton" Content="Customize"
+                            Click="CustomizeButton_Click" Style="{StaticResource QuietButtonStyle}"
+                            Padding="13,9" Margin="0,0,7,0"
+                            ToolTip="Choose from 30 animations, 30 effects and 30 backgrounds"/>
+                    <Button x:Name="GameModeButton" Content="Game mode"
+                            Click="GameModeButton_Click" Style="{StaticResource QuietButtonStyle}"
+                            Padding="13,9" Margin="0,0,7,0"
+                            ToolTip="Show one synchronized lyric line in a top overlay"/>
+                    <Button x:Name="ImportButton" Content="Import lyrics"
+                            Click="ImportLyrics_Click"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Padding="16,9"/>
+                </StackPanel>
             </Grid>
 
             <Border x:Name="LyricsCard" Grid.Row="2" Opacity="0"
@@ -241,7 +251,7 @@
                 <ScrollViewer x:Name="LyricsScrollViewer"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
-                              CanContentScroll="True">
+                              CanContentScroll="False">
                     <StackPanel x:Name="LyricsPanel">
                         <StackPanel x:Name="LyricsEmptyText" Margin="0,52,0,0"
                                     HorizontalAlignment="Center" MaxWidth="430" Opacity="0.92">
@@ -278,7 +288,7 @@
                 <TextBlock Text="Lyrics are never fabricated · Unsynced sources stay labeled"
                            FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.3.0  /  WINDOWS 11"
+            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.4.0  /  WINDOWS 11"
                        FontSize="9" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextMutedBrush}"
                        VerticalAlignment="Center"/>

@@ -14,7 +14,7 @@ public sealed class DiscordPresenceDataTests
     {
         var track = CreateTrack(TimeSpan.FromSeconds(75), isPlaying: true, TimeSpan.FromSeconds(240));
 
-        var result = DiscordPresenceData.FromTrack(track, Anchor.AddSeconds(5));
+        var result = DiscordPresenceData.FromTrack(track, Anchor);
 
         Assert.AreEqual("Track", result.Details);
         Assert.AreEqual("Artist", result.State);
@@ -45,6 +45,28 @@ public sealed class DiscordPresenceDataTests
 
         Assert.AreEqual(Anchor.AddSeconds(-12).ToUnixTimeSeconds(), result.StartTimestamp);
         Assert.IsNull(result.EndTimestamp);
+    }
+
+    [TestMethod]
+    public void CurrentSyncedLyricIsPublishedInDiscordState()
+    {
+        var track = CreateTrack(TimeSpan.FromSeconds(75), isPlaying: true, TimeSpan.FromSeconds(240));
+
+        var result = DiscordPresenceData.FromTrack(track, Anchor, "The current lyric line");
+
+        Assert.AreEqual("Track", result.Details);
+        Assert.AreEqual("♫ The current lyric line · Artist", result.State);
+    }
+
+    [TestMethod]
+    public void LongLyricDoesNotExceedDiscordStateLimit()
+    {
+        var track = CreateTrack(TimeSpan.Zero, isPlaying: true, TimeSpan.FromSeconds(240));
+
+        var result = DiscordPresenceData.FromTrack(track, Anchor, new string('L', 240));
+
+        Assert.IsTrue(result.State.Length <= 128);
+        Assert.IsTrue(result.State.StartsWith("♫ ", StringComparison.Ordinal));
     }
 
     [TestMethod]

@@ -50,6 +50,11 @@ public partial class MainWindow : Window
     private string? _discordApplicationId;
     private bool _discordEnabled;
     private DateTimeOffset _lastDiscordConnectAttempt = DateTimeOffset.MinValue;
+    private DateTimeOffset _manualScrollUntil = DateTimeOffset.MinValue;
+    private AppearanceSettings _appearance = AppearanceSettings.Default;
+    private GameModeWindow? _gameModeWindow;
+    private bool _mainWindowHiddenForGameMode;
+    private bool _isClosing;
 
     public MainWindow()
     {
@@ -58,15 +63,20 @@ public partial class MainWindow : Window
         _timer.Tick += Timer_Tick;
         _discordRetryTimer.Tick += DiscordRetryTimer_Tick;
         _scrollAnimationTimer.Tick += ScrollAnimationTimer_Tick;
+        LyricsScrollViewer.PreviewMouseWheel += LyricsScrollViewer_PreviewMouseWheel;
+        LyricsScrollViewer.PreviewKeyDown += LyricsScrollViewer_PreviewKeyDown;
         Activated += (_, _) => RefreshPlaybackMotion();
         Deactivated += (_, _) => RefreshPlaybackMotion();
         StateChanged += (_, _) => RefreshPlaybackMotion();
         Loaded += MainWindow_Loaded;
         Closed += async (_, _) =>
         {
+            _isClosing = true;
             _discordRetryTimer.Stop();
             _timer.Stop();
             _scrollAnimationTimer.Stop();
+            _gameModeWindow?.Close();
+            _gameModeWindow = null;
             _spotify.SnapshotChanged -= Spotify_SnapshotChanged;
             _spotify.Dispose();
 
@@ -86,6 +96,8 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         PlayEntranceAnimation();
+        _appearance = AppearanceSettingsStore.Load();
+        ApplyAppearance();
 
         _discordApplicationId = DiscordApplicationIdStore.Load();
         if (DiscordApplicationIdStore.IsValidApplicationId(_discordApplicationId))
@@ -141,6 +153,7 @@ public partial class MainWindow : Window
             TrackArtist.Text = "SkyLyrics monitors Spotify Desktop through Windows media sessions.";
             PositionText.Text = "—";
             TrackProgress.Value = 0;
+            UpdateGameModeLine(null);
             RefreshPlaybackMotion();
             UpdateRenderInterval();
             await SyncDiscordPresenceAsync();
@@ -148,6 +161,13 @@ public partial class MainWindow : Window
         }
 
         var trackChanged = !string.Equals(_lastTrackKey, track.MatchKey, StringComparison.Ordinal);
+        if (trackChanged)
+        {
+            _scrollAnimationTimer.Stop();
+            _manualScrollUntil = DateTimeOffset.MinValue;
+            LyricsScrollViewer.ScrollToTop();
+        }
+
         _currentTrack = track;
         _lastPosition = GetEstimatedPosition(track);
         ConnectionText.Text = "Spotify Desktop connected";
@@ -267,9 +287,18 @@ public partial class MainWindow : Window
 
         try
         {
+            string? currentLyric = null;
+            if (_lyrics?.HasLineTimestamps == true &&
+                _activeLineIndex is int activeIndex &&
+                activeIndex >= 0 &&
+                activeIndex < _lyrics.Lines.Count)
+            {
+                currentLyric = _lyrics.Lines[activeIndex].Text;
+            }
+
             var presence = _currentTrack is null
                 ? null
-                : DiscordPresenceData.FromTrack(_currentTrack, DateTimeOffset.UtcNow);
+                : DiscordPresenceData.FromTrack(_currentTrack, DateTimeOffset.UtcNow, currentLyric);
 
             await _discord.SetActivityAsync(_discordApplicationId!, presence);
 
@@ -323,6 +352,7 @@ public partial class MainWindow : Window
         _activeLineIndex = null;
         _activeWordLineIndex = null;
         _activeWordIndex = null;
+        UpdateGameModeLine(null);
         _lyricLineBlocks.Clear();
         _lyricLineSurfaces.Clear();
         _lyricWordRuns.Clear();
@@ -522,8 +552,10 @@ public partial class MainWindow : Window
         var lineChanged = _activeLineIndex != activeIndex;
         var wordChanged = _activeWordLineIndex != activeIndex || _activeWordIndex != activeWordIndex;
 
+        UpdateGameModeLine(activeIndex);
         if (!lineChanged && !wordChanged)
             return;
+
 
         if (lineChanged)
         {
@@ -550,27 +582,58 @@ public partial class MainWindow : Window
                     ? Color.FromArgb(_isDark ? (byte)48 : (byte)92, accentSoft.R, accentSoft.G, accentSoft.B)
                     : Color.FromArgb(0, accentSoft.R, accentSoft.G, accentSoft.B);
 
-                var transform = block.RenderTransform as TranslateTransform ?? new TranslateTransform();
-                block.RenderTransform = transform;
+                var transforms = AppearanceCatalog.EnsureTransforms(block);
+                var animationPreset = AppearanceCatalog.GetAnimation(_appearance.AnimationId);
+                var lineDuration = new Duration(TimeSpan.FromMilliseconds(animationPreset.DurationMs));
 
                 if (shouldAnimate)
                 {
                     block.BeginAnimation(UIElement.OpacityProperty,
-                        new DoubleAnimation(block.Opacity, targetOpacity, duration) { EasingFunction = easing });
+                        new DoubleAnimation(block.Opacity, targetOpacity, lineDuration)
+                        { EasingFunction = AppearanceCatalog.CreateEasing(animationPreset.Easing) });
                     block.BeginAnimation(TextBlock.FontSizeProperty,
-                        new DoubleAnimation(block.FontSize, targetFontSize, duration) { EasingFunction = easing });
-                    transform.BeginAnimation(TranslateTransform.YProperty,
-                        new DoubleAnimation(transform.Y, targetOffset, duration) { EasingFunction = easing });
+                        new DoubleAnimation(block.FontSize, targetFontSize, lineDuration)
+                        { EasingFunction = easing });
+
+                    if (isActive)
+                    {
+                        AppearanceCatalog.AnimateActiveLine(transforms, _appearance.AnimationId);
+                    }
+                    else
+                    {
+                        transforms.Move.BeginAnimation(TranslateTransform.YProperty,
+                            new DoubleAnimation(transforms.Move.Y, targetOffset, duration) { EasingFunction = easing });
+                        transforms.Move.BeginAnimation(TranslateTransform.XProperty,
+                            new DoubleAnimation(transforms.Move.X, 0, duration) { EasingFunction = easing });
+                        transforms.Scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                            new DoubleAnimation(transforms.Scale.ScaleX, 1, duration) { EasingFunction = easing });
+                        transforms.Scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                            new DoubleAnimation(transforms.Scale.ScaleY, 1, duration) { EasingFunction = easing });
+                        transforms.Rotate.BeginAnimation(RotateTransform.AngleProperty,
+                            new DoubleAnimation(transforms.Rotate.Angle, 0, duration) { EasingFunction = easing });
+                    }
                 }
                 else
                 {
                     block.BeginAnimation(UIElement.OpacityProperty, null);
                     block.BeginAnimation(TextBlock.FontSizeProperty, null);
-                    transform.BeginAnimation(TranslateTransform.YProperty, null);
+                    transforms.Move.BeginAnimation(TranslateTransform.YProperty, null);
+                    transforms.Move.BeginAnimation(TranslateTransform.XProperty, null);
+                    transforms.Scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    transforms.Scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                    transforms.Rotate.BeginAnimation(RotateTransform.AngleProperty, null);
                     block.Opacity = targetOpacity;
                     block.FontSize = targetFontSize;
-                    transform.Y = targetOffset;
+                    transforms.Move.X = 0;
+                    transforms.Move.Y = targetOffset;
+                    transforms.Scale.ScaleX = 1;
+                    transforms.Scale.ScaleY = 1;
+                    transforms.Rotate.Angle = 0;
                 }
+
+                block.Effect = isActive
+                    ? AppearanceCatalog.CreateTextEffect(_appearance.EffectId)
+                    : null;
 
                 if (shouldUpdateColor)
                 {
@@ -591,6 +654,7 @@ public partial class MainWindow : Window
             }
 
             _activeLineIndex = activeIndex;
+            QueueDiscordPresenceUpdate();
 
             if (activeIndex is int visibleIndex &&
                 visibleIndex >= 0 &&
@@ -701,9 +765,14 @@ public partial class MainWindow : Window
             {
                 var lineCenter = lineSurface.TranslatePoint(
                     new Point(0, lineSurface.ActualHeight / 2), LyricsPanel).Y;
-                var target = Math.Clamp(
-                    LyricsScrollViewer.VerticalOffset + lineCenter - LyricsScrollViewer.ViewportHeight * 0.48,
-                    0,
+                if (DateTimeOffset.UtcNow < _manualScrollUntil)
+                    return;
+
+                // lineCenter is already in content coordinates; the calculator deliberately
+                // has no current VerticalOffset input to prevent cumulative scroll drift.
+                var target = LyricsScrollTargetCalculator.Calculate(
+                    lineCenter,
+                    LyricsScrollViewer.ViewportHeight,
                     LyricsScrollViewer.ScrollableHeight);
 
                 _scrollStartOffset = LyricsScrollViewer.VerticalOffset;
@@ -721,6 +790,113 @@ public partial class MainWindow : Window
                 // Layout can change while a song is switching; the next lyric tick will retry.
             }
         }), DispatcherPriority.Loaded);
+    }
+
+    private void LyricsScrollViewer_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        _manualScrollUntil = DateTimeOffset.UtcNow.AddSeconds(5);
+        _scrollAnimationTimer.Stop();
+    }
+
+    private void LyricsScrollViewer_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key is System.Windows.Input.Key.PageUp or System.Windows.Input.Key.PageDown or
+            System.Windows.Input.Key.Home or System.Windows.Input.Key.End or
+            System.Windows.Input.Key.Up or System.Windows.Input.Key.Down)
+        {
+            _manualScrollUntil = DateTimeOffset.UtcNow.AddSeconds(5);
+            _scrollAnimationTimer.Stop();
+        }
+    }
+
+    private void QueueDiscordPresenceUpdate()
+    {
+        Dispatcher.BeginInvoke(new Action(async () => await SyncDiscordPresenceAsync()),
+            DispatcherPriority.Background);
+    }
+
+    private void UpdateGameModeLine(int? activeIndex)
+    {
+        if (_gameModeWindow is null)
+            return;
+
+        var line = _lyrics?.HasLineTimestamps == true &&
+                   activeIndex is int index &&
+                   index >= 0 &&
+                   index < _lyrics.Lines.Count
+            ? _lyrics.Lines[index].Text
+            : null;
+
+        _gameModeWindow.UpdateLyric(line);
+    }
+
+    private void CustomizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new CustomizationWindow(_appearance, settings =>
+        {
+            _appearance = settings;
+            AppearanceSettingsStore.Save(settings);
+            ApplyAppearance();
+            if (_gameModeWindow is not null)
+                _gameModeWindow.ApplyAppearance(settings);
+        })
+        {
+            Owner = this
+        };
+
+        window.ShowDialog();
+    }
+
+    private void GameModeButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameModeWindow is not null)
+        {
+            _gameModeWindow.Close();
+            return;
+        }
+
+        _gameModeWindow = new GameModeWindow(_appearance);
+        _gameModeWindow.Closed += (_, _) =>
+        {
+            _gameModeWindow = null;
+            GameModeButton.Content = "Game mode";
+            if (!_isClosing && _mainWindowHiddenForGameMode)
+            {
+                _mainWindowHiddenForGameMode = false;
+                Show();
+                WindowState = WindowState.Normal;
+                Activate();
+            }
+        };
+        _gameModeWindow.Show();
+        GameModeButton.Content = "Exit game mode";
+        UpdateGameModeLine(_activeLineIndex);
+        _mainWindowHiddenForGameMode = true;
+        Hide();
+    }
+
+    private void ApplyAppearance()
+    {
+        RootGrid.Background = AppearanceCatalog.CreateBackgroundBrush(_appearance.BackgroundId);
+        LyricsCard.Effect = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            Color = Colors.Black,
+            BlurRadius = 20,
+            ShadowDepth = 5,
+            Opacity = _isDark ? .24 : .10,
+            RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance
+        };
+
+        foreach (var block in _lyricLineBlocks)
+            block.Effect = null;
+
+        if (_activeLineIndex is int activeIndex &&
+            activeIndex >= 0 &&
+            activeIndex < _lyricLineBlocks.Count)
+        {
+            _lyricLineBlocks[activeIndex].Effect =
+                AppearanceCatalog.CreateTextEffect(_appearance.EffectId);
+        }
     }
 
     private void ScrollAnimationTimer_Tick(object? sender, EventArgs e)
@@ -913,7 +1089,7 @@ public partial class MainWindow : Window
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             });
         Foreground = (Brush)FindResource("TextPrimaryBrush");
-        RootGrid.Background = Brushes.Transparent;
+        RootGrid.Background = AppearanceCatalog.CreateBackgroundBrush(_appearance.BackgroundId);
         ThemeButton.Content = _isDark ? "Light theme" : "Dark theme";
     }
 
