@@ -36,4 +36,30 @@ public static class LyricsSyncEngine
 
         return activeIndex >= 0 ? activeIndex : null;
     }
+
+    public static int? FindActiveWordIndex(
+        LyricLine line,
+        TimeSpan playbackPosition,
+        TimeSpan? userOffset = null)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+
+        if (line.Words is not { Count: > 0 })
+            return null;
+
+        var adjustedPosition = playbackPosition + (userOffset ?? TimeSpan.Zero);
+        var activeIndex = -1;
+
+        // Word order is validated by LyricsFileParser. A sequential scan also
+        // handles overlapping word durations without inventing word boundaries.
+        for (var index = 0; index < line.Words.Count; index++)
+        {
+            if (line.Words[index].StartTime > adjustedPosition)
+                break;
+
+            activeIndex = index;
+        }
+
+        return activeIndex >= 0 ? activeIndex : null;
+    }
 }
