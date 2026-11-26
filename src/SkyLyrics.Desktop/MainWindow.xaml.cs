@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using SkyLyrics.Core.Lyrics;
@@ -16,8 +17,13 @@ public partial class MainWindow : Window
     private readonly SpotifySessionMonitor _spotify = new();
     private readonly LrclibClient _lyricsClient = new(new HttpClient { Timeout = TimeSpan.FromSeconds(12) });
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(900) };
+    private readonly List<TextBlock> _lyricLineBlocks = new();
+
     private string? _lastTrackKey;
     private LyricsDocument? _lyrics;
+    private LyricsDocument? _renderedLyrics;
+    private int? _activeLineIndex;
+    private TimeSpan _lastPosition;
     private bool _isRefreshing;
     private bool _isDark = true;
 
@@ -26,7 +32,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         _timer.Tick += Timer_Tick;
         Loaded += MainWindow_Loaded;
-        Closed += (_, _) => _timer.Stop();
+        Closed += (_, _) =>
+        {
+            _timer.Stop();
+            _lyricsClient.Dispose();
+        };
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -66,6 +76,7 @@ public partial class MainWindow : Window
                 return;
             }
 
+            _lastPosition = track.Position;
             ConnectionText.Text = "Spotify Desktop connected";
             TrackTitle.Text = track.Title;
             TrackArtist.Text = track.Artist;
@@ -96,6 +107,9 @@ public partial class MainWindow : Window
     private async Task LoadLyricsForTrackAsync(SpotifyTrackSnapshot track)
     {
         _lyrics = null;
+        _renderedLyrics = null;
+        _activeLineIndex = null;
+        _lyricLineBlocks.Clear();
         LyricsPanel.Children.Clear();
         LyricsStateText.Text = "SEARCHING";
         AddMessage("Looking for a verified LRCLIB match…");
@@ -108,7 +122,7 @@ public partial class MainWindow : Window
             if (result is null)
             {
                 LyricsStateText.Text = "NOT FOUND";
-                AddMessage("No exact LRCLIB result was found. Import a matching LRC file to continue.");
+                AddMessage("No exact LRCLIB result was found. Import a matching .lrc file to continue.");
                 return;
             }
 
@@ -116,8 +130,6 @@ public partial class MainWindow : Window
             {
                 _lyrics = LrcParser.Parse(result.SyncedLyrics, "LRCLIB");
                 LyricsStateText.Text = "LINE SYNC";
-                if (result.HasWordSync)
-                    LyricsStateText.Text = "LINE SYNC · WORD TIMING FILE AVAILABLE";
             }
             else if (!string.IsNullOrWhiteSpace(result.PlainLyrics))
             {
@@ -156,34 +168,106 @@ public partial class MainWindow : Window
         }
     }
 
-    private void RenderLyrics(TimeSpan position)
+    private void BuildLyricsSurface()
     {
         if (_lyrics is null)
             return;
 
-        var activeIndex = LyricsSyncEngine.FindActiveLineIndex(_lyrics, position);
         LyricsPanel.Children.Clear();
+        _lyricLineBlocks.Clear();
 
         if (_lyrics.IsUnsynced)
             AddMessage("UNSYNCED · This source does not provide timestamps.");
 
-        for (var index = 0; index < _lyrics.Lines.Count; index++)
+        foreach (var line in _lyrics.Lines)
         {
-            var line = _lyrics.Lines[index];
-            var isActive = activeIndex == index;
-            LyricsPanel.Children.Add(new TextBlock
+            var block = new TextBlock
             {
                 Text = line.Text,
-                FontSize = isActive ? 21 : 17,
-                FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal,
-                Foreground = isActive
-                    ? (Brush)FindResource("AccentBrush")
-                    : new SolidColorBrush(_isDark ? Color.FromRgb(170, 185, 178) : Color.FromRgb(93, 108, 101)),
+                FontSize = 17,
+                FontWeight = FontWeights.Normal,
+                Foreground = MutedLyricsBrush(),
+                Opacity = 0.68,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 7, 0, 7)
-            });
+                Margin = new Thickness(0, 7, 0, 7),
+                RenderTransform = new TranslateTransform(0, 3),
+                RenderTransformOrigin = new Point(0.5, 0.5)
+            };
+
+            _lyricLineBlocks.Add(block);
+            LyricsPanel.Children.Add(block);
         }
+
+        _renderedLyrics = _lyrics;
+        // Sentinel ensures that the first sync state is applied even when there
+        // is no active line yet (for example, before the first LRC timestamp).
+        _activeLineIndex = int.MinValue;
     }
+
+    private void RenderLyrics(TimeSpan position, bool animate = true)
+    {
+        if (_lyrics is null)
+            return;
+
+        if (!ReferenceEquals(_renderedLyrics, _lyrics))
+            BuildLyricsSurface();
+
+        var activeIndex = LyricsSyncEngine.FindActiveLineIndex(_lyrics, position);
+        if (_activeLineIndex == activeIndex)
+            return;
+
+        var animationDuration = new Duration(TimeSpan.FromMilliseconds(260));
+        var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+
+        for (var index = 0; index < _lyricLineBlocks.Count; index++)
+        {
+            var block = _lyricLineBlocks[index];
+            var isActive = activeIndex == index;
+            var targetOpacity = isActive ? 1.0 : activeIndex is not null && index < activeIndex ? 0.48 : 0.68;
+            var targetFontSize = isActive ? 22.0 : 17.0;
+            var targetOffset = isActive ? 0.0 : 3.0;
+
+            var currentOpacity = block.Opacity;
+            block.Opacity = targetOpacity;
+            block.FontSize = targetFontSize;
+            block.FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal;
+            block.Foreground = isActive
+                ? (Brush)FindResource("AccentBrush")
+                : MutedLyricsBrush();
+
+            if (block.RenderTransform is not TranslateTransform transform)
+            {
+                transform = new TranslateTransform();
+                block.RenderTransform = transform;
+            }
+
+            var currentOffset = transform.Y;
+            transform.Y = targetOffset;
+
+            if (animate)
+            {
+                block.BeginAnimation(UIElement.OpacityProperty,
+                    new DoubleAnimation(currentOpacity, targetOpacity, animationDuration) { EasingFunction = easing });
+                transform.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(currentOffset, targetOffset, animationDuration) { EasingFunction = easing });
+            }
+            else
+            {
+                block.BeginAnimation(UIElement.OpacityProperty, null);
+                transform.BeginAnimation(TranslateTransform.YProperty, null);
+            }
+        }
+
+        _activeLineIndex = activeIndex;
+
+        if (activeIndex is int visibleIndex && visibleIndex >= 0 && visibleIndex < _lyricLineBlocks.Count)
+            _lyricLineBlocks[visibleIndex].BringIntoView();
+    }
+
+    private Brush MutedLyricsBrush() =>
+        new SolidColorBrush(_isDark
+            ? Color.FromRgb(170, 185, 178)
+            : Color.FromRgb(93, 108, 101));
 
     private void AddMessage(string message)
     {
@@ -217,11 +301,17 @@ public partial class MainWindow : Window
                 ? LrcParser.Parse(content, "local .lrc")
                 : LyricsDocument.FromPlainText(content, source: "local text");
 
+            _renderedLyrics = null;
+            _activeLineIndex = null;
+            _lastPosition = TimeSpan.Zero;
             LyricsStateText.Text = _lyrics.HasLineTimestamps ? "LOCAL · LINE SYNC" : "LOCAL · UNSYNCED";
-            RenderLyrics(TimeSpan.Zero);
+            RenderLyrics(_lastPosition);
         }
         catch (Exception ex)
         {
+            _lyrics = null;
+            _renderedLyrics = null;
+            _lyricLineBlocks.Clear();
             LyricsStateText.Text = "IMPORT FAILED";
             LyricsPanel.Children.Clear();
             AddMessage($"Could not import this file: {ex.Message}");
@@ -239,8 +329,12 @@ public partial class MainWindow : Window
             ? Color.FromRgb(88, 214, 198)
             : Color.FromRgb(24, 133, 117));
         UpdateThemeBorders();
+
         if (_lyrics is not null)
-            RenderLyrics(TimeSpan.Zero);
+        {
+            _renderedLyrics = null;
+            RenderLyrics(_lastPosition, animate: false);
+        }
     }
 
     private void UpdateThemeBorders()
