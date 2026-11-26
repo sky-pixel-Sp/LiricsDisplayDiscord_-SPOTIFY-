@@ -72,6 +72,28 @@ public sealed class SqliteLyricsCacheTests
         }
     }
 
+
+    [TestMethod]
+    public async Task CacheKeySeparatesDifferentTrackDurations()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"skylyrics-cache-{Guid.NewGuid():N}.db");
+        try
+        {
+            var cache = new SqliteLyricsCache(databasePath);
+            var track = CreateTrack();
+            var document = LyricsDocument.FromPlainText("Cached words", "Sample", "Artist");
+            var otherVersion = track with { Duration = TimeSpan.FromSeconds(198) };
+
+            await cache.SetAsync(track, document);
+
+            Assert.IsNull(await cache.GetAsync(otherVersion));
+        }
+        finally
+        {
+            DeleteDatabaseFiles(databasePath);
+        }
+    }
+
     [TestMethod]
     public async Task RejectsEmptyDocumentsInsteadOfCreatingEmptyCacheEntries()
     {
