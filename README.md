@@ -15,10 +15,18 @@ SkyLyrics Desktop is a native Windows x64 companion for Spotify Desktop. It read
 - Animated active-line transitions and automatic scroll following without rebuilding the lyric list on every polling tick.
 - Local import for `.lrc`, Lyricsfile YAML, and plain `.txt`.
 - Dark/Light theme switch.
+- Discord Rich Presence for Spotify Desktop through local Windows IPC: title, artist, play/pause state, and source-derived playback timestamps.
+- Discord Application ID stored locally in the current Windows user profile; no bot token, OAuth login, message access, or voice capture.
 - SQLite offline cache stored in `%LOCALAPPDATA%\SkyLyrics\lyrics.db`, with 30-day expiry and a track identity based on normalized artist/title/album and rounded duration.
 - Seven-plus additional cache and matching tests; 17 automated tests pass in the verified CI build.
 - Per-user Windows x64 installer built with Inno Setup, with Start Menu shortcut, optional desktop shortcut, and uninstaller.
 - GitHub Actions builds/tests the app, packages the installer, and smoke-tests install/uninstall.
+
+## Discord integration
+
+The first-time setup requires a Discord application registered in the [Discord Developer Portal](https://discord.com/developers/applications). Copy its public Application ID into SkyLyrics' Discord setup dialog. Discord Desktop must be running and activity sharing must be enabled. Setup details and privacy behavior are documented in [docs/DISCORD_RICH_PRESENCE.md](docs/DISCORD_RICH_PRESENCE.md).
+
+SkyLyrics publishes track title, artist, playback state, and timestamps derived from Windows GSMTC. It does not publish lyrics, control Spotify, access Discord messages, join voice channels, or capture audio.
 
 ## Accuracy rules
 
