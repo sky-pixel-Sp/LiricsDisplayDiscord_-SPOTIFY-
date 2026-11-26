@@ -15,7 +15,8 @@ namespace SkyLyrics.Desktop;
 public partial class MainWindow : Window
 {
     private readonly SpotifySessionMonitor _spotify = new();
-    private readonly LrclibClient _lyricsClient = new(new HttpClient { Timeout = TimeSpan.FromSeconds(12) });
+    private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(12) };
+    private readonly LrclibClient _lyricsClient;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(900) };
     private readonly List<TextBlock> _lyricLineBlocks = new();
 
@@ -29,13 +30,14 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        _lyricsClient = new LrclibClient(_httpClient);
         InitializeComponent();
         _timer.Tick += Timer_Tick;
         Loaded += MainWindow_Loaded;
         Closed += (_, _) =>
         {
             _timer.Stop();
-            _lyricsClient.Dispose();
+            _httpClient.Dispose();
         };
     }
 
