@@ -24,7 +24,10 @@ public partial class MainWindow : Window
     private readonly LrclibClient _lyricsClient;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(33) };
     private readonly List<TextBlock> _lyricLineBlocks = new();
+    private readonly List<Border> _lyricLineSurfaces = new();
     private readonly List<List<Run>> _lyricWordRuns = new();
+    private readonly DispatcherTimer _scrollAnimationTimer =
+        new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(16) };
 
     private string? _lastTrackKey;
     private SpotifyTrackSnapshot? _currentTrack;
@@ -35,6 +38,11 @@ public partial class MainWindow : Window
     private int? _activeWordIndex;
     private TimeSpan _lastPosition;
     private DateTimeOffset _lastProgressUiUpdate = DateTimeOffset.MinValue;
+    private DateTimeOffset _scrollStartedAt = DateTimeOffset.MinValue;
+    private double _scrollStartOffset;
+    private double _scrollTargetOffset;
+    private bool? _lastPlaybackAnimationState;
+    private bool? _lastConnectionAnimationState;
     private bool _isDark = true;
 
     public MainWindow()
@@ -42,10 +50,12 @@ public partial class MainWindow : Window
         _lyricsClient = new LrclibClient(_httpClient);
         InitializeComponent();
         _timer.Tick += Timer_Tick;
+        _scrollAnimationTimer.Tick += ScrollAnimationTimer_Tick;
         Loaded += MainWindow_Loaded;
         Closed += (_, _) =>
         {
             _timer.Stop();
+            _scrollAnimationTimer.Stop();
             _spotify.SnapshotChanged -= Spotify_SnapshotChanged;
             _spotify.Dispose();
             _httpClient.Dispose();
@@ -54,6 +64,8 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        PlayEntranceAnimation();
+
         try
         {
             await _lyricsCache.InitializeAsync();
@@ -89,15 +101,18 @@ public partial class MainWindow : Window
             _currentTrack = null;
             _lastTrackKey = null;
             ConnectionText.Text = "Spotify Desktop not detected";
-            PlaybackText.Text = "Open Spotify Desktop and start playback";
+            PlaybackText.Text = "SPOTIFY NOT DETECTED";
             TrackTitle.Text = "No Spotify track detected";
             TrackArtist.Text = "SkyLyrics monitors Spotify Desktop through Windows media sessions.";
             PositionText.Text = "—";
             TrackProgress.Value = 0;
+            SetConnectionAnimation(false);
+            SetPlaybackAnimations(false);
             UpdateRenderInterval();
             return;
         }
 
+        var trackChanged = !string.Equals(_lastTrackKey, track.MatchKey, StringComparison.Ordinal);
         _currentTrack = track;
         _lastPosition = GetEstimatedPosition(track);
         ConnectionText.Text = "Spotify Desktop connected";
@@ -105,9 +120,13 @@ public partial class MainWindow : Window
         TrackArtist.Text = track.Artist;
         PlaybackText.Text = track.IsPlaying ? "PLAYING" : "PAUSED";
 
-        if (!string.Equals(_lastTrackKey, track.MatchKey, StringComparison.Ordinal))
+        SetConnectionAnimation(true);
+        SetPlaybackAnimations(track.IsPlaying);
+
+        if (trackChanged)
         {
             _lastTrackKey = track.MatchKey;
+            AnimateTrackIdentity();
             await LoadLyricsForTrackAsync(track);
         }
 
@@ -281,7 +300,9 @@ public partial class MainWindow : Window
 
         LyricsPanel.Children.Clear();
         _lyricLineBlocks.Clear();
+        _lyricLineSurfaces.Clear();
         _lyricWordRuns.Clear();
+        _scrollAnimationTimer.Stop();
 
         if (_lyrics.IsUnsynced)
             AddMessage("UNSYNCED · This source does not provide timestamps.");
@@ -293,11 +314,10 @@ public partial class MainWindow : Window
                 FontSize = 18,
                 FontWeight = FontWeights.Normal,
                 Foreground = MutedLyricsBrush(),
-                Opacity = 0.68,
+                Opacity = 0.72,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 10, 0, 10),
                 TextAlignment = TextAlignment.Center,
-                RenderTransform = new TranslateTransform(0, 3),
+                RenderTransform = new TranslateTransform(0, 5),
                 RenderTransformOrigin = new Point(0.5, 0.5)
             };
 
@@ -314,21 +334,33 @@ public partial class MainWindow : Window
             }
             else
             {
-                // If a provider's word segments do not reconstruct the source line
-                // exactly, keep the original line text and disable word highlighting.
+                // If source word segments do not reconstruct the source line exactly,
+                // preserve the line text and disable word highlighting.
                 block.Text = line.Text;
             }
 
+            var surface = new Border
+            {
+                CornerRadius = new CornerRadius(14),
+                Padding = new Thickness(16, 10, 16, 10),
+                Margin = new Thickness(4, 2, 4, 2),
+                Background = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
+                BorderThickness = new Thickness(1),
+                Child = block
+            };
+
             _lyricLineBlocks.Add(block);
+            _lyricLineSurfaces.Add(surface);
             _lyricWordRuns.Add(wordRuns);
-            LyricsPanel.Children.Add(block);
+            LyricsPanel.Children.Add(surface);
         }
 
         _renderedLyrics = _lyrics;
-        // Sentinels force the initial line and word state to be applied.
         _activeLineIndex = int.MinValue;
         _activeWordLineIndex = int.MinValue;
         _activeWordIndex = int.MinValue;
+        RevealLyricsSurface();
     }
 
     private void RenderLyrics(TimeSpan position, bool animate = true)
@@ -351,52 +383,65 @@ public partial class MainWindow : Window
 
         if (lineChanged)
         {
-            var animationDuration = new Duration(TimeSpan.FromMilliseconds(260));
-            var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+            var duration = new Duration(TimeSpan.FromMilliseconds(300));
+            var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var accent = ThemeColor("AccentBrush", Color.FromRgb(103, 215, 176));
+            var accentSoft = ThemeColor("AccentSoftBrush", Color.FromRgb(29, 56, 46));
+            var muted = MutedLyricsColor();
 
             for (var index = 0; index < _lyricLineBlocks.Count; index++)
             {
                 var block = _lyricLineBlocks[index];
+                var surface = _lyricLineSurfaces[index];
                 var isActive = activeIndex == index;
                 var targetOpacity = isActive ? 1.0 : activeIndex is not null && index < activeIndex ? 0.48 : 0.68;
-                var targetFontSize = isActive ? 22.0 : 17.0;
-                var targetOffset = isActive ? 0.0 : 3.0;
+                var targetFontSize = isActive ? 23.0 : 17.0;
+                var targetOffset = isActive ? 0.0 : 4.0;
+                var targetTextColor = isActive ? accent : muted;
+                var targetSurfaceColor = isActive
+                    ? Color.FromArgb(_isDark ? (byte)48 : (byte)92, accentSoft.R, accentSoft.G, accentSoft.B)
+                    : Color.FromArgb(0, accentSoft.R, accentSoft.G, accentSoft.B);
 
                 var currentOpacity = block.Opacity;
-                block.Opacity = targetOpacity;
-                block.FontSize = targetFontSize;
-                block.FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal;
-                block.Foreground = isActive
-                    ? (Brush)FindResource("AccentBrush")
-                    : MutedLyricsBrush();
-
-                if (block.RenderTransform is not TranslateTransform transform)
-                {
-                    transform = new TranslateTransform();
-                    block.RenderTransform = transform;
-                }
-
-                var currentOffset = transform.Y;
-                transform.Y = targetOffset;
+                var transform = block.RenderTransform as TranslateTransform ?? new TranslateTransform();
+                block.RenderTransform = transform;
 
                 if (animate)
                 {
                     block.BeginAnimation(UIElement.OpacityProperty,
-                        new DoubleAnimation(currentOpacity, targetOpacity, animationDuration) { EasingFunction = easing });
+                        new DoubleAnimation(currentOpacity, targetOpacity, duration) { EasingFunction = easing });
+                    block.BeginAnimation(TextBlock.FontSizeProperty,
+                        new DoubleAnimation(block.FontSize, targetFontSize, duration) { EasingFunction = easing });
                     transform.BeginAnimation(TranslateTransform.YProperty,
-                        new DoubleAnimation(currentOffset, targetOffset, animationDuration) { EasingFunction = easing });
+                        new DoubleAnimation(transform.Y, targetOffset, duration) { EasingFunction = easing });
+
+                    TransitionTextColor(block, targetTextColor, duration, easing);
+                    TransitionSurfaceColor(surface, targetSurfaceColor, duration, easing);
                 }
                 else
                 {
                     block.BeginAnimation(UIElement.OpacityProperty, null);
+                    block.BeginAnimation(TextBlock.FontSizeProperty, null);
                     transform.BeginAnimation(TranslateTransform.YProperty, null);
+                    block.Opacity = targetOpacity;
+                    block.FontSize = targetFontSize;
+                    transform.Y = targetOffset;
+                    block.Foreground = new SolidColorBrush(targetTextColor);
+                    surface.Background = new SolidColorBrush(targetSurfaceColor);
+                    surface.BorderBrush = new SolidColorBrush(Color.FromArgb(isActive ? (byte)75 : (byte)0, accent.R, accent.G, accent.B));
                 }
+
+                block.FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal;
             }
 
             _activeLineIndex = activeIndex;
 
-            if (activeIndex is int visibleIndex && visibleIndex >= 0 && visibleIndex < _lyricLineBlocks.Count)
-                _lyricLineBlocks[visibleIndex].BringIntoView();
+            if (activeIndex is int visibleIndex &&
+                visibleIndex >= 0 &&
+                visibleIndex < _lyricLineSurfaces.Count)
+            {
+                SmoothScrollToLine(_lyricLineSurfaces[visibleIndex]);
+            }
         }
 
         if (wordChanged)
@@ -405,11 +450,16 @@ public partial class MainWindow : Window
 
     private void UpdateWordHighlights(int? activeLineIndex, int? activeWordIndex)
     {
+        var muted = MutedLyricsColor();
+        var accent = ThemeColor("AccentBrush", Color.FromRgb(103, 215, 176));
+        var duration = new Duration(TimeSpan.FromMilliseconds(125));
+        var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+
         if (_activeWordLineIndex is int previousLine &&
             previousLine >= 0 && previousLine < _lyricWordRuns.Count)
         {
             foreach (var run in _lyricWordRuns[previousLine])
-                run.Foreground = MutedLyricsBrush();
+                TransitionRunColor(run, muted, duration, easing);
         }
 
         if (activeLineIndex is int lineIndex &&
@@ -417,17 +467,137 @@ public partial class MainWindow : Window
             lineIndex >= 0 && lineIndex < _lyricWordRuns.Count &&
             wordIndex >= 0 && wordIndex < _lyricWordRuns[lineIndex].Count)
         {
-            _lyricWordRuns[lineIndex][wordIndex].Foreground = (Brush)FindResource("AccentBrush");
+            TransitionRunColor(_lyricWordRuns[lineIndex][wordIndex], accent, duration, easing);
         }
 
         _activeWordLineIndex = activeLineIndex;
         _activeWordIndex = activeWordIndex;
     }
 
-    private Brush MutedLyricsBrush() =>
-        new SolidColorBrush(_isDark
+    private void TransitionTextColor(
+        TextBlock block,
+        Color target,
+        Duration duration,
+        IEasingFunction easing)
+    {
+        var current = BrushColor(block.Foreground, MutedLyricsColor());
+        var brush = new SolidColorBrush(current);
+        block.Foreground = brush;
+        brush.BeginAnimation(SolidColorBrush.ColorProperty,
+            new ColorAnimation(current, target, duration) { EasingFunction = easing });
+    }
+
+    private static void TransitionRunColor(
+        Run run,
+        Color target,
+        Duration duration,
+        IEasingFunction easing)
+    {
+        var current = BrushColor(run.Foreground, target);
+        var brush = new SolidColorBrush(current);
+        run.Foreground = brush;
+        brush.BeginAnimation(SolidColorBrush.ColorProperty,
+            new ColorAnimation(current, target, duration) { EasingFunction = easing });
+    }
+
+    private static void TransitionSurfaceColor(
+        Border surface,
+        Color target,
+        Duration duration,
+        IEasingFunction easing)
+    {
+        var current = BrushColor(surface.Background, Colors.Transparent);
+        var background = new SolidColorBrush(current);
+        surface.Background = background;
+        background.BeginAnimation(SolidColorBrush.ColorProperty,
+            new ColorAnimation(current, target, duration) { EasingFunction = easing });
+
+        var accent = Color.FromRgb(103, 215, 176);
+        var currentBorder = BrushColor(surface.BorderBrush, Colors.Transparent);
+        var border = new SolidColorBrush(currentBorder);
+        surface.BorderBrush = border;
+        border.BeginAnimation(SolidColorBrush.ColorProperty,
+            new ColorAnimation(currentBorder,
+                Color.FromArgb(target.A == 0 ? (byte)0 : (byte)82, accent.R, accent.G, accent.B),
+                duration) { EasingFunction = easing });
+    }
+
+    private void RevealLyricsSurface()
+    {
+        LyricsPanel.Opacity = 0;
+        LyricsPanel.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(360))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(40),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
+    }
+
+    private void SmoothScrollToLine(Border lineSurface)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!IsLoaded || lineSurface.ActualHeight <= 0 || LyricsScrollViewer.ViewportHeight <= 0)
+                return;
+
+            try
+            {
+                var lineCenter = lineSurface.TranslatePoint(
+                    new Point(0, lineSurface.ActualHeight / 2), LyricsPanel).Y;
+                var target = Math.Clamp(
+                    LyricsScrollViewer.VerticalOffset + lineCenter - LyricsScrollViewer.ViewportHeight * 0.48,
+                    0,
+                    LyricsScrollViewer.ScrollableHeight);
+
+                _scrollStartOffset = LyricsScrollViewer.VerticalOffset;
+                _scrollTargetOffset = target;
+                _scrollStartedAt = DateTimeOffset.UtcNow;
+
+                if (Math.Abs(_scrollTargetOffset - _scrollStartOffset) > 2)
+                {
+                    _scrollAnimationTimer.Stop();
+                    _scrollAnimationTimer.Start();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Layout can change while a song is switching; the next lyric tick will retry.
+            }
+        }), DispatcherPriority.Loaded);
+    }
+
+    private void ScrollAnimationTimer_Tick(object? sender, EventArgs e)
+    {
+        var elapsed = DateTimeOffset.UtcNow - _scrollStartedAt;
+        var progress = Math.Clamp(elapsed.TotalMilliseconds / 280.0, 0, 1);
+        var eased = 1 - Math.Pow(1 - progress, 3);
+        var offset = _scrollStartOffset + (_scrollTargetOffset - _scrollStartOffset) * eased;
+
+        LyricsScrollViewer.ScrollToVerticalOffset(offset);
+
+        if (progress >= 1)
+        {
+            LyricsScrollViewer.ScrollToVerticalOffset(_scrollTargetOffset);
+            _scrollAnimationTimer.Stop();
+        }
+    }
+
+    private static Color BrushColor(Brush? brush, Color fallback) =>
+        brush is SolidColorBrush solid ? solid.Color : fallback;
+
+    private static Color ThemeColor(string key, Color fallback)
+    {
+        return Application.Current.TryFindResource(key) is SolidColorBrush brush
+            ? brush.Color
+            : fallback;
+    }
+
+    private Color MutedLyricsColor() =>
+        _isDark
             ? Color.FromRgb(170, 185, 178)
-            : Color.FromRgb(93, 108, 101));
+            : Color.FromRgb(93, 108, 101);
+
+    private Brush MutedLyricsBrush() => new SolidColorBrush(MutedLyricsColor());
 
     private async Task SaveLyricsToCacheAsync(SpotifyTrackSnapshot track, LyricsDocument lyrics)
     {
@@ -445,15 +615,30 @@ public partial class MainWindow : Window
 
     private void AddMessage(string message)
     {
-        LyricsPanel.Children.Add(new TextBlock
+        var text = new TextBlock
         {
             Text = message,
             FontSize = 13,
+            Opacity = 0,
             Foreground = new SolidColorBrush(_isDark ? Color.FromRgb(139, 153, 149) : Color.FromRgb(100, 112, 106)),
             TextAlignment = TextAlignment.Center,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 10, 0, 10)
-        });
+            Margin = new Thickness(0, 10, 0, 10),
+            RenderTransform = new TranslateTransform(0, 7)
+        };
+
+        LyricsPanel.Children.Add(text);
+        text.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            });
+        if (text.RenderTransform is TranslateTransform transform)
+            transform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(7, 0, TimeSpan.FromMilliseconds(260))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                });
     }
 
     private async void ImportLyrics_Click(object sender, RoutedEventArgs e)
@@ -494,12 +679,14 @@ public partial class MainWindow : Window
                 await SaveLyricsToCacheAsync(_currentTrack, _lyrics);
 
             RenderLyrics(_lastPosition);
+            AnimateImportSuccess();
         }
         catch (Exception ex)
         {
             _lyrics = null;
             _renderedLyrics = null;
             _lyricLineBlocks.Clear();
+            _lyricLineSurfaces.Clear();
             _lyricWordRuns.Clear();
             LyricsStateText.Text = "IMPORT FAILED";
             LyricsPanel.Children.Clear();
@@ -553,14 +740,185 @@ public partial class MainWindow : Window
                 ["ProgressTrackBrush"] = Color.FromRgb(222, 232, 225)
             };
 
+        var previousWindowColor = BrushColor(Background, _isDark
+            ? Color.FromRgb(242, 246, 243)
+            : Color.FromRgb(12, 18, 16));
+
         foreach (var (key, color) in palette)
             Application.Current.Resources[key] = new SolidColorBrush(color);
 
-        Background = (Brush)FindResource("WindowBackgroundBrush");
+        var windowBrush = new SolidColorBrush(previousWindowColor);
+        Background = windowBrush;
+        windowBrush.BeginAnimation(SolidColorBrush.ColorProperty,
+            new ColorAnimation(previousWindowColor, palette["WindowBackgroundBrush"],
+                new Duration(TimeSpan.FromMilliseconds(260)))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
         Foreground = (Brush)FindResource("TextPrimaryBrush");
         RootGrid.Background = Brushes.Transparent;
         ThemeButton.Content = _isDark ? "Light theme" : "Dark theme";
     }
+
+    private void PlayEntranceAnimation()
+    {
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        RootGrid.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(430)) { EasingFunction = easing });
+
+        if (RootGrid.RenderTransform is TranslateTransform rootTransform)
+            rootTransform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(480)) { EasingFunction = easing });
+
+        AnimateSurfaceEntrance(NowPlayingCard, 90, 430);
+        AnimateSurfaceEntrance(LyricsCard, 180, 480);
+    }
+
+    private static void AnimateSurfaceEntrance(FrameworkElement surface, double delay, double duration)
+    {
+        surface.Opacity = 0;
+        surface.RenderTransform = new TranslateTransform(0, 11);
+        surface.RenderTransformOrigin = new Point(0.5, 0.5);
+
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+        surface.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(duration))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(delay),
+                EasingFunction = easing
+            });
+
+        if (surface.RenderTransform is TranslateTransform transform)
+            transform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(11, 0, TimeSpan.FromMilliseconds(duration))
+                {
+                    BeginTime = TimeSpan.FromMilliseconds(delay),
+                    EasingFunction = easing
+                });
+    }
+
+    private void AnimateTrackIdentity()
+    {
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+        TrackTitle.Opacity = 0;
+        TrackArtist.Opacity = 0.35;
+
+        TrackTitle.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(330)) { EasingFunction = easing });
+        TrackArtist.BeginAnimation(UIElement.OpacityProperty,
+            new DoubleAnimation(0.35, 1, TimeSpan.FromMilliseconds(420))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(45),
+                EasingFunction = easing
+            });
+
+        if (TrackTitle.RenderTransform is TranslateTransform titleTransform)
+            titleTransform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(7, 0, TimeSpan.FromMilliseconds(360)) { EasingFunction = easing });
+        else
+        {
+            var transform = new TranslateTransform(0, 7);
+            TrackTitle.RenderTransform = transform;
+            transform.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(7, 0, TimeSpan.FromMilliseconds(360)) { EasingFunction = easing });
+        }
+    }
+
+    private void SetConnectionAnimation(bool connected)
+    {
+        if (_lastConnectionAnimationState == connected)
+            return;
+
+        _lastConnectionAnimationState = connected;
+        ConnectionDot.BeginAnimation(UIElement.OpacityProperty, null);
+        ConnectionDot.Opacity = 1;
+
+        if (connected)
+        {
+            ConnectionDot.BeginAnimation(UIElement.OpacityProperty,
+                new DoubleAnimation(0.62, 1, TimeSpan.FromMilliseconds(1050))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                });
+        }
+    }
+
+    private void SetPlaybackAnimations(bool isPlaying)
+    {
+        if (_lastPlaybackAnimationState == isPlaying)
+            return;
+
+        _lastPlaybackAnimationState = isPlaying;
+        var bars = new[] { EqualizerBar1, EqualizerBar2, EqualizerBar3, EqualizerBar4 };
+
+        PlaybackDot.BeginAnimation(UIElement.OpacityProperty, null);
+        PlaybackDot.Opacity = 1;
+
+        if (isPlaying)
+        {
+            PlaybackEqualizer.Visibility = Visibility.Visible;
+            PlaybackDot.BeginAnimation(UIElement.OpacityProperty,
+                new DoubleAnimation(0.55, 1, TimeSpan.FromMilliseconds(720))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                });
+
+            for (var index = 0; index < bars.Length; index++)
+            {
+                if (bars[index].RenderTransform is not ScaleTransform transform)
+                    continue;
+
+                transform.BeginAnimation(ScaleTransform.ScaleYProperty,
+                    new DoubleAnimation(0.22 + (index % 2) * 0.12, 0.96,
+                        TimeSpan.FromMilliseconds(310 + index * 95))
+                    {
+                        BeginTime = TimeSpan.FromMilliseconds(index * 75),
+                        AutoReverse = true,
+                        RepeatBehavior = RepeatBehavior.Forever,
+                        EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                    });
+            }
+        }
+        else
+        {
+            PlaybackEqualizer.Visibility = Visibility.Collapsed;
+            foreach (var bar in bars)
+            {
+                if (bar.RenderTransform is ScaleTransform transform)
+                {
+                    transform.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                    transform.ScaleY = 0.42;
+                }
+            }
+        }
+    }
+
+    private void AnimateImportSuccess()
+    {
+        var target = ThemeColor("AccentBrush", Color.FromRgb(103, 215, 176));
+        var previous = BrushColor(ImportButtonBrush(), target);
+        var flash = new SolidColorBrush(previous);
+
+        if (FindName("ImportButton") is Button importButton)
+        {
+            importButton.Background = flash;
+            flash.BeginAnimation(SolidColorBrush.ColorProperty,
+                new ColorAnimation(target, TimeSpan.FromMilliseconds(420))
+                {
+                    AutoReverse = true,
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                });
+        }
+    }
+
+    private Brush ImportButtonBrush() =>
+        FindName("ImportButton") is Button button ? button.Background : Brushes.Transparent;
 
     private static string FormatTime(TimeSpan value) =>
         value.TotalHours >= 1 ? value.ToString(@"h\:mm\:ss") : value.ToString(@"m\:ss");
