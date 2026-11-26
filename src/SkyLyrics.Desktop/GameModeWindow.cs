@@ -73,6 +73,7 @@ public sealed class GameModeWindow : Window
                 catch (InvalidOperationException) { }
             }
         };
+        MouseRightButtonUp += (_, _) => Close();
         KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape)
