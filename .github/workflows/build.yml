@@ -13,9 +13,9 @@ permissions:
 
 jobs:
   build-test:
-    name: Build and test (Windows x64)
+    name: Build, test and package (Windows x64)
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -51,11 +51,75 @@ jobs:
           Get-FileHash $exe -Algorithm SHA256 | Format-List
           Write-Host "Executable size: $size bytes"
 
-      - name: Upload Windows x64 build
+      - name: Install Inno Setup 7.1.1
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup-7.1.1-x64.exe"
+          $url = "https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $actualHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expectedHash = "8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0"
+          if ($actualHash -ne $expectedHash) { throw "Inno Setup installer checksum mismatch." }
+
+          $install = Start-Process -FilePath $installer -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-") -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Inno Setup installation failed with exit code $($install.ExitCode)." }
+
+          $pf86 = [Environment]::GetEnvironmentVariable("ProgramFiles(x86)")
+          $candidates = @(
+            (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
+            (Join-Path $pf86 "Inno Setup 7\ISCC.exe")
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw "ISCC.exe was not found after Inno Setup installation." }
+          "ISCC_PATH=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Compile Windows installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "artifacts/installer" | Out-Null
+          & "$env:ISCC_PATH" "installer/SkyLyrics.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
+
+          $setup = "artifacts/installer/SkyLyrics-Desktop-Setup-x64.exe"
+          if (-not (Test-Path $setup)) { throw "Expected Windows installer not found: $setup" }
+          if ((Get-Item $setup).Length -le 0) { throw "Windows installer is empty." }
+          Get-FileHash $setup -Algorithm SHA256 | Format-List
+          Write-Host "Installer size: $((Get-Item $setup).Length) bytes"
+
+      - name: Smoke test installer and uninstaller
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path "artifacts/installer/SkyLyrics-Desktop-Setup-x64.exe").Path
+          $installDir = Join-Path $env:RUNNER_TEMP "SkyLyrics Installer Smoke Test"
+          $quotedInstallDir = [char]34 + $installDir + [char]34
+          $arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR=$quotedInstallDir"
+          $install = Start-Process -FilePath $setup -ArgumentList $arguments -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer smoke test failed with exit code $($install.ExitCode)." }
+
+          $appExe = Join-Path $installDir "SkyLyrics.Desktop.exe"
+          if (-not (Test-Path $appExe)) { throw "Installed application executable was not found." }
+          if ((Get-Item $appExe).Length -le 0) { throw "Installed application executable is empty." }
+
+          $uninstaller = Get-ChildItem -Path $installDir -Filter "unins*.exe" -File | Select-Object -First 1
+          if (-not $uninstaller) { throw "Uninstaller executable was not created." }
+          $uninstall = Start-Process -FilePath $uninstaller.FullName -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller smoke test failed with exit code $($uninstall.ExitCode)." }
+          if (Test-Path $appExe) { throw "Application executable still exists after uninstall." }
+          Write-Host "Install and uninstall smoke test passed."
+
+      - name: Upload Windows x64 application
         uses: actions/upload-artifact@v4
         with:
           name: SkyLyrics-Desktop-win-x64
           path: artifacts/SkyLyrics-win-x64/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Windows x64 installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyLyrics-Desktop-Setup-x64
+          path: artifacts/installer/SkyLyrics-Desktop-Setup-x64.exe
           if-no-files-found: error
           retention-days: 14
 
