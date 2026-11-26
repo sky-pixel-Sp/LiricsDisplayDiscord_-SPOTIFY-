@@ -201,7 +201,11 @@ public sealed class SqliteLyricsCache
                 .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
                 .ToLowerInvariant();
 
-        var identity = $"{Normalize(track.Artist)}\u001f{Normalize(track.Title)}\u001f{Normalize(track.Album)}";
+        var durationSeconds = track.Duration is { } duration && duration > TimeSpan.Zero
+            ? Math.Round(duration.TotalSeconds, MidpointRounding.AwayFromZero)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : "unknown";
+        var identity = $"{Normalize(track.Artist)}\u001f{Normalize(track.Title)}\u001f{Normalize(track.Album)}\u001f{durationSeconds}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
     }
 }
