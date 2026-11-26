@@ -34,7 +34,6 @@ public partial class MainWindow : Window
     private int? _activeWordLineIndex;
     private int? _activeWordIndex;
     private TimeSpan _lastPosition;
-    private bool _isRefreshing;
     private DateTimeOffset _lastProgressUiUpdate = DateTimeOffset.MinValue;
     private bool _isDark = true;
 
@@ -497,7 +496,7 @@ public partial class MainWindow : Window
             _activeLineIndex = null;
             _activeWordLineIndex = null;
             _activeWordIndex = null;
-            _lastPosition = TimeSpan.Zero;
+            _lastPosition = _currentTrack is not null ? GetEstimatedPosition(_currentTrack) : TimeSpan.Zero;
             LyricsStateText.Text = _lyrics.HasWordTimestamps
                 ? "LOCAL · WORD + LINE SYNC"
                 : _lyrics.HasLineTimestamps
