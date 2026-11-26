@@ -172,6 +172,15 @@ public partial class MainWindow : Window
                 return;
             }
 
+            var match = LyricsMatchValidator.Evaluate(track, result);
+            if (!match.IsMatch)
+            {
+                LyricsStateText.Text = "MATCH REJECTED";
+                AddMessage($"LRCLIB candidate was not displayed: {match.Reason}");
+                AddMessage("Import a verified LRC or Lyricsfile for this track instead.");
+                return;
+            }
+
             var wordDataInvalid = false;
 
             if (result.HasWordSync && !string.IsNullOrWhiteSpace(result.LyricsFile))
