@@ -1,5 +1,5 @@
 #define MyAppName "SkyLyrics Desktop"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.3.0"
 #define MyAppPublisher "SkyLyrics"
 #define MyAppExeName "SkyLyrics.Desktop.exe"
 
