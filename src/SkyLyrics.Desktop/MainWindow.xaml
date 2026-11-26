@@ -87,6 +87,23 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
+                <Border Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                        CornerRadius="11" Padding="10,8" Margin="0,0,7,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="DiscordConnectionDot" Width="7" Height="7"
+                                 Fill="#65736C" Margin="0,0,7,0"/>
+                        <TextBlock x:Name="DiscordStatusText" Text="Discord not configured"
+                                   FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <Button x:Name="DiscordButton" Content="Set up"
+                        Click="DiscordButton_Click" Style="{StaticResource QuietButtonStyle}"
+                        Padding="12,9" Margin="0,0,5,0"/>
+                <Button x:Name="DiscordSettingsButton" Content="⚙"
+                        Click="DiscordSettingsButton_Click" Style="{StaticResource QuietButtonStyle}"
+                        Padding="10,9" Margin="0,0,9,0" ToolTip="Discord settings"/>
                 <Button x:Name="ThemeButton" Content="Light theme"
                         Click="ThemeButton_Click" Style="{StaticResource QuietButtonStyle}"/>
             </StackPanel>
@@ -261,7 +278,7 @@
                 <TextBlock Text="Lyrics are never fabricated · Unsynced sources stay labeled"
                            FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.2.0  /  WINDOWS 11"
+            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.3.0  /  WINDOWS 11"
                        FontSize="9" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextMutedBrush}"
                        VerticalAlignment="Center"/>

@@ -17,12 +17,15 @@ namespace SkyLyrics.Desktop;
 public partial class MainWindow : Window
 {
     private readonly SpotifySessionMonitor _spotify = new();
+    private readonly DiscordRpcClient _discord = new();
     private readonly SqliteLyricsCache _lyricsCache = new(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SkyLyrics", "lyrics.db"));
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(12) };
     private readonly LrclibClient _lyricsClient;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(33) };
+    private readonly DispatcherTimer _discordRetryTimer =
+        new() { Interval = TimeSpan.FromSeconds(8) };
     private readonly List<TextBlock> _lyricLineBlocks = new();
     private readonly List<Border> _lyricLineSurfaces = new();
     private readonly List<List<Run>> _lyricWordRuns = new();
@@ -44,23 +47,38 @@ public partial class MainWindow : Window
     private bool? _lastPlaybackAnimationState;
     private bool? _lastConnectionAnimationState;
     private bool _isDark = true;
+    private string? _discordApplicationId;
+    private bool _discordEnabled;
+    private DateTimeOffset _lastDiscordConnectAttempt = DateTimeOffset.MinValue;
 
     public MainWindow()
     {
         _lyricsClient = new LrclibClient(_httpClient);
         InitializeComponent();
         _timer.Tick += Timer_Tick;
+        _discordRetryTimer.Tick += DiscordRetryTimer_Tick;
         _scrollAnimationTimer.Tick += ScrollAnimationTimer_Tick;
         Activated += (_, _) => RefreshPlaybackMotion();
         Deactivated += (_, _) => RefreshPlaybackMotion();
         StateChanged += (_, _) => RefreshPlaybackMotion();
         Loaded += MainWindow_Loaded;
-        Closed += (_, _) =>
+        Closed += async (_, _) =>
         {
+            _discordRetryTimer.Stop();
             _timer.Stop();
             _scrollAnimationTimer.Stop();
             _spotify.SnapshotChanged -= Spotify_SnapshotChanged;
             _spotify.Dispose();
+
+            try
+            {
+                await _discord.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Discord shutdown cleanup failed: {ex}");
+            }
+
             _httpClient.Dispose();
         };
     }
@@ -68,6 +86,19 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         PlayEntranceAnimation();
+
+        _discordApplicationId = DiscordApplicationIdStore.Load();
+        if (DiscordApplicationIdStore.IsValidApplicationId(_discordApplicationId))
+        {
+            _discordEnabled = true;
+            DiscordButton.Content = "Disconnect";
+            _discordRetryTimer.Start();
+        }
+        else
+        {
+            DiscordStatusText.Text = "Discord not configured";
+            DiscordButton.Content = "Set up";
+        }
 
         try
         {
@@ -85,6 +116,7 @@ public partial class MainWindow : Window
             await _spotify.InitializeAsync();
             ConnectionText.Text = "Spotify session monitor ready";
             _timer.Start();
+            await SyncDiscordPresenceAsync();
         }
         catch (Exception ex)
         {
@@ -111,6 +143,7 @@ public partial class MainWindow : Window
             TrackProgress.Value = 0;
             RefreshPlaybackMotion();
             UpdateRenderInterval();
+            await SyncDiscordPresenceAsync();
             return;
         }
 
@@ -123,6 +156,7 @@ public partial class MainWindow : Window
         PlaybackText.Text = track.IsPlaying ? "PLAYING" : "PAUSED";
 
         RefreshPlaybackMotion();
+        await SyncDiscordPresenceAsync();
 
         if (trackChanged)
         {
@@ -154,6 +188,114 @@ public partial class MainWindow : Window
 
     private static TimeSpan GetEstimatedPosition(SpotifyTrackSnapshot track) =>
         PlaybackPositionEstimator.Estimate(track, DateTimeOffset.UtcNow);
+
+    private async void DiscordButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_discordEnabled)
+        {
+            _discordEnabled = false;
+            _discordRetryTimer.Stop();
+            await _discord.DisconnectAsync();
+            DiscordButton.Content = "Connect";
+            DiscordStatusText.Text = "Disconnected";
+            UpdateDiscordIndicator(false);
+            return;
+        }
+
+        if (!DiscordApplicationIdStore.IsValidApplicationId(_discordApplicationId))
+        {
+            var setup = new DiscordSetupDialog(_discordApplicationId) { Owner = this };
+            if (setup.ShowDialog() != true)
+                return;
+
+            _discordApplicationId = setup.ApplicationId;
+            DiscordApplicationIdStore.Save(_discordApplicationId);
+        }
+
+        _discordEnabled = true;
+        _lastDiscordConnectAttempt = DateTimeOffset.MinValue;
+        DiscordButton.Content = "Disconnect";
+        _discordRetryTimer.Start();
+        await SyncDiscordPresenceAsync();
+    }
+
+    private async void DiscordSettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var setup = new DiscordSetupDialog(_discordApplicationId) { Owner = this };
+        if (setup.ShowDialog() != true)
+            return;
+
+        var nextApplicationId = setup.ApplicationId;
+        if (!string.Equals(_discordApplicationId, nextApplicationId, StringComparison.Ordinal))
+        {
+            if (_discordEnabled)
+                await _discord.DisconnectAsync();
+
+            _discordApplicationId = nextApplicationId;
+            _lastDiscordConnectAttempt = DateTimeOffset.MinValue;
+        }
+
+        DiscordApplicationIdStore.Save(nextApplicationId);
+
+        if (_discordEnabled)
+        {
+            await SyncDiscordPresenceAsync();
+        }
+        else
+        {
+            DiscordStatusText.Text = "Application ID saved";
+            UpdateDiscordIndicator(false);
+        }
+    }
+
+    private async void DiscordRetryTimer_Tick(object? sender, EventArgs e)
+    {
+        await SyncDiscordPresenceAsync();
+    }
+
+    private async Task SyncDiscordPresenceAsync()
+    {
+        if (!_discordEnabled || !DiscordApplicationIdStore.IsValidApplicationId(_discordApplicationId))
+            return;
+
+        if (!_discord.IsConnected &&
+            DateTimeOffset.UtcNow - _lastDiscordConnectAttempt < TimeSpan.FromSeconds(6))
+            return;
+
+        if (!_discord.IsConnected)
+            _lastDiscordConnectAttempt = DateTimeOffset.UtcNow;
+
+        try
+        {
+            var presence = _currentTrack is null
+                ? null
+                : DiscordPresenceData.FromTrack(_currentTrack, DateTimeOffset.UtcNow);
+
+            await _discord.SetActivityAsync(_discordApplicationId!, presence);
+
+            DiscordStatusText.Text = _currentTrack is null
+                ? "Connected · idle"
+                : "Rich Presence active";
+            UpdateDiscordIndicator(true);
+        }
+        catch (Exception ex)
+        {
+            DiscordStatusText.Text = "Discord unavailable";
+            UpdateDiscordIndicator(false);
+            System.Diagnostics.Debug.WriteLine($"Discord Rich Presence update failed: {ex}");
+        }
+    }
+
+    private void UpdateDiscordIndicator(bool connected)
+    {
+        var color = connected
+            ? ThemeColor("AccentBrush", Color.FromRgb(103, 215, 176))
+            : ThemeColor("TextMutedBrush", Color.FromRgb(115, 132, 123));
+
+        DiscordConnectionDot.BeginAnimation(UIElement.OpacityProperty, null);
+        DiscordConnectionDot.Opacity = connected ? 1 : 0.72;
+        DiscordConnectionDot.Fill = new SolidColorBrush(color);
+    }
 
     private void UpdateProgressDisplay(SpotifyTrackSnapshot track, TimeSpan position)
     {
