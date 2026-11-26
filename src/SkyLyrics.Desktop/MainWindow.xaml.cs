@@ -94,6 +94,7 @@ public partial class MainWindow : Window
                 TrackArtist.Text = "SkyLyrics monitors Spotify Desktop through Windows media sessions.";
                 PositionText.Text = "—";
                 TrackProgress.Value = 0;
+                _timer.Interval = TimeSpan.FromMilliseconds(900);
                 return;
             }
 
@@ -114,6 +115,7 @@ public partial class MainWindow : Window
                 await LoadLyricsForTrackAsync(track);
             }
 
+            UpdatePollingInterval(track.IsPlaying);
             RenderLyrics(track.Position);
         }
         catch (Exception ex)
@@ -124,6 +126,19 @@ public partial class MainWindow : Window
         {
             _isRefreshing = false;
         }
+    }
+
+    private void UpdatePollingInterval(bool isPlaying)
+    {
+        var milliseconds = !isPlaying
+            ? 900
+            : _lyrics?.HasWordTimestamps == true
+                ? 110
+                : _lyrics?.HasLineTimestamps == true
+                    ? 260
+                    : 900;
+
+        _timer.Interval = TimeSpan.FromMilliseconds(milliseconds);
     }
 
     private async Task LoadLyricsForTrackAsync(SpotifyTrackSnapshot track)
