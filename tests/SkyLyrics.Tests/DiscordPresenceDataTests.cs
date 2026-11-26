@@ -19,8 +19,8 @@ public sealed class DiscordPresenceDataTests
         Assert.AreEqual("Track", result.Details);
         Assert.AreEqual("Artist", result.State);
         Assert.IsTrue(result.IsPlaying);
-        Assert.AreEqual(Anchor.AddSeconds(-70).ToUnixTimeSeconds(), result.StartTimestamp);
-        Assert.AreEqual(Anchor.AddSeconds(170).ToUnixTimeSeconds(), result.EndTimestamp);
+        Assert.AreEqual(Anchor.AddSeconds(-75).ToUnixTimeSeconds(), result.StartTimestamp);
+        Assert.AreEqual(Anchor.AddSeconds(165).ToUnixTimeSeconds(), result.EndTimestamp);
     }
 
     [TestMethod]
