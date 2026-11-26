@@ -553,8 +553,6 @@ public partial class MainWindow : Window
         if (!lineChanged && !wordChanged)
             return;
 
-        if (lineChanged)
-            QueueDiscordPresenceUpdate();
 
         if (lineChanged)
         {
@@ -653,6 +651,7 @@ public partial class MainWindow : Window
             }
 
             _activeLineIndex = activeIndex;
+            QueueDiscordPresenceUpdate();
 
             if (activeIndex is int visibleIndex &&
                 visibleIndex >= 0 &&
