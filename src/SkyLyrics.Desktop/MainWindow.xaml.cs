@@ -768,10 +768,11 @@ public partial class MainWindow : Window
                 if (DateTimeOffset.UtcNow < _manualScrollUntil)
                     return;
 
-                // lineCenter is already in content coordinates; do not add VerticalOffset.
-                var target = Math.Clamp(
-                    lineCenter - LyricsScrollViewer.ViewportHeight * 0.48,
-                    0,
+                // lineCenter is already in content coordinates; the calculator deliberately
+                // has no current VerticalOffset input to prevent cumulative scroll drift.
+                var target = LyricsScrollTargetCalculator.Calculate(
+                    lineCenter,
+                    LyricsScrollViewer.ViewportHeight,
                     LyricsScrollViewer.ScrollableHeight);
 
                 _scrollStartOffset = LyricsScrollViewer.VerticalOffset;
