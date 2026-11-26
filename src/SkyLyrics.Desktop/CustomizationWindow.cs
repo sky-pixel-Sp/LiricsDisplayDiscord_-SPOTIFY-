@@ -47,7 +47,7 @@ public sealed class CustomizationWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(18) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(18) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var header = new StackPanel();
@@ -107,7 +107,11 @@ public sealed class CustomizationWindow : Window
         Grid.SetRow(previewPanel, 3);
         root.Children.Add(previewPanel);
 
-        var footer = new DockPanel { LastChildFill = false };
+        var footer = new DockPanel
+        {
+            LastChildFill = false,
+            Margin = new Thickness(0, 18, 0, 0)
+        };
         var counts = new TextBlock
         {
             Text = "30 animations   ·   30 effects   ·   30 backgrounds",
