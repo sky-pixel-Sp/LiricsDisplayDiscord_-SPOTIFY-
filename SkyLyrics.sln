@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyLyrics.Core", "src\SkyLy
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyLyrics.Windows", "src\SkyLyrics.Windows\SkyLyrics.Windows.csproj", "{D9C0F632-24BB-4B59-967E-8E0C7EECD5B1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyLyrics.Persistence", "src\SkyLyrics.Persistence\SkyLyrics.Persistence.csproj", "{B18F945A-0A26-4A3F-B9CB-E3E0997E7AC4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyLyrics.Desktop", "src\SkyLyrics.Desktop\SkyLyrics.Desktop.csproj", "{4D50A9C7-C1EA-4973-A6EC-ED72DCACBC62}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyLyrics.Tests", "tests\SkyLyrics.Tests\SkyLyrics.Tests.csproj", "{E2899446-0D1F-4986-8A5B-44EE7A6202CA}"
@@ -24,8 +26,12 @@ Global
     {D9C0F632-24BB-4B59-967E-8E0C7EECD5B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
     {D9C0F632-24BB-4B59-967E-8E0C7EECD5B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
     {D9C0F632-24BB-4B59-967E-8E0C7EECD5B1}.Release|Any CPU.Build.0 = Release|Any CPU
+    {B18F945A-0A26-4A3F-B9CB-E3E0997E7AC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {B18F945A-0A26-4A3F-B9CB-E3E0997E7AC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {B18F945A-0A26-4A3F-B9CB-E3E0997E7AC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {B18F945A-0A26-4A3F-B9CB-E3E0997E7AC4}.Release|Any CPU.Build.0 = Release|Any CPU
     {4D50A9C7-C1EA-4973-A6EC-ED72DCACBC62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-    {4D50A9C7-C1EA-4973-A6EC-ED72DCACBC62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {4D50A9C7-C1EA-4973-A6EC-ED72DCACBC62}.Debug|Any CPU.Build.0 = Release|Any CPU
     {4D50A9C7-C1EA-4973-A6EC-ED72DCACBC62}.Release|Any CPU.ActiveCfg = Release|Any CPU
     {4D50A9C7-C1EA-4973-A6EC-ED72DCACBC62}.Release|Any CPU.Build.0 = Release|Any CPU
     {E2899446-0D1F-4986-8A5B-44EE7A6202CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
