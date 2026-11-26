@@ -1,8 +1,8 @@
 namespace SkyLyrics.Core.Models;
 
 /// <summary>
-/// Source-derived information that SkyLyrics is allowed to publish as Discord Rich Presence.
-/// No lyric text, playback controls, or fabricated track metadata are included.
+/// Source-derived information published as Discord Rich Presence.
+/// The optional lyric line is taken only from the currently active, timestamped source line.
 /// </summary>
 public sealed record DiscordPresenceData(
     string Details,
@@ -11,7 +11,10 @@ public sealed record DiscordPresenceData(
     long? EndTimestamp,
     bool IsPlaying)
 {
-    public static DiscordPresenceData FromTrack(SpotifyTrackSnapshot track, DateTimeOffset now)
+    public static DiscordPresenceData FromTrack(
+        SpotifyTrackSnapshot track,
+        DateTimeOffset now,
+        string? currentLyricLine = null)
     {
         ArgumentNullException.ThrowIfNull(track);
 
@@ -20,11 +23,25 @@ public sealed record DiscordPresenceData(
             details = "Unknown track";
 
         var artist = NormalizeAndLimit(track.Artist, 128);
-        var state = track.IsPlaying
-            ? (artist.Length == 0 ? "Spotify Desktop" : artist)
-            : (artist.Length == 0 ? "Paused" : $"{artist} · Paused");
+        var lyric = NormalizeAndLimit(currentLyricLine, 112);
+        string state;
 
-        state = NormalizeAndLimit(state, 128);
+        if (lyric.Length > 0)
+        {
+            var lyricPrefix = track.IsPlaying ? "♫ " : "Ⅱ · ♫ ";
+            var remaining = Math.Max(0, 128 - lyricPrefix.Length - (artist.Length > 0 ? artist.Length + 3 : 0));
+            lyric = NormalizeAndLimit(lyric, remaining);
+            state = artist.Length > 0
+                ? NormalizeAndLimit($"{lyricPrefix}{lyric} · {artist}", 128)
+                : NormalizeAndLimit($"{lyricPrefix}{lyric}", 128);
+        }
+        else
+        {
+            state = track.IsPlaying
+                ? (artist.Length == 0 ? "Spotify Desktop" : artist)
+                : (artist.Length == 0 ? "Paused" : $"{artist} · Paused");
+            state = NormalizeAndLimit(state, 128);
+        }
 
         if (!track.IsPlaying)
             return new DiscordPresenceData(details, state, null, null, false);
@@ -40,7 +57,7 @@ public sealed record DiscordPresenceData(
 
     private static string NormalizeAndLimit(string? value, int maximumLength)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (string.IsNullOrWhiteSpace(value) || maximumLength <= 0)
             return string.Empty;
 
         var normalized = string.Join(' ', value.Split(
