@@ -181,6 +181,7 @@ public partial class MainWindow : Window
         _activeWordLineIndex = null;
         _activeWordIndex = null;
         _lyricLineBlocks.Clear();
+        _lyricLineSurfaces.Clear();
         _lyricWordRuns.Clear();
         LyricsPanel.Children.Clear();
         LyricsStateText.Text = "SEARCHING";
