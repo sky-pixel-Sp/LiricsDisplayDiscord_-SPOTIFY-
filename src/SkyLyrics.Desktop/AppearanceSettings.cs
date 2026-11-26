@@ -251,7 +251,7 @@ public static class AppearanceCatalog
             "sine" => new SineEase { EasingMode = EasingMode.EaseOut },
             "circle" => new CircleEase { EasingMode = EasingMode.EaseOut },
             "exponential" => new ExponentialEase { EasingMode = EasingMode.EaseOut },
-            "linear" => new LinearEase(),
+            "linear" => new LinearEasing(),
             _ => new CubicEase { EasingMode = EasingMode.EaseOut }
         };
 
@@ -307,3 +307,8 @@ public sealed record TextBlockTransforms(
     TranslateTransform Move,
     ScaleTransform Scale,
     RotateTransform Rotate);
+
+internal sealed class LinearEasing : IEasingFunction
+{
+    public double Ease(double normalizedTime) => normalizedTime;
+}
