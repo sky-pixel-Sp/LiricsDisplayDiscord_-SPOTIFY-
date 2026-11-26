@@ -127,6 +127,16 @@ public sealed class LyricsParserTests
                   - text: 'timing'
             """;
 
-        Assert.ThrowsException<FormatException>(() => LyricsFileParser.Parse(yaml));
+        var threwExpectedException = false;
+        try
+        {
+            LyricsFileParser.Parse(yaml);
+        }
+        catch (FormatException)
+        {
+            threwExpectedException = true;
+        }
+
+        Assert.IsTrue(threwExpectedException, "Invalid word timing must be rejected instead of guessed.");
     }
 }
