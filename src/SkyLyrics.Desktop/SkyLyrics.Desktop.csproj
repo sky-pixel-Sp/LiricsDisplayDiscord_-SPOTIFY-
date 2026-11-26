@@ -7,7 +7,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>SkyLyrics.Desktop</AssemblyName>
     <RootNamespace>SkyLyrics.Desktop</RootNamespace>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
