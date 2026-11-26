@@ -99,6 +99,11 @@
                 CornerRadius="20" Padding="21"
                 Effect="{StaticResource CardShadowEffect}">
             <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="230"/>
+                </Grid.ColumnDefinitions>
                 <Border Height="2" VerticalAlignment="Top" CornerRadius="1" Margin="2,0,2,0"
                         IsHitTestVisible="False" Opacity="0.72">
                     <Border.Background>
@@ -109,11 +114,6 @@
                         </LinearGradientBrush>
                     </Border.Background>
                 </Border>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="230"/>
-                </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="NOW PLAYING" Style="{StaticResource EyebrowTextStyle}"
