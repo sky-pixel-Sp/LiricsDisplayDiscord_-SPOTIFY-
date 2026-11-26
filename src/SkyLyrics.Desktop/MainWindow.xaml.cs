@@ -132,23 +132,8 @@ public partial class MainWindow : Window
             UpdateProgressDisplay(track, position);
     }
 
-    private static TimeSpan GetEstimatedPosition(SpotifyTrackSnapshot track)
-    {
-        if (!track.IsPlaying)
-            return track.Position;
-
-        var anchor = track.PositionUpdatedAtUtc == default
-            ? DateTimeOffset.UtcNow
-            : track.PositionUpdatedAtUtc;
-        var elapsed = DateTimeOffset.UtcNow - anchor;
-        if (elapsed < TimeSpan.Zero)
-            elapsed = TimeSpan.Zero;
-
-        var estimated = track.Position + elapsed;
-        return track.Duration is { } duration && duration > TimeSpan.Zero && estimated > duration
-            ? duration
-            : estimated;
-    }
+    private static TimeSpan GetEstimatedPosition(SpotifyTrackSnapshot track) =>
+        PlaybackPositionEstimator.Estimate(track, DateTimeOffset.UtcNow);
 
     private void UpdateProgressDisplay(SpotifyTrackSnapshot track, TimeSpan position)
     {
