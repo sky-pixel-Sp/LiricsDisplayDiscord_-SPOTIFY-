@@ -34,14 +34,16 @@ public sealed class SpotifySessionMonitor : IDisposable
         GlobalSystemMediaTransportControlsSessionManager sender,
         CurrentSessionChangedEventArgs args)
     {
-        await SelectSpotifySessionAsync();
+        try { await SelectSpotifySessionAsync(); }
+        catch { SnapshotChanged?.Invoke(null); }
     }
 
     private async void Manager_SessionsChanged(
         GlobalSystemMediaTransportControlsSessionManager sender,
         SessionsChangedEventArgs args)
     {
-        await SelectSpotifySessionAsync();
+        try { await SelectSpotifySessionAsync(); }
+        catch { SnapshotChanged?.Invoke(null); }
     }
 
     private async Task SelectSpotifySessionAsync()
@@ -142,6 +144,11 @@ public sealed class SpotifySessionMonitor : IDisposable
         {
             await PublishSnapshotCoreAsync(refreshMediaProperties);
         }
+        catch
+        {
+            // A transient GSMTC/WinRT failure must not escape an async-void event handler.
+            SnapshotChanged?.Invoke(null);
+        }
         finally
         {
             _refreshGate.Release();
@@ -202,6 +209,5 @@ public sealed class SpotifySessionMonitor : IDisposable
         }
 
         DetachSession();
-        _refreshGate.Dispose();
     }
 }
