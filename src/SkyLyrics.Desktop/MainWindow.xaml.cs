@@ -290,12 +290,13 @@ public partial class MainWindow : Window
         {
             var block = new TextBlock
             {
-                FontSize = 17,
+                FontSize = 18,
                 FontWeight = FontWeights.Normal,
                 Foreground = MutedLyricsBrush(),
                 Opacity = 0.68,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 7, 0, 7),
+                Margin = new Thickness(0, 10, 0, 10),
+                TextAlignment = TextAlignment.Center,
                 RenderTransform = new TranslateTransform(0, 3),
                 RenderTransformOrigin = new Point(0.5, 0.5)
             };
@@ -447,10 +448,11 @@ public partial class MainWindow : Window
         LyricsPanel.Children.Add(new TextBlock
         {
             Text = message,
-            FontSize = 14,
+            FontSize = 13,
             Foreground = new SolidColorBrush(_isDark ? Color.FromRgb(139, 153, 149) : Color.FromRgb(100, 112, 106)),
+            TextAlignment = TextAlignment.Center,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 8, 0, 8)
+            Margin = new Thickness(0, 10, 0, 10)
         });
     }
 
@@ -508,14 +510,7 @@ public partial class MainWindow : Window
     private void ThemeButton_Click(object sender, RoutedEventArgs e)
     {
         _isDark = !_isDark;
-        Background = new SolidColorBrush(_isDark ? Color.FromRgb(16, 20, 20) : Color.FromRgb(242, 246, 244));
-        Foreground = new SolidColorBrush(_isDark ? Color.FromRgb(242, 245, 244) : Color.FromRgb(29, 42, 37));
-        RootGrid.Background = Background;
-        ThemeButton.Content = _isDark ? "Light theme" : "Dark theme";
-        Resources["AccentBrush"] = new SolidColorBrush(_isDark
-            ? Color.FromRgb(88, 214, 198)
-            : Color.FromRgb(24, 133, 117));
-        UpdateThemeBorders();
+        ApplyTheme();
 
         if (_lyrics is not null)
         {
@@ -524,33 +519,47 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateThemeBorders()
+    private void ApplyTheme()
     {
-        foreach (var border in FindVisualChildren<Border>(RootGrid))
-        {
-            if (border.CornerRadius != new CornerRadius(18))
-                continue;
+        var palette = _isDark
+            ? new Dictionary<string, Color>
+            {
+                ["WindowBackgroundBrush"] = Color.FromRgb(12, 18, 16),
+                ["SurfaceBrush"] = Color.FromRgb(19, 28, 25),
+                ["SurfaceElevatedBrush"] = Color.FromRgb(25, 36, 31),
+                ["StrokeBrush"] = Color.FromRgb(38, 53, 46),
+                ["TextPrimaryBrush"] = Color.FromRgb(238, 245, 241),
+                ["TextSecondaryBrush"] = Color.FromRgb(167, 182, 174),
+                ["TextMutedBrush"] = Color.FromRgb(115, 132, 123),
+                ["AccentBrush"] = Color.FromRgb(103, 215, 176),
+                ["AccentSoftBrush"] = Color.FromRgb(29, 56, 46),
+                ["ButtonSurfaceBrush"] = Color.FromRgb(27, 43, 36),
+                ["ButtonForegroundBrush"] = Color.FromRgb(234, 247, 240),
+                ["ProgressTrackBrush"] = Color.FromRgb(38, 53, 46)
+            }
+            : new Dictionary<string, Color>
+            {
+                ["WindowBackgroundBrush"] = Color.FromRgb(242, 246, 243),
+                ["SurfaceBrush"] = Color.FromRgb(255, 255, 255),
+                ["SurfaceElevatedBrush"] = Color.FromRgb(247, 251, 248),
+                ["StrokeBrush"] = Color.FromRgb(222, 232, 225),
+                ["TextPrimaryBrush"] = Color.FromRgb(24, 37, 31),
+                ["TextSecondaryBrush"] = Color.FromRgb(82, 100, 90),
+                ["TextMutedBrush"] = Color.FromRgb(116, 133, 123),
+                ["AccentBrush"] = Color.FromRgb(22, 134, 94),
+                ["AccentSoftBrush"] = Color.FromRgb(226, 244, 234),
+                ["ButtonSurfaceBrush"] = Color.FromRgb(230, 242, 235),
+                ["ButtonForegroundBrush"] = Color.FromRgb(23, 74, 55),
+                ["ProgressTrackBrush"] = Color.FromRgb(222, 232, 225)
+            };
 
-            border.Background = new SolidColorBrush(_isDark
-                ? Color.FromRgb(25, 33, 31)
-                : Colors.White);
-            border.BorderBrush = new SolidColorBrush(_isDark
-                ? Color.FromRgb(44, 57, 53)
-                : Color.FromRgb(218, 228, 222));
-        }
-    }
+        foreach (var (key, color) in palette)
+            Application.Current.Resources[key] = new SolidColorBrush(color);
 
-    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
-    {
-        var count = VisualTreeHelper.GetChildrenCount(parent);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            if (child is T match)
-                yield return match;
-            foreach (var descendant in FindVisualChildren<T>(child))
-                yield return descendant;
-        }
+        Background = (Brush)FindResource("WindowBackgroundBrush");
+        Foreground = (Brush)FindResource("TextPrimaryBrush");
+        RootGrid.Background = Brushes.Transparent;
+        ThemeButton.Content = _isDark ? "Light theme" : "Dark theme";
     }
 
     private static string FormatTime(TimeSpan value) =>
