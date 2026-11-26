@@ -251,7 +251,7 @@
                 <ScrollViewer x:Name="LyricsScrollViewer"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
-                              CanContentScroll="True">
+                              CanContentScroll="False">
                     <StackPanel x:Name="LyricsPanel">
                         <StackPanel x:Name="LyricsEmptyText" Margin="0,52,0,0"
                                     HorizontalAlignment="Center" MaxWidth="430" Opacity="0.92">
