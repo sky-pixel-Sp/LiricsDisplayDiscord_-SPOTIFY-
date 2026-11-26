@@ -1,7 +1,5 @@
 using System.Buffers.Binary;
-using System.Diagnostics;
 using System.IO.Pipes;
-using System.Text;
 using System.Text.Json;
 using SkyLyrics.Core.Models;
 
@@ -127,8 +125,8 @@ public sealed class DiscordRpcClient : IAsyncDisposable
             {
                 using (var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
-                    connectTimeout.CancelAfter(TimeSpan.FromMilliseconds(900));
-                    await candidate.ConnectAsync(900, connectTimeout.Token);
+                    connectTimeout.CancelAfter(TimeSpan.FromMilliseconds(150));
+                    await candidate.ConnectAsync(150, connectTimeout.Token);
                 }
 
                 var handshake = JsonSerializer.SerializeToUtf8Bytes(new
