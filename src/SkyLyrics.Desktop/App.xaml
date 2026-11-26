@@ -21,7 +21,6 @@
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-            <Setter Property="CharacterSpacing" Value="110"/>
         </Style>
 
         <Style x:Key="QuietButtonStyle" TargetType="{x:Type Button}">
