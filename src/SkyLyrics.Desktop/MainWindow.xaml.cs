@@ -53,6 +53,8 @@ public partial class MainWindow : Window
     private DateTimeOffset _manualScrollUntil = DateTimeOffset.MinValue;
     private AppearanceSettings _appearance = AppearanceSettings.Default;
     private GameModeWindow? _gameModeWindow;
+    private bool _mainWindowHiddenForGameMode;
+    private bool _isClosing;
 
     public MainWindow()
     {
@@ -69,6 +71,7 @@ public partial class MainWindow : Window
         Loaded += MainWindow_Loaded;
         Closed += async (_, _) =>
         {
+            _isClosing = true;
             _discordRetryTimer.Stop();
             _timer.Stop();
             _scrollAnimationTimer.Stop();
@@ -848,20 +851,27 @@ public partial class MainWindow : Window
         if (_gameModeWindow is not null)
         {
             _gameModeWindow.Close();
-            _gameModeWindow = null;
-            GameModeButton.Content = "Game mode";
             return;
         }
 
-        _gameModeWindow = new GameModeWindow(_appearance) { Owner = this };
+        _gameModeWindow = new GameModeWindow(_appearance);
         _gameModeWindow.Closed += (_, _) =>
         {
             _gameModeWindow = null;
             GameModeButton.Content = "Game mode";
+            if (!_isClosing && _mainWindowHiddenForGameMode)
+            {
+                _mainWindowHiddenForGameMode = false;
+                Show();
+                WindowState = WindowState.Normal;
+                Activate();
+            }
         };
         _gameModeWindow.Show();
         GameModeButton.Content = "Exit game mode";
         UpdateGameModeLine(_activeLineIndex);
+        _mainWindowHiddenForGameMode = true;
+        Hide();
     }
 
     private void ApplyAppearance()
