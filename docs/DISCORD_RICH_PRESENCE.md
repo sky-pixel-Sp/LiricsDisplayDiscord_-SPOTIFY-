@@ -1,33 +1,32 @@
-# Discord Rich Presence
+# Discord Rich Presence — integration status
 
-SkyLyrics Desktop can publish the current Spotify Desktop track to a user's Discord profile through Discord's local Windows IPC interface.
+## Target behavior
 
-## First-time setup
-
-1. Open the Discord Developer Portal: https://discord.com/developers/applications
-2. Create an application named **SkyLyrics Desktop** (or a name you prefer).
-3. On the application's **General Information** page, copy **Application ID**.
-4. In SkyLyrics Desktop, click **Set up** or the Discord settings gear, then paste the numeric Application ID.
-5. Keep the Discord desktop client running and enable activity sharing in Discord's Activity Privacy settings.
-
-Only the public Application ID is saved, at %LOCALAPPDATA%\SkyLyrics\discord-app-id.txt. Do not paste a bot token, client secret, password, or OAuth token into SkyLyrics.
-
-## Presence behavior
+SkyLyrics should publish the current Spotify Desktop track to the user's Discord profile:
 
 - Activity type: Listening.
-- Details: the current Spotify track title.
-- State: the current artist; a paused track is marked Paused.
-- Playback timestamps: derived from Windows GSMTC position and duration. The timer is omitted while paused.
-- Track changes update the activity. Discord IPC is retried after the Discord client is restarted.
-- Presence is cleared when Spotify has no current track, when the user disconnects, and when SkyLyrics closes.
+- Details: current Spotify track title.
+- State: artist, with a Paused indicator when playback is paused.
+- Timestamps: based only on Windows GSMTC playback position and duration.
+- Clear the presence when Spotify has no active track, when the user disconnects, or when SkyLyrics exits.
 
-SkyLyrics does not publish lyric text, access Discord messages, join voice channels, send messages, control Discord, or capture/record audio. Spotify remains the playback controller.
+No lyrics, Discord messages, voice-channel data, audio capture, or playback controls are part of this integration.
 
-## Requirements and limitations
+## Discord setup requirements
 
-- Windows desktop build of SkyLyrics.
-- Discord Desktop must be running on the same Windows user session.
-- The Discord application must have a valid Application ID.
-- The user's Discord activity-sharing/privacy settings must allow activity to be shown.
+A Discord application must be registered in the [Discord Developer Portal](https://discord.com/developers/applications). Copy the public Application ID from the application's General Information page. Discord Desktop must be running and activity sharing must be enabled.
 
-The Discord application registration is user-owned configuration. SkyLyrics does not embed a fabricated Application ID and does not need a bot account or user OAuth login for basic local Rich Presence.
+## Important implementation compatibility note
+
+Discord documents two related but distinct integration paths:
+
+1. The general RPC-over-IPC documentation describes the `discord-ipc-{n}` named pipe and the `SET_ACTIVITY` command. It also states that RPC commands require an authenticated client.
+2. The newer Discord Social SDK documents a desktop Rich Presence path that does not require OAuth authentication. It requires a registered Application ID, a running Discord desktop client, and the official native SDK.
+
+The current Phase 5 draft contains a minimal raw IPC prototype. Its Windows build and unit tests pass, but those checks do not prove that Discord will accept an unauthenticated `SET_ACTIVITY` command on a live desktop client. **Do not treat this draft as release-ready or merge it until the live protocol path is validated and moved to the supported Social SDK flow if needed.**
+
+The Social SDK is distributed separately through the authenticated Discord Developer Portal. Its native runtime must be bundled with the application in accordance with Discord's SDK terms. It must not be copied into this public source repository as a loose SDK distribution.
+
+## Privacy
+
+The intended direct Rich Presence path does not require a bot account, bot token, Discord password, or user OAuth login. Only the public Application ID is saved locally. If a different authenticated RPC path is chosen, that would require an explicit product decision and user consent; it must not be enabled silently.
