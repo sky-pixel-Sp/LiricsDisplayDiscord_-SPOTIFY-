@@ -10,7 +10,10 @@
         FontFamily="Segoe UI Variable"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
-    <Grid x:Name="RootGrid" Margin="26">
+    <Grid x:Name="RootGrid" Margin="26" Opacity="0">
+        <Grid.RenderTransform>
+            <TranslateTransform Y="12"/>
+        </Grid.RenderTransform>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="18"/>
@@ -19,6 +22,26 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <!-- Static ambient color fields: no animated background loop or per-frame GPU work. -->
+        <Canvas Grid.RowSpan="6" IsHitTestVisible="False" ClipToBounds="True">
+            <Ellipse Width="560" Height="420" Canvas.Left="500" Canvas.Top="-205" Opacity="0.19">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#3267D7B0" Offset="0"/>
+                        <GradientStop Color="#0067D7B0" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Width="420" Height="340" Canvas.Left="-190" Canvas.Top="410" Opacity="0.12">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#293DAB82" Offset="0"/>
+                        <GradientStop Color="#003DAB82" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+            </Ellipse>
+        </Canvas>
 
         <!-- Brand / connection / appearance -->
         <Grid Grid.Row="0">
@@ -53,29 +76,62 @@
                 <Border Background="{DynamicResource SurfaceBrush}"
                         BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                         CornerRadius="11" Padding="12,9" Margin="0,0,10,0">
+                    <Border.RenderTransform>
+                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                    </Border.RenderTransform>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+                        <Ellipse x:Name="ConnectionDot" Width="7" Height="7"
+                                 Fill="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
                         <TextBlock x:Name="ConnectionText" Text="Checking Spotify…"
                                    FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
+                <Border Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                        CornerRadius="11" Padding="10,8" Margin="0,0,7,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="DiscordConnectionDot" Width="7" Height="7"
+                                 Fill="#65736C" Margin="0,0,7,0"/>
+                        <TextBlock x:Name="DiscordStatusText" Text="Discord not configured"
+                                   FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                <Button x:Name="DiscordButton" Content="Set up"
+                        Click="DiscordButton_Click" Style="{StaticResource QuietButtonStyle}"
+                        Padding="12,9" Margin="0,0,5,0"/>
+                <Button x:Name="DiscordSettingsButton" Content="⚙"
+                        Click="DiscordSettingsButton_Click" Style="{StaticResource QuietButtonStyle}"
+                        Padding="10,9" Margin="0,0,9,0" ToolTip="Discord settings"/>
                 <Button x:Name="ThemeButton" Content="Light theme"
                         Click="ThemeButton_Click" Style="{StaticResource QuietButtonStyle}"/>
             </StackPanel>
         </Grid>
 
         <!-- Now playing -->
-        <Border Grid.Row="2"
+        <Border x:Name="NowPlayingCard" Grid.Row="2" Opacity="0"
+                MouseEnter="SurfaceCard_MouseEnter" MouseLeave="SurfaceCard_MouseLeave"
                 Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
-                CornerRadius="20" Padding="21">
+                CornerRadius="20" Padding="21"
+                Effect="{StaticResource CardShadowEffect}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="230"/>
                 </Grid.ColumnDefinitions>
+                <Border Height="2" VerticalAlignment="Top" CornerRadius="1" Margin="2,0,2,0"
+                        IsHitTestVisible="False" Opacity="0.72">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#0067D7B0" Offset="0"/>
+                            <GradientStop Color="#A167D7B0" Offset="0.48"/>
+                            <GradientStop Color="#0067D7B0" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="NOW PLAYING" Style="{StaticResource EyebrowTextStyle}"
@@ -83,7 +139,11 @@
                     <TextBlock x:Name="TrackTitle" Text="Open Spotify Desktop to begin"
                                FontSize="25" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}"
-                               TextTrimming="CharacterEllipsis" TextWrapping="Wrap"/>
+                               TextTrimming="CharacterEllipsis" TextWrapping="Wrap">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="0"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
                     <TextBlock x:Name="TrackArtist" Text="Your current track will appear here"
                                FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
@@ -95,11 +155,39 @@
 
                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
                     <Border Background="{DynamicResource AccentSoftBrush}"
-                            CornerRadius="8" Padding="9,5"
+                            CornerRadius="9" Padding="10,6"
                             HorizontalAlignment="Left" Margin="0,0,0,10">
-                        <TextBlock x:Name="PlaybackText" Text="WAITING FOR SPOTIFY"
-                                   FontSize="9" FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentBrush}"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse x:Name="PlaybackDot" Width="6" Height="6"
+                                     Fill="{DynamicResource AccentBrush}" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="PlaybackText" Text="WAITING FOR SPOTIFY"
+                                       FontSize="9" FontWeight="Bold"
+                                       Foreground="{DynamicResource AccentBrush}"/>
+                            <StackPanel x:Name="PlaybackEqualizer" Orientation="Horizontal"
+                                        Height="12" Margin="9,0,0,0"
+                                        VerticalAlignment="Center" Visibility="Collapsed">
+                                <Border x:Name="EqualizerBar1" Width="2.5" Height="5" Margin="1,0" RenderTransformOrigin="0.5,1"
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="2"
+                                        VerticalAlignment="Bottom">
+                                    <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
+                                                                    </Border>
+                                <Border x:Name="EqualizerBar2" Width="2.5" Height="10" Margin="1,0" RenderTransformOrigin="0.5,1"
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="2"
+                                        VerticalAlignment="Bottom">
+                                    <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
+                                </Border>
+                                <Border x:Name="EqualizerBar3" Width="2.5" Height="7" Margin="1,0" RenderTransformOrigin="0.5,1"
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="2"
+                                        VerticalAlignment="Bottom">
+                                    <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
+                                </Border>
+                                <Border x:Name="EqualizerBar4" Width="2.5" Height="11" Margin="1,0" RenderTransformOrigin="0.5,1"
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="2"
+                                        VerticalAlignment="Bottom">
+                                    <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
                     </Border>
                     <TextBlock x:Name="PositionText" Text="0:00 / 0:00"
                                FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
@@ -138,23 +226,25 @@
                     </Border>
                 </StackPanel>
 
-                <Button Grid.Column="1" Content="Import lyrics"
+                <Button x:Name="ImportButton" Grid.Column="1" Content="Import lyrics"
                         Click="ImportLyrics_Click"
                         Style="{StaticResource AccentButtonStyle}"
                         Padding="16,9"/>
             </Grid>
 
-            <Border Grid.Row="2"
+            <Border x:Name="LyricsCard" Grid.Row="2" Opacity="0"
+                    MouseEnter="SurfaceCard_MouseEnter" MouseLeave="SurfaceCard_MouseLeave"
                     Background="{DynamicResource SurfaceBrush}"
                     BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
-                    CornerRadius="20" Padding="24">
+                    CornerRadius="20" Padding="24"
+                    Effect="{StaticResource CardShadowEffect}">
                 <ScrollViewer x:Name="LyricsScrollViewer"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               CanContentScroll="True">
                     <StackPanel x:Name="LyricsPanel">
                         <StackPanel x:Name="LyricsEmptyText" Margin="0,52,0,0"
-                                    HorizontalAlignment="Center" MaxWidth="430">
+                                    HorizontalAlignment="Center" MaxWidth="430" Opacity="0.92">
                             <Border Width="54" Height="54" CornerRadius="17"
                                     Background="{DynamicResource AccentSoftBrush}"
                                     HorizontalAlignment="Center" Margin="0,0,0,18">
@@ -188,7 +278,7 @@
                 <TextBlock Text="Lyrics are never fabricated · Unsynced sources stay labeled"
                            FontSize="10" Foreground="{DynamicResource TextMutedBrush}"/>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="SKYLyrics  /  WINDOWS 11"
+            <TextBlock Grid.Column="1" Text="SKYLyrics  /  v0.3.0  /  WINDOWS 11"
                        FontSize="9" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextMutedBrush}"
                        VerticalAlignment="Center"/>
