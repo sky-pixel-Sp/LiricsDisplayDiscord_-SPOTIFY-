@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="../SkyLyrics.Core/SkyLyrics.Core.csproj" />
     <ProjectReference Include="../SkyLyrics.Windows/SkyLyrics.Windows.csproj" />
+    <ProjectReference Include="../SkyLyrics.Persistence/SkyLyrics.Persistence.csproj" />
   </ItemGroup>
 </Project>
