@@ -158,19 +158,16 @@
                                         Background="{DynamicResource AccentBrush}" CornerRadius="2"
                                         VerticalAlignment="Bottom">
                                     <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
-                                    <Border.RenderTransformOrigin>0.5,1</Border.RenderTransformOrigin>
                                 </Border>
                                 <Border x:Name="EqualizerBar3" Width="2.5" Height="7" Margin="1,0" RenderTransformOrigin="0.5,1"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="2"
                                         VerticalAlignment="Bottom">
                                     <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
-                                    <Border.RenderTransformOrigin>0.5,1</Border.RenderTransformOrigin>
                                 </Border>
                                 <Border x:Name="EqualizerBar4" Width="2.5" Height="11" Margin="1,0" RenderTransformOrigin="0.5,1"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="2"
                                         VerticalAlignment="Bottom">
                                     <Border.RenderTransform><ScaleTransform ScaleY="0.5"/></Border.RenderTransform>
-                                    <Border.RenderTransformOrigin>0.5,1</Border.RenderTransformOrigin>
                                 </Border>
                             </StackPanel>
                         </StackPanel>
