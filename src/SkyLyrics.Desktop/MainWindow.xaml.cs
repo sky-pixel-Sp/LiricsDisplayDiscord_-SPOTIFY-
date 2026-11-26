@@ -51,6 +51,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         _timer.Tick += Timer_Tick;
         _scrollAnimationTimer.Tick += ScrollAnimationTimer_Tick;
+        Activated += (_, _) => RefreshPlaybackMotion();
+        Deactivated += (_, _) => RefreshPlaybackMotion();
+        StateChanged += (_, _) => RefreshPlaybackMotion();
         Loaded += MainWindow_Loaded;
         Closed += (_, _) =>
         {
@@ -106,8 +109,7 @@ public partial class MainWindow : Window
             TrackArtist.Text = "SkyLyrics monitors Spotify Desktop through Windows media sessions.";
             PositionText.Text = "—";
             TrackProgress.Value = 0;
-            SetConnectionAnimation(false);
-            SetPlaybackAnimations(false);
+            RefreshPlaybackMotion();
             UpdateRenderInterval();
             return;
         }
@@ -120,8 +122,7 @@ public partial class MainWindow : Window
         TrackArtist.Text = track.Artist;
         PlaybackText.Text = track.IsPlaying ? "PLAYING" : "PAUSED";
 
-        SetConnectionAnimation(true);
-        SetPlaybackAnimations(track.IsPlaying);
+        RefreshPlaybackMotion();
 
         if (trackChanged)
         {
@@ -890,6 +891,13 @@ public partial class MainWindow : Window
                     EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
                 });
         }
+    }
+
+    private void RefreshPlaybackMotion()
+    {
+        var windowCanAnimate = IsActive && WindowState != WindowState.Minimized;
+        SetConnectionAnimation(windowCanAnimate && _currentTrack is not null);
+        SetPlaybackAnimations(windowCanAnimate && _currentTrack?.IsPlaying == true);
     }
 
     private void SetPlaybackAnimations(bool isPlaying)
