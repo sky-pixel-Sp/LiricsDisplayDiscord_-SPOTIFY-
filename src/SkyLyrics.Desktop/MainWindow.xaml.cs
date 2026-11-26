@@ -823,10 +823,10 @@ public partial class MainWindow : Window
         return group;
     }
 
-    private void SurfaceCard_MouseEnter(object sender, RoutedEventArgs e) =>
+    private void SurfaceCard_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) =>
         AnimateSurfaceScale(sender, 1.006);
 
-    private void SurfaceCard_MouseLeave(object sender, RoutedEventArgs e) =>
+    private void SurfaceCard_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) =>
         AnimateSurfaceScale(sender, 1.0);
 
     private static void AnimateSurfaceScale(object sender, double targetScale)
@@ -953,12 +953,13 @@ public partial class MainWindow : Window
         if (FindName("ImportButton") is Button importButton)
         {
             importButton.Background = flash;
-            flash.BeginAnimation(SolidColorBrush.ColorProperty,
-                new ColorAnimation(target, TimeSpan.FromMilliseconds(420))
-                {
-                    AutoReverse = true,
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-                });
+            var animation = new ColorAnimation(target, TimeSpan.FromMilliseconds(420))
+            {
+                AutoReverse = true,
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            animation.Completed += (_, _) => importButton.ClearValue(Control.BackgroundProperty);
+            flash.BeginAnimation(SolidColorBrush.ColorProperty, animation);
         }
     }
 
