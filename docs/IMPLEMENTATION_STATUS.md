@@ -2,58 +2,74 @@
 
 **Project:** SkyLyrics Desktop  
 **Working branch:** `feat/phase-1-native-foundation`  
-**PR:** https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-/pull/1
+**Pull request:** https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-/pull/1  
+**Verified source commit:** `90b1fbc2afe1931a0101bd5dcb7ff748b9c6d643`
 
-## Verified implementation
+## Verified GitHub Actions run
 
-At source commit `f0b42eec14125e54ef97157e735911d629a0853e`, GitHub Actions run #6 completed successfully:
+Run [#45807615647](https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-/actions/runs/45807615647) completed successfully on Windows x64.
 
-- Windows x64 restore: passed
-- Release solution build: passed
-- Automated tests: 7 passed, 0 failed, 0 skipped
-- Self-contained Windows x64 publish: passed
-- Executable existence and non-zero size validation: passed
-- Build artifact upload: passed
-- Test-result artifact upload: passed
+- Restore: passed
+- Release build: passed
+- Automated tests: **17 passed, 0 failed, 0 skipped**
+- Self-contained Windows x64 app publish: passed
+- Executable validation: passed
+- Inno Setup 7.1.1 installation: passed
+- Installer compilation: passed
+- Silent install smoke test: passed
+- Uninstall smoke test: passed
+- App, installer, and test artifacts: uploaded
 
-The published file was a PE32+ x86-64 Windows GUI executable. CI reported 165,558,220 bytes before ZIP compression.
+### Artifact integrity
+
+| Artifact | Size | SHA-256 |
+|---|---:|---|
+| `SkyLyrics.Desktop.exe` | 167,852,487 bytes | `758d28218ba3eb14b59b47bb91c6e027505f9709bf292346e9e4911b2c85e1ca` |
+| `SkyLyrics-Desktop-Setup-x64.exe` | 49,365,701 bytes | `13a65ed654504219ea729ff9927d1119cbaae9b3fb179dca3469c6836f4009fd` |
+
+The application payload is PE32+ x86-64. The Setup is an Inno Setup executable that installs only on x64 Windows and places the app in the current user's LocalAppData Programs folder. It does not require elevation. The Setup is currently unsigned.
 
 ## Implemented scope
 
 | Area | Status |
 |---|---|
 | .NET 10 / WPF solution | Implemented |
-| Spotify Desktop GSMTC metadata + timeline | Implemented |
-| LRCLIB exact lookup | Implemented |
+| Spotify Desktop GSMTC metadata and timeline | Implemented |
+| LRCLIB exact metadata lookup | Implemented |
+| Conservative Spotify ↔ LRCLIB metadata validation | Implemented |
 | LRC line timestamp parser | Implemented |
 | Lyricsfile YAML 1.0 parser | Implemented |
 | Provider-supplied word timestamps | Implemented |
-| Active line / word synchronization engine | Implemented |
+| Active line and active word synchronization | Implemented |
 | Animated active-line transitions | Implemented |
+| Adaptive sync refresh cadence | Implemented |
 | LRC / Lyricsfile / TXT local import | Implemented |
 | Dark / Light theme switch | Implemented |
-| SQLite cache | Not implemented |
-| Ambiguous-match selection UI | Not implemented |
-| LRCLIB search fallback | Not implemented |
+| SQLite offline cache with 30-day expiry | Implemented |
+| Cache identity includes title/artist/album/duration | Implemented |
+| Windows x64 self-contained executable | Implemented |
+| Per-user Windows Setup executable | Implemented |
+| Installer/uninstaller smoke test in CI | Implemented |
+| LRCLIB candidate search / ambiguity selector | Not implemented |
 | Floating mini-player / diagnostics screen | Not implemented |
-| Signed installer | Not implemented |
-| Manual app launch test on user's PC | Not performed |
-| Figma editable design frames | Not completed |
+| Code signing | Not implemented |
+| Manual launch on user's PC with Spotify Desktop | Not performed |
+| Figma editable screen frames | Not completed |
 
-## Accuracy invariants
+## Accuracy and privacy invariants
 
 1. Plain lyrics do not acquire generated timestamps.
 2. Word highlighting is enabled only from actual Lyricsfile `lines[].words` timestamps.
-3. Word segments must contain text and a valid `start_ms`; invalid word timing is rejected.
-4. If a Lyricsfile with invalid word timing has valid `syncedLyrics`, the app falls back to those line timestamps.
-5. If the source has no timestamps, the UI labels the lyrics UNSYNCED.
-6. The app does not use Spotify private APIs or capture/record audio.
+3. Word segments must contain text and a valid `start_ms`; malformed word timing is rejected.
+4. If word sync is malformed but synced LRC is available, the app falls back to line timestamps.
+5. LRCLIB metadata is checked against Spotify's title, artist, available album, and duration (2-second tolerance).
+6. Cache identity includes normalized artist/title/album and rounded track duration to reduce collisions between alternate versions.
+7. The app does not use Spotify private APIs or capture/record audio.
 
 ## Next implementation phases
 
-1. SQLite cache with a stable track identity key, cache freshness, and offline retrieval.
-2. LRCLIB candidate search and ambiguity handling.
-3. Session lifecycle hardening: current-session changes, track seeks, pause/resume, reconnect, and stale-request cancellation.
-4. Mini-player, settings, and diagnostics views.
-5. Windows installer packaging, uninstall verification, app metadata, icon, and optional signing.
-6. Manual validation on Windows with Spotify Desktop and a broad set of real tracks.
+1. LRCLIB candidate search plus safe manual selection for ambiguous results.
+2. Dedicated diagnostics and floating mini-player.
+3. Session lifecycle and manual validation: track switches, pause/resume, seek, reconnect, missing provider records, and offline cache.
+4. Windows code signing and release hardening.
+5. Figma editable screens after Figma tool availability is restored.
