@@ -7,6 +7,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SkyLyrics.Core/SkyLyrics.Core.csproj" />
-    <PackageReference Include="Microsoft.Windows.SDK.NET.Ref" Version="10.0.28000.87" />
   </ItemGroup>
 </Project>
