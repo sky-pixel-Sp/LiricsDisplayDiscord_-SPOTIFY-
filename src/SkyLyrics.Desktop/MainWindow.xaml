@@ -54,7 +54,7 @@
                         Background="#263A35" Foreground="#DFF7F1" BorderBrush="#48665D"/>
             </StackPanel>
             <Border Background="#151D1B" CornerRadius="18" BorderBrush="#2C3935" BorderThickness="1" Padding="22">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer x:Name="LyricsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel x:Name="LyricsPanel">
                         <TextBlock x:Name="LyricsEmptyText"
                                    Text="Lyrics will appear when a matching result is found. You can also import your own LRC file."
