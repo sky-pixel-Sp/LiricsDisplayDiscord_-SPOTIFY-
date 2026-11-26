@@ -7,7 +7,8 @@ public sealed record SpotifyTrackSnapshot(
     TimeSpan Position,
     TimeSpan? Duration,
     bool IsPlaying,
-    string SourceAppUserModelId)
+    string SourceAppUserModelId,
+    DateTimeOffset PositionUpdatedAtUtc = default)
 {
     public string MatchKey => $"{Artist.Trim()}\u001f{Title.Trim()}\u001f{Album?.Trim()}";
 }

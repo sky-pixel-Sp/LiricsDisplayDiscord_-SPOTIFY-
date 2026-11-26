@@ -22,7 +22,7 @@ public partial class MainWindow : Window
         "SkyLyrics", "lyrics.db"));
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(12) };
     private readonly LrclibClient _lyricsClient;
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(900) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(33) };
     private readonly List<TextBlock> _lyricLineBlocks = new();
     private readonly List<List<Run>> _lyricWordRuns = new();
 
@@ -34,7 +34,7 @@ public partial class MainWindow : Window
     private int? _activeWordLineIndex;
     private int? _activeWordIndex;
     private TimeSpan _lastPosition;
-    private bool _isRefreshing;
+    private DateTimeOffset _lastProgressUiUpdate = DateTimeOffset.MinValue;
     private bool _isDark = true;
 
     public MainWindow()
@@ -46,6 +46,8 @@ public partial class MainWindow : Window
         Closed += (_, _) =>
         {
             _timer.Stop();
+            _spotify.SnapshotChanged -= Spotify_SnapshotChanged;
+            _spotify.Dispose();
             _httpClient.Dispose();
         };
     }
@@ -64,10 +66,10 @@ public partial class MainWindow : Window
 
         try
         {
+            _spotify.SnapshotChanged += Spotify_SnapshotChanged;
             await _spotify.InitializeAsync();
             ConnectionText.Text = "Spotify session monitor ready";
             _timer.Start();
-            await RefreshPlaybackAsync();
         }
         catch (Exception ex)
         {
@@ -75,70 +77,81 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void Timer_Tick(object? sender, EventArgs e) => await RefreshPlaybackAsync();
-
-    private async Task RefreshPlaybackAsync()
+    private void Spotify_SnapshotChanged(SpotifyTrackSnapshot? snapshot)
     {
-        if (_isRefreshing)
-            return;
-
-        _isRefreshing = true;
-        try
-        {
-            var track = await _spotify.GetCurrentTrackAsync();
-            if (track is null)
-            {
-                ConnectionText.Text = "Spotify Desktop not detected";
-                PlaybackText.Text = "Open Spotify Desktop and start playback";
-                TrackTitle.Text = "No Spotify track detected";
-                TrackArtist.Text = "SkyLyrics monitors Spotify Desktop through Windows media sessions.";
-                PositionText.Text = "—";
-                TrackProgress.Value = 0;
-                _timer.Interval = TimeSpan.FromMilliseconds(900);
-                return;
-            }
-
-            _currentTrack = track;
-            _lastPosition = track.Position;
-            ConnectionText.Text = "Spotify Desktop connected";
-            TrackTitle.Text = track.Title;
-            TrackArtist.Text = track.Artist;
-            PlaybackText.Text = track.IsPlaying ? "PLAYING" : "PAUSED";
-            PositionText.Text = $"{FormatTime(track.Position)} / {(track.Duration is { } duration ? FormatTime(duration) : "—")}";
-            TrackProgress.Value = track.Duration is { } total && total > TimeSpan.Zero
-                ? Math.Clamp(track.Position.TotalMilliseconds / total.TotalMilliseconds * 100, 0, 100)
-                : 0;
-
-            if (!string.Equals(_lastTrackKey, track.MatchKey, StringComparison.Ordinal))
-            {
-                _lastTrackKey = track.MatchKey;
-                await LoadLyricsForTrackAsync(track);
-            }
-
-            UpdatePollingInterval(track.IsPlaying);
-            RenderLyrics(track.Position);
-        }
-        catch (Exception ex)
-        {
-            ConnectionText.Text = $"Session read error: {ex.Message}";
-        }
-        finally
-        {
-            _isRefreshing = false;
-        }
+        Dispatcher.BeginInvoke(new Action(async () => await ApplySnapshotAsync(snapshot)));
     }
 
-    private void UpdatePollingInterval(bool isPlaying)
+    private async Task ApplySnapshotAsync(SpotifyTrackSnapshot? track)
     {
-        var milliseconds = !isPlaying
-            ? 900
-            : _lyrics?.HasWordTimestamps == true
-                ? 110
-                : _lyrics?.HasLineTimestamps == true
-                    ? 260
-                    : 900;
+        if (track is null)
+        {
+            _currentTrack = null;
+            _lastTrackKey = null;
+            ConnectionText.Text = "Spotify Desktop not detected";
+            PlaybackText.Text = "Open Spotify Desktop and start playback";
+            TrackTitle.Text = "No Spotify track detected";
+            TrackArtist.Text = "SkyLyrics monitors Spotify Desktop through Windows media sessions.";
+            PositionText.Text = "—";
+            TrackProgress.Value = 0;
+            UpdateRenderInterval();
+            return;
+        }
 
-        _timer.Interval = TimeSpan.FromMilliseconds(milliseconds);
+        _currentTrack = track;
+        _lastPosition = GetEstimatedPosition(track);
+        ConnectionText.Text = "Spotify Desktop connected";
+        TrackTitle.Text = track.Title;
+        TrackArtist.Text = track.Artist;
+        PlaybackText.Text = track.IsPlaying ? "PLAYING" : "PAUSED";
+
+        if (!string.Equals(_lastTrackKey, track.MatchKey, StringComparison.Ordinal))
+        {
+            _lastTrackKey = track.MatchKey;
+            await LoadLyricsForTrackAsync(track);
+        }
+
+        UpdateRenderInterval();
+        RenderLyrics(_lastPosition);
+        UpdateProgressDisplay(track, _lastPosition);
+    }
+
+    private void Timer_Tick(object? sender, EventArgs e)
+    {
+        if (_currentTrack is not { } track)
+            return;
+
+        var position = GetEstimatedPosition(track);
+        _lastPosition = position;
+
+        // Lyrics are evaluated on a light render clock. Spotify metadata is event-driven
+        // and is never fetched from this timer.
+        RenderLyrics(position);
+
+        if (DateTimeOffset.UtcNow - _lastProgressUiUpdate >= TimeSpan.FromMilliseconds(250))
+            UpdateProgressDisplay(track, position);
+    }
+
+    private static TimeSpan GetEstimatedPosition(SpotifyTrackSnapshot track) =>
+        PlaybackPositionEstimator.Estimate(track, DateTimeOffset.UtcNow);
+
+    private void UpdateProgressDisplay(SpotifyTrackSnapshot track, TimeSpan position)
+    {
+        PositionText.Text = $"{FormatTime(position)} / {(track.Duration is { } duration ? FormatTime(duration) : "—")}";
+        TrackProgress.Value = track.Duration is { } total && total > TimeSpan.Zero
+            ? Math.Clamp(position.TotalMilliseconds / total.TotalMilliseconds * 100, 0, 100)
+            : 0;
+        _lastProgressUiUpdate = DateTimeOffset.UtcNow;
+    }
+
+    private void UpdateRenderInterval()
+    {
+        var hasTimedLyrics = _lyrics?.HasLineTimestamps == true;
+        var isPlaying = _currentTrack?.IsPlaying == true;
+
+        _timer.Interval = isPlaying && hasTimedLyrics
+            ? TimeSpan.FromMilliseconds(33)
+            : TimeSpan.FromMilliseconds(400);
     }
 
     private async Task LoadLyricsForTrackAsync(SpotifyTrackSnapshot track)
@@ -468,7 +481,7 @@ public partial class MainWindow : Window
             _activeLineIndex = null;
             _activeWordLineIndex = null;
             _activeWordIndex = null;
-            _lastPosition = TimeSpan.Zero;
+            _lastPosition = _currentTrack is not null ? GetEstimatedPosition(_currentTrack) : TimeSpan.Zero;
             LyricsStateText.Text = _lyrics.HasWordTimestamps
                 ? "LOCAL · WORD + LINE SYNC"
                 : _lyrics.HasLineTimestamps
