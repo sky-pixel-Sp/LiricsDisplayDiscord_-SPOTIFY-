@@ -47,7 +47,7 @@ A live LRCLIB lookup requires a network connection and remains separate from det
 
 ## Exit criteria
 
-- [ ] Windows x64 build and all unit tests pass.
+- [x] Windows x64 build and all unit tests pass (68/68 tests; 0 compiler warnings and 0 errors).
 - [x] LRCLIB API contract and graceful cached-endpoint fallback are implemented.
 - [x] LRC and Lyricsfile parsing preserve only source-supplied timestamps.
 - [x] SQLite WAL cache with compressed payloads is implemented.
