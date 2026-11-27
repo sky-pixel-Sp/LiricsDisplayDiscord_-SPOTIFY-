@@ -13,6 +13,7 @@ public sealed class GlobalHotkeyService : IDisposable
     private const int FocusHotkeyId = 0x534B01;
     private const int MiniHotkeyId = 0x534B02;
     private const int ShowHotkeyId = 0x534B03;
+    private const int GameModeHotkeyId = 0x534B04;
 
     private readonly Window _window;
     private readonly WindowModeService _windowModes;
@@ -39,6 +40,7 @@ public sealed class GlobalHotkeyService : IDisposable
         Register(FocusHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x4B, "Ctrl+Alt+K · Focus view");
         Register(MiniHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x4D, "Ctrl+Alt+M · Mini player");
         Register(ShowHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x53, "Ctrl+Alt+S · Show main window");
+        Register(GameModeHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x47, "Ctrl+Alt+G · Game Mode");
     }
 
     private void Register(int id, uint modifiers, uint key, string label)
@@ -68,6 +70,10 @@ public sealed class GlobalHotkeyService : IDisposable
                 break;
             case ShowHotkeyId:
                 ShowMainWindow();
+                handled = true;
+                break;
+            case GameModeHotkeyId:
+                _windowModes.ToggleGameMode();
                 handled = true;
                 break;
         }
@@ -117,6 +123,7 @@ public sealed class GlobalHotkeyService : IDisposable
             UnregisterHotKey(_handle, FocusHotkeyId);
             UnregisterHotKey(_handle, MiniHotkeyId);
             UnregisterHotKey(_handle, ShowHotkeyId);
+            UnregisterHotKey(_handle, GameModeHotkeyId);
             _handle = IntPtr.Zero;
         }
     }

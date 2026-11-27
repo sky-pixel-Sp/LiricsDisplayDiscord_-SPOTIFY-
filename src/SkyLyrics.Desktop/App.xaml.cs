@@ -96,6 +96,7 @@ public partial class App : System.Windows.Application
                 mainWindow.ShowFromTray,
                 windowModes.ShowFocusView,
                 windowModes.ToggleMiniPlayer,
+                windowModes.ToggleGameMode,
                 mainWindow.ShowSettings,
                 mainWindow.ShowDiagnostics,
                 () => Dispatcher.BeginInvoke(new Action(() =>

@@ -9,6 +9,7 @@ public sealed record AppPreferences
     public bool DiscordPresenceEnabled { get; init; }
     public string DiscordApplicationId { get; init; } = string.Empty;
     public bool ObsOverlayEnabled { get; init; }
+    public GameModePreferences GameMode { get; init; } = new();
     public int ObsOverlayPort { get; init; } = 43821;
 
     public AppPreferences Normalize()
@@ -20,6 +21,7 @@ public sealed record AppPreferences
             SyncOffsetMilliseconds = Math.Clamp(SyncOffsetMilliseconds, -500, 500),
             DiscordApplicationId = id,
             ObsOverlayPort = Math.Clamp(ObsOverlayPort, 1024, 65535),
+            GameMode = (GameMode ?? new GameModePreferences()).Normalize(),
             DiscordPresenceEnabled = DiscordPresenceEnabled && IsValidDiscordApplicationId(id)
         };
     }
