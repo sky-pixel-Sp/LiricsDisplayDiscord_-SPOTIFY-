@@ -51,7 +51,8 @@ These are planned workstreams, not active controls or completed features.
 | Explicit YouTube Music website/source confirmation | Pending |
 | LRC editor, validation and export | Implemented in the working branch; CI and device acceptance pending |
 | Dual-language lyrics, translation and word-level editing | Pending |
-| Extreme Visual Engine | Pending |
+| Metadata-reactive album ambience, fluid gradient and particle field | Implemented in working branch; CI and device performance acceptance pending |
+| Real audio-reactive spectrum/waveform input | Pending; requires explicit opt-in Windows audio-session capture implementation |
 | Advanced Game Mode | Pending |
 | Integrations and Customization Studio | Pending |
 | Windows device acceptance and release | Pending |

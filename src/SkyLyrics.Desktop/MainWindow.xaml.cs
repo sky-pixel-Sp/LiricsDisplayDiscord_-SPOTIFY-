@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly IAppPreferencesStore _preferences;
     private readonly SyncScheduler _scheduler;
     private readonly ISelectablePlaybackSessionSource _playbackSource;
+    private VisualStudioWindow? _visualStudioWindow;
     private bool _isFullscreen;
     private WindowState _restoreWindowState;
     private WindowStyle _restoreWindowStyle;
@@ -151,6 +152,27 @@ public partial class MainWindow : Window
     {
         ShowFromTray();
         new DiagnosticsWindow(_viewModel) { Owner = this }.Show();
+    }
+
+    private void OpenVisualStudio_Click(object sender, RoutedEventArgs e)
+    {
+        if (_visualStudioWindow is { IsVisible: true })
+        {
+            _visualStudioWindow.Activate();
+            return;
+        }
+
+        var window = new VisualStudioWindow(_viewModel, _preferences) { Owner = this };
+        _visualStudioWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_visualStudioWindow, window))
+            {
+                _visualStudioWindow = null;
+            }
+        };
+        window.Show();
+        window.Activate();
     }
 
     private void OpenFocus_Click(object sender, RoutedEventArgs e) => _windowModes.ShowFocusView();

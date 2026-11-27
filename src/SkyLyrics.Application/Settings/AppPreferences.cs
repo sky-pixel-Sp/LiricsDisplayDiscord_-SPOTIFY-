@@ -13,6 +13,7 @@ public sealed record AppPreferences
     public string DiscordApplicationId { get; init; } = string.Empty;
     public bool ObsOverlayEnabled { get; init; }
     public GameModePreferences GameMode { get; init; } = new();
+    public VisualStudioPreferences Visuals { get; init; } = new();
     public int ObsOverlayPort { get; init; } = 43821;
     public CustomizationPreferences Customization { get; init; } = new();
 
@@ -29,6 +30,7 @@ public sealed record AppPreferences
             DiscordApplicationId = id,
             ObsOverlayPort = Math.Clamp(ObsOverlayPort, 1024, 65535),
             GameMode = (GameMode ?? new GameModePreferences()).Normalize(),
+            Visuals = (Visuals ?? new VisualStudioPreferences()).Normalize(),
             Customization = (Customization ?? new CustomizationPreferences()).Normalize(),
             DiscordPresenceEnabled = DiscordPresenceEnabled && IsValidDiscordApplicationId(id)
         };

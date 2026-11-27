@@ -104,6 +104,39 @@ public sealed class AppPreferencesStoreTests
     }
 
     [Fact]
+    public void Normalize_ClampsVisualSettingsToSupportedModesAndBudgets()
+    {
+        var preferences = new AppPreferences
+        {
+            Visuals = new VisualStudioPreferences
+            {
+                ModeId = "unknown",
+                QualityId = "unknown",
+                Intensity = 140
+            }
+        }.Normalize();
+
+        Assert.Equal("album-ambient", preferences.Visuals.ModeId);
+        Assert.Equal("balanced", preferences.Visuals.QualityId);
+        Assert.Equal(100, preferences.Visuals.Intensity);
+        Assert.Equal(20, preferences.Visuals.ParticleBudget);
+        Assert.Equal(24, preferences.Visuals.FrameRateCap);
+    }
+
+    [Theory]
+    [InlineData("eco", 8, 12)]
+    [InlineData("balanced", 20, 24)]
+    [InlineData("high", 36, 30)]
+    [InlineData("ultra", 56, 45)]
+    public void VisualQualityMapsToBoundedResourceBudget(string quality, int particles, int frameRate)
+    {
+        var preferences = new VisualStudioPreferences { QualityId = quality }.Normalize();
+
+        Assert.Equal(particles, preferences.ParticleBudget);
+        Assert.Equal(frameRate, preferences.FrameRateCap);
+    }
+
+    [Fact]
     public void DiscordApplicationId_RequiresOnlyNumericSnowflakeCharacters()
     {
         Assert.True(AppPreferences.IsValidDiscordApplicationId("12345678901234567"));

@@ -55,6 +55,12 @@
                             <TextBlock Text="Live lyrics" FontSize="12" FontWeight="SemiBold" />
                         </StackPanel>
                     </Button>
+                    <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenVisualStudio_Click" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/list-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Visual Studio" FontSize="12" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenFocus_Click" Margin="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/focus.svg" Width="17" Height="17" Margin="0,0,12,0" />
