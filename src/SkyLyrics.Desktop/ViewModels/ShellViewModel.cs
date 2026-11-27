@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Lyrics;
 using SkyLyrics.Application.Playback;
+using SkyLyrics.Application.Synchronization;
 using SkyLyrics.Core.Lyrics;
 using SkyLyrics.Core.Playback;
 using SkyLyrics.Core.Scene;
@@ -17,9 +18,11 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly IPlaybackSessionSource _playbackSource;
     private readonly ILyricsService _lyricsService;
+    private readonly SyncScheduler _syncScheduler;
     private readonly ILogger<ShellViewModel> _logger;
     private readonly Dispatcher _dispatcher;
     private PlaybackSnapshot? _snapshot;
+    private SceneState _sceneState = SceneState.Empty;
     private LyricsTrackSignature? _requestedSignature;
     private CancellationTokenSource? _lyricsCancellation;
     private long _lyricsGeneration;
@@ -32,14 +35,19 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public ShellViewModel(
         IPlaybackSessionSource playbackSource,
         ILyricsService lyricsService,
+        SyncScheduler syncScheduler,
         ILogger<ShellViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(playbackSource);
         ArgumentNullException.ThrowIfNull(lyricsService);
+        ArgumentNullException.ThrowIfNull(syncScheduler);
         ArgumentNullException.ThrowIfNull(logger);
 
         _playbackSource = playbackSource;
         _lyricsService = lyricsService;
+        _syncScheduler = syncScheduler;
+        _sceneState = syncScheduler.Current;
+        _syncScheduler.SceneChanged += OnSceneChanged;
         _logger = logger;
         _dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         _snapshot = playbackSource.Current;
@@ -182,7 +190,28 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string NextMilestone => "Phase 3 — event-driven SyncScheduler and SceneState";
+    public string ActiveLyricText => _sceneState.ActiveLine?.Text ?? string.Empty;
+
+    public string UpcomingLyricText => _sceneState.NextLine?.Text ?? string.Empty;
+
+    public string ActiveWordText => _sceneState.WordFill?.Word.Text ?? string.Empty;
+
+    public string ActiveWordProgressLabel =>
+        _sceneState.WordFill is { Word.End: not null } fill
+            ? $"{Math.Round(fill.Progress * 100d):0}%"
+            : string.Empty;
+
+    public string SyncPositionLabel => FormatTime(_sceneState.Position);
+
+    public string SyncStatusLabel => _sceneState.PlaybackStatus switch
+    {
+        PlaybackStatus.Playing => "SYNC CLOCK · LIVE",
+        PlaybackStatus.Paused => "SYNC CLOCK · PAUSED",
+        PlaybackStatus.Stopped => "SYNC CLOCK · STOPPED",
+        _ => "SYNC CLOCK · WAITING"
+    };
+
+    public string NextMilestone => "Phase 4 — cinematic renderer and artwork presentation";
 
     public string VersionLabel => $"VERSION {AppVersion.Major}.{AppVersion.Minor}.{AppVersion.Build}";
 
@@ -218,6 +247,41 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void OnSceneChanged(object? sender, SceneStateChangedEventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            ApplySceneState(e.State);
+            return;
+        }
+
+        if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+        {
+            _dispatcher.BeginInvoke(new Action(() => ApplySceneState(e.State)));
+        }
+    }
+
+    private void ApplySceneState(SceneState state)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _sceneState = state;
+        OnPropertyChanged(nameof(ActiveLyricText));
+        OnPropertyChanged(nameof(UpcomingLyricText));
+        OnPropertyChanged(nameof(ActiveWordText));
+        OnPropertyChanged(nameof(ActiveWordProgressLabel));
+        OnPropertyChanged(nameof(SyncPositionLabel));
+        OnPropertyChanged(nameof(SyncStatusLabel));
+    }
+
     private void OnSnapshotChanged(object? sender, PlaybackSessionChangedEventArgs e)
     {
         if (_disposed)
@@ -245,6 +309,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _snapshot = snapshot;
+        _syncScheduler.UpdatePlayback(snapshot, changeKind);
         OnPropertyChanged(nameof(SessionBadgeText));
         OnPropertyChanged(nameof(StatusTitle));
         OnPropertyChanged(nameof(ArtistLine));
@@ -355,6 +420,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         if (error is not null)
         {
+            _syncScheduler.UpdateLyrics(null);
             LyricsModeLabel = "LOOKUP FAILED";
             LyricsText = string.Empty;
             LyricsStatusText = error;
@@ -363,6 +429,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         if (result is null)
         {
+            _syncScheduler.UpdateLyrics(null);
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
             LyricsStatusText = "LRCLIB did not return a matching lyrics record.";
@@ -370,6 +437,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var document = result.Document;
+        _syncScheduler.UpdateLyrics(document);
         LyricsModeLabel = document.SyncMode switch
         {
             LyricsSyncMode.WordSynced => "WORD-SYNCED LYRICS",
@@ -461,6 +529,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         _disposed = true;
         _playbackSource.SnapshotChanged -= OnSnapshotChanged;
+        _syncScheduler.SceneChanged -= OnSceneChanged;
         CancelLyricsLookup();
     }
 }

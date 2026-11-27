@@ -74,7 +74,7 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0"
-                           Text="PHASE 2  /  LYRICS ENGINE"
+                           Text="PHASE 3  /  LIVE SYNC ENGINE"
                            FontSize="11"
                            Foreground="{StaticResource SecondaryText}" />
 
@@ -138,6 +138,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" LastChildFill="False">
@@ -158,7 +159,68 @@
                                    FontSize="11"
                                    Foreground="{StaticResource SecondaryText}"
                                    TextWrapping="Wrap" />
-                        <ScrollViewer Grid.Row="2"
+                        <Border Grid.Row="2"
+                                Margin="0,0,0,14"
+                                Padding="18"
+                                CornerRadius="13"
+                                Background="#111A22"
+                                BorderBrush="#263642"
+                                BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <DockPanel Grid.Row="0" LastChildFill="False">
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Text="ACTIVE LINE"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="{StaticResource SecondaryText}" />
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Text="{Binding SyncPositionLabel}"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBrush}" />
+                                </DockPanel>
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding ActiveLyricText}"
+                                           Margin="0,10,0,5"
+                                           FontSize="27"
+                                           FontWeight="SemiBold"
+                                           LineHeight="36"
+                                           Foreground="{StaticResource PrimaryText}"
+                                           TextWrapping="Wrap" />
+                                <StackPanel Grid.Row="2"
+                                            Orientation="Horizontal"
+                                            Margin="0,2,0,12">
+                                    <TextBlock Text="{Binding ActiveWordText}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBrush}" />
+                                    <TextBlock Text="{Binding ActiveWordProgressLabel}"
+                                               Margin="10,0,0,0"
+                                               FontSize="11"
+                                               Foreground="{StaticResource SecondaryText}" />
+                                </StackPanel>
+                                <DockPanel Grid.Row="3" LastChildFill="False">
+                                    <TextBlock DockPanel.Dock="Left"
+                                               Text="{Binding UpcomingLyricText}"
+                                               FontSize="13"
+                                               Foreground="{StaticResource SecondaryText}"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Text="{Binding SyncStatusLabel}"
+                                               Margin="12,0,0,0"
+                                               FontSize="9"
+                                               FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBrush}" />
+                                </DockPanel>
+                            </Grid>
+                        </Border>
+                        <ScrollViewer Grid.Row="3"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">
                             <TextBlock Text="{Binding LyricsText}"
