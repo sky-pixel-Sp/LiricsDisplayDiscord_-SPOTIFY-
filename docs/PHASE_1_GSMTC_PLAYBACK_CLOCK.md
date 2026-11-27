@@ -39,7 +39,7 @@ A real-device validation still requires Spotify Desktop to be installed and acti
 - [x] Explicit Spotify Desktop identity matching is implemented.
 - [x] Monotonic clock supports rate, pause, resume, seek and timeline bounds.
 - [x] Automated tests cover playback-clock arithmetic and identity matching.
-- [ ] Windows CI passes for this branch.
+- [x] Windows CI passes for this branch (31/31 tests passed, 0 compiler warnings/errors).
 - [ ] Manual Spotify Desktop validation on Windows 11 is recorded.
 
 ## Next phase
