@@ -13,6 +13,8 @@ using Button = System.Windows.Controls.Button;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 using Point = System.Windows.Point;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using Cursor = System.Windows.Input.Cursor;
 
 namespace SkyLyrics.Desktop;
 
