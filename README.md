@@ -8,7 +8,7 @@ A native Windows desktop companion that detects Spotify Desktop playback and dis
 - Language/runtime: C# / .NET 10 LTS
 - Desktop UI: WPF with MVVM and dependency injection
 - Playback source: Windows Global System Media Transport Controls (GSMTC)
-- Lyrics: LRCLIB plus user-selected local LRC files
+- Lyrics: LRCLIB plus user-selected local LRC and Lyricsfile YAML files
 - Persistence: SQLite
 - Outputs: WPF cinema/overlay, local OBS overlay, official Discord Rich Presence, and optional Discord Embedded Activity
 - Repository: sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-
@@ -28,9 +28,10 @@ The core does not depend on any presentation or external-output implementation. 
 
 - Phase 0: .NET solution, immutable scene contract, output-router boundary, WPF composition root, unit tests, and Windows CI.
 - Phase 1: Windows GSMTC session monitor, explicit Spotify Desktop identity matcher, monotonic PlaybackClock, live playback status and timeline display.
-- Phase 2 is planned: LRCLIB provider, LRC and Lyricsfile parsing, and SQLite cache.
+- Phase 2: LRCLIB provider, local LRC/Lyricsfile import, truthful sync-mode labels, generation-safe track lookup, and compressed SQLite cache.
+- Phase 3 is planned: event-driven SyncScheduler and immutable SceneState publication.
 
-See docs/PHASE_0_BASELINE.md, docs/PHASE_1_GSMTC_PLAYBACK_CLOCK.md, docs/PROJECT_SPECIFICATION.md, docs/TECHNICAL_IMPLEMENTATION_PLAN.md, and docs/UI_FIGMA_SPECIFICATION.md.
+See docs/PHASE_0_BASELINE.md, docs/PHASE_1_GSMTC_PLAYBACK_CLOCK.md, docs/PHASE_2_LYRICS_CACHE.md, docs/PROJECT_SPECIFICATION.md, docs/TECHNICAL_IMPLEMENTATION_PLAN.md, and docs/UI_FIGMA_SPECIFICATION.md.
 
 ## Accuracy and privacy requirements
 

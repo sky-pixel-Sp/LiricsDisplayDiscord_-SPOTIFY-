@@ -17,5 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SkyLyrics.Core\SkyLyrics.Core.csproj" />
     <ProjectReference Include="..\..\src\SkyLyrics.Application\SkyLyrics.Application.csproj" />
+    <ProjectReference Include="..\..\src\SkyLyrics.Infrastructure\SkyLyrics.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
