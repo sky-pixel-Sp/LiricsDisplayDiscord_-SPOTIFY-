@@ -17,8 +17,11 @@ namespace SkyLyrics.Desktop.ViewModels;
 
 public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 {
-    private static readonly Version AppVersion =
-        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 2, 0);
+    private static readonly string AppVersion =
+        Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)
+        ?? "2.1.0-preview.1";
 
     private readonly IPlaybackSessionSource _playbackSource;
     private readonly ILyricsService _lyricsService;
@@ -282,9 +285,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _ => "SYNC CLOCK · WAITING"
     };
 
-    public string NextMilestone => "Phase 4 — cinematic renderer and artwork presentation";
+    public string NextMilestone => "SkyLyrics 2.1 — multi-source music companion";
 
-    public string VersionLabel => $"VERSION {AppVersion.Major}.{AppVersion.Minor}.{AppVersion.Build}";
+    public string VersionLabel => $"VERSION {AppVersion}";
 
     public async Task LoadLocalLyricsFileAsync(string filePath)
     {
