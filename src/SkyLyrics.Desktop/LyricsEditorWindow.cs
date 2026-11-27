@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
 using SkyLyrics.Infrastructure.Lyrics;
+using Button = System.Windows.Controls.Button;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace SkyLyrics.Desktop;
 
