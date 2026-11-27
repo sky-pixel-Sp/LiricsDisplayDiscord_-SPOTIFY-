@@ -6,7 +6,7 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 
 ## Current foundation
 
-- Spotify Desktop playback metadata and timeline through Windows GSMTC.
+- Windows GSMTC playback metadata and timeline for Spotify Desktop, recognized Windows Media sessions, and browser media sessions.
 - LRCLIB lyric lookup, exact-match validation and local SQLite caching.
 - User-selected LRC and Lyricsfile YAML import.
 - Line synchronization and source-provided word synchronization.
@@ -24,7 +24,7 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 - **Advanced Game Mode:** click-through, lock/pin, hotkeys, multiple monitors, saved geometry and adaptive rendering.
 - **Customization Studio:** versioned themes, typography, layouts, motion presets and safe import/export.
 
-YouTube Music in a browser may be exposed by Windows only as a Chrome/Edge media session. GSMTC metadata does not reliably identify the website, so a source picker or explicit user selection is required where the website identity cannot be verified. The application must label the detected source accurately.
+YouTube Music in a browser is exposed, when available, as a Chrome/Edge browser media session. GSMTC metadata does not reliably identify the website, so a source picker or explicit user selection is required where the website identity cannot be verified. The application must label the detected source accurately.
 
 ## Platform and architecture
 

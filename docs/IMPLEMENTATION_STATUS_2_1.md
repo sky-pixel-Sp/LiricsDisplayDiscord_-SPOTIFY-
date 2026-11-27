@@ -22,7 +22,7 @@ This is baseline CI evidence only. It is not a claim that the application has be
 - Main application close is not converted into a hide-to-tray action.
 - Focus, Mini Player and Game Mode share the same ShellViewModel/SceneState.
 - Game Mode already supports position persistence, resize handles, topmost/pin, settings and close.
-- Spotify is the only playback source currently selected by the GSMTC monitor.
+- The GSMTC monitor now recognizes exact Spotify identities, known Windows Media player identities and known browser media-session identities. A browser session is not proof that YouTube Music is the website.
 - Discord Rich Presence uses local Discord IPC.
 - OBS output is loopback-only.
 
@@ -45,7 +45,8 @@ These are planned workstreams, not active controls or completed features.
 | Baseline selection and isolated work branch | Complete |
 | 2.1 preview version identity and release metadata | In progress |
 | Window chrome and window-state QA | Pending |
-| Multi-source playback adapters | Pending |
+| Multi-source GSMTC recognition and playback adapter | Implemented in the working branch; awaiting Windows CI and device acceptance |
+| Explicit YouTube Music website/source confirmation | Pending |
 | Advanced Lyrics Studio | Pending |
 | Extreme Visual Engine | Pending |
 | Advanced Game Mode | Pending |

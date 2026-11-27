@@ -62,10 +62,9 @@ public partial class App : System.Windows.Application
 
             builder.Services.AddSingleton<ILyricsProvider, LrclibClient>();
             builder.Services.AddSingleton<ILyricsService, LyricsService>();
-            builder.Services.AddSingleton<SpotifyAppIdentityMatcher>();
-            builder.Services.AddSingleton<SpotifyGsmTcSessionMonitor>();
-            builder.Services.AddSingleton<IPlaybackSessionSource>(services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
-            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
+            builder.Services.AddSingleton<WindowsMediaSessionMonitor>();
+            builder.Services.AddSingleton<IPlaybackSessionSource>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
 
             builder.Services.AddSingleton<SyncScheduler>();
             builder.Services.AddSingleton<ShellViewModel>();

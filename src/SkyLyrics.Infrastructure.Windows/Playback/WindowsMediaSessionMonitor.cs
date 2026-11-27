@@ -9,13 +9,17 @@ using Windows.Storage.Streams;
 
 namespace SkyLyrics.Infrastructure.Windows.Playback;
 
-public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSessionSource
+/// <summary>
+/// Publishes one selected, supported Windows media session through the application's
+/// shared playback clock. Browser sessions remain labelled as browser sessions because
+/// GSMTC does not expose a reliable website identity.
+/// </summary>
+public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSessionSource
 {
     private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaximumReconnectDelay = TimeSpan.FromSeconds(30);
 
-    private readonly ILogger<SpotifyGsmTcSessionMonitor> _logger;
-    private readonly SpotifyAppIdentityMatcher _identityMatcher;
+    private readonly ILogger<WindowsMediaSessionMonitor> _logger;
     private readonly TimeProvider _timeProvider;
     private readonly PlaybackClock _clock;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
@@ -26,14 +30,12 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
     private PlaybackSnapshot? _current;
     private CancellationToken _stoppingToken;
 
-    public SpotifyGsmTcSessionMonitor(
-        ILogger<SpotifyGsmTcSessionMonitor> logger,
-        SpotifyAppIdentityMatcher identityMatcher,
+    public WindowsMediaSessionMonitor(
+        ILogger<WindowsMediaSessionMonitor> logger,
         TimeProvider timeProvider)
     {
-        _logger = logger;
-        _identityMatcher = identityMatcher;
-        _timeProvider = timeProvider;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _clock = new PlaybackClock(timeProvider);
     }
 
@@ -58,7 +60,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
                 _manager.SessionsChanged += OnSessionsChanged;
                 _manager.CurrentSessionChanged += OnCurrentSessionChanged;
 
-                _logger.LogInformation("GSMTC session manager is ready.");
+                _logger.LogInformation("Windows GSMTC media session manager is ready.");
                 await RefreshSelectedSessionAsync(
                     PlaybackSessionChangeKind.Connected,
                     refreshMediaProperties: true,
@@ -73,7 +75,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
             }
             catch (Exception exception)
             {
-                _logger.LogWarning(exception, "GSMTC session manager failed. Retrying in {Delay}.", reconnectDelay);
+                _logger.LogWarning(exception, "Windows GSMTC session manager failed. Retrying in {Delay}.", reconnectDelay);
             }
             finally
             {
@@ -142,7 +144,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "GSMTC event refresh failed.");
+            _logger.LogWarning(exception, "Windows media-session event refresh failed.");
         }
     }
 
@@ -161,12 +163,13 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
                 return;
             }
 
-            var sessions = manager.GetSessions().ToArray();
-            var spotifySessions = sessions
-                .Where(session => _identityMatcher.IsMatch(session.SourceAppUserModelId))
+            var sessions = manager.GetSessions()
+                .Where(session => MediaSessionIdentityMatcher
+                    .Resolve(session.SourceAppUserModelId)
+                    .IsSupported)
                 .ToArray();
 
-            var selectedSession = SelectSession(manager, spotifySessions);
+            var selectedSession = SelectSession(manager, sessions);
             if (selectedSession is null)
             {
                 var hadSession = _activeSession is not null || _current is not null;
@@ -209,30 +212,36 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
 
     private static GlobalSystemMediaTransportControlsSession? SelectSession(
         GlobalSystemMediaTransportControlsSessionManager manager,
-        IReadOnlyList<GlobalSystemMediaTransportControlsSession> spotifySessions)
+        IReadOnlyList<GlobalSystemMediaTransportControlsSession> supportedSessions)
     {
-        if (spotifySessions.Count == 0)
+        if (supportedSessions.Count == 0)
         {
             return null;
         }
 
-        var playingSession = spotifySessions.FirstOrDefault(session =>
-            session.GetPlaybackInfo().PlaybackStatus ==
-            GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing);
-
-        if (playingSession is not null)
-        {
-            return playingSession;
-        }
-
         var currentSession = manager.GetCurrentSession();
-        if (currentSession is not null &&
-            spotifySessions.Any(session => Equals(session, currentSession)))
+        var playingSessions = supportedSessions
+            .Where(session => session.GetPlaybackInfo().PlaybackStatus ==
+                              GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+            .ToArray();
+
+        if (currentSession is not null && playingSessions.Any(session => Equals(session, currentSession)))
         {
             return currentSession;
         }
 
-        return spotifySessions[0];
+        if (playingSessions.Length > 0)
+        {
+            return playingSessions[0];
+        }
+
+        if (currentSession is not null &&
+            supportedSessions.Any(session => Equals(session, currentSession)))
+        {
+            return currentSession;
+        }
+
+        return supportedSessions[0];
     }
 
     private async Task PublishActiveSessionAsync(
@@ -261,7 +270,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                _logger.LogDebug(exception, "GSMTC did not return media metadata for the selected session.");
+                _logger.LogDebug(exception, "The selected Windows media session did not return metadata.");
             }
         }
 
@@ -303,6 +312,9 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
             kind = PlaybackSessionChangeKind.Connected;
         }
         else if (!SameTrackMetadata(current.Track, snapshot.Track) ||
+                 !StringComparer.OrdinalIgnoreCase.Equals(
+                     current.SourceAppUserModelId,
+                     snapshot.SourceAppUserModelId) ||
                  requestedKind == PlaybackSessionChangeKind.TrackChanged)
         {
             kind = PlaybackSessionChangeKind.TrackChanged;
@@ -335,7 +347,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
             if (stream.Size == 0 || stream.Size > MaximumArtworkBytes)
             {
                 _logger.LogDebug(
-                    "Spotify artwork was skipped because its payload size {ArtworkSize} is outside the supported range.",
+                    "Media artwork was skipped because its payload size {ArtworkSize} is outside the supported range.",
                     stream.Size);
                 return ImmutableArray<byte>.Empty;
             }
@@ -355,7 +367,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "The active GSMTC session did not expose readable album artwork.");
+            _logger.LogDebug(exception, "The active Windows media session did not expose readable artwork.");
             return ImmutableArray<byte>.Empty;
         }
     }

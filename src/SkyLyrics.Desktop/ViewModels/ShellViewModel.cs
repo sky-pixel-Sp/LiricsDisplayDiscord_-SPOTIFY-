@@ -38,7 +38,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private long _lyricsGeneration;
     private bool _disposed;
 
-    private string _lyricsStatusText = "Waiting for Spotify playback.";
+    private string _lyricsStatusText = "Waiting for media playback.";
     private string _lyricsModeLabel = "NO LYRICS";
     private string _lyricsText = string.Empty;
 
@@ -72,7 +72,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string SessionBadgeText =>
-        _snapshot is null ? "SPOTIFY NOT DETECTED" : "SPOTIFY CONNECTED";
+        _snapshot is null
+            ? "NO MEDIA SESSION"
+            : $"{MediaSessionIdentityMatcher.Resolve(_snapshot.SourceAppUserModelId).DisplayName.ToUpperInvariant()} CONNECTED";
 
     public string StatusTitle
     {
@@ -84,7 +86,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
                 return title;
             }
 
-            return _snapshot is null ? "Waiting for Spotify Desktop" : "Spotify session connected";
+            return _snapshot is null ? "Waiting for music playback" : "Media session connected";
         }
     }
 
@@ -114,12 +116,12 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         {
             if (_snapshot is null)
             {
-                return "Start Spotify Desktop and begin playback. SkyLyrics is listening for its Windows media session; browser player sessions are not selected.";
+                return "Start Spotify Desktop, a browser music player, or Windows Media. SkyLyrics will use a supported Windows media session.";
             }
 
             if (string.IsNullOrWhiteSpace(_snapshot.Track?.Title))
             {
-                return "Spotify Desktop is connected, but Windows has not supplied a track title yet.";
+                return "The media session is connected, but Windows has not supplied a track title yet.";
             }
 
             return "Playback metadata and timeline are received through Windows GSMTC.";
@@ -131,7 +133,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         PlaybackStatus.Playing => "PLAYING",
         PlaybackStatus.Paused => "PAUSED",
         PlaybackStatus.Stopped => "STOPPED",
-        _ => _snapshot is null ? "WAITING FOR SESSION" : "SESSION AVAILABLE"
+        _ => _snapshot is null ? "WAITING FOR MEDIA SESSION" : "SESSION AVAILABLE"
     };
 
     public string PositionLabel
@@ -153,7 +155,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public string SourceIdentityLabel =>
         _snapshot is null
             ? "SOURCE  —"
-            : $"SOURCE  {_snapshot.SourceAppUserModelId}";
+            : $"SOURCE  {MediaSessionIdentityMatcher.Resolve(_snapshot.SourceAppUserModelId).DisplayName}";
 
     public string LyricsStatusText
     {
@@ -238,8 +240,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public bool HasAlbumArtwork => _albumArtwork is not null;
 
     public string ArtworkAvailabilityLabel => HasAlbumArtwork
-        ? "ARTWORK · SPOTIFY MEDIA SESSION"
-        : "ARTWORK NOT PROVIDED BY SPOTIFY SESSION";
+        ? "ARTWORK · WINDOWS MEDIA SESSION"
+        : "ARTWORK NOT PROVIDED BY MEDIA SESSION";
 
     public string StageEmptyStateText
     {
@@ -247,7 +249,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         {
             if (_snapshot is null)
             {
-                return "Connect Spotify Desktop to begin.";
+                return "Connect a supported music session to begin.";
             }
 
             if (_activeLyricsDocument is null)
@@ -447,7 +449,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "NO LYRICS";
             LyricsText = string.Empty;
-            LyricsStatusText = "Waiting for Spotify playback.";
+            LyricsStatusText = "Waiting for media playback.";
             return;
         }
 
