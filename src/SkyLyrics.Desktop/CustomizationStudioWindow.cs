@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,6 +7,16 @@ using Microsoft.Win32;
 using SkyLyrics.Application.Customization;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Desktop.Services;
+using Button = System.Windows.Controls.Button;
+using ComboBox = System.Windows.Controls.ComboBox;
+using ListBox = System.Windows.Controls.ListBox;
+using Panel = System.Windows.Controls.Panel;
+using Slider = System.Windows.Controls.Slider;
+using TextBox = System.Windows.Controls.TextBox;
+using FontFamily = System.Windows.Media.FontFamily;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using MessageBox = System.Windows.MessageBox;
 
 namespace SkyLyrics.Desktop;
 
@@ -17,7 +28,7 @@ public sealed class CustomizationStudioWindow : Window
         { "sage", "midnight", "paper" };
 
     private readonly IAppPreferencesStore _preferences;
-    private readonly List<ThemeProfile> _profiles;
+    private readonly ObservableCollection<ThemeProfile> _profiles;
     private readonly ThemeProfile _originalActive;
     private readonly ListBox _profileList = new();
     private readonly TextBox _name = new();
@@ -39,7 +50,7 @@ public sealed class CustomizationStudioWindow : Window
     {
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         var customization = preferences.Current.Customization.Normalize();
-        _profiles = customization.Profiles.ToList();
+        _profiles = new ObservableCollection<ThemeProfile>(customization.Profiles);
         _originalActive = _profiles.First(profile =>
             StringComparer.OrdinalIgnoreCase.Equals(profile.Id, customization.ActiveProfileId));
 
@@ -341,7 +352,6 @@ public sealed class CustomizationStudioWindow : Window
             return;
 
         _profiles.Remove(selected);
-        _profileList.Items.Refresh();
         _profileList.SelectedItem = _profiles.FirstOrDefault(profile =>
             StringComparer.OrdinalIgnoreCase.Equals(profile.Id, _preferences.Current.Customization.ActiveProfileId))
             ?? _profiles.FirstOrDefault();
