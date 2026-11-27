@@ -88,7 +88,7 @@ public sealed class GameModeWindow : Window
         var root = new Grid { Margin = new Thickness(8) };
         _surface.CornerRadius = new CornerRadius(20);
         _surface.BorderThickness = new Thickness(1.2);
-        _surface.BorderBrush = MakeGradient("#8DE8D1", "#426E86");
+        _surface.BorderBrush = MakeGradient("#A8E6CF", "#526D62");
         _surface.Padding = new Thickness(22, 14, 22, 14);
         _surface.Effect = new DropShadowEffect
         {
@@ -120,7 +120,7 @@ public sealed class GameModeWindow : Window
             Width = 8,
             Height = 8,
             CornerRadius = new CornerRadius(4),
-            Background = Brush("#8DE8D1"),
+            Background = Brush("#A8E6CF"),
             Margin = new Thickness(0, 0, 9, 0)
         };
         brand.Children.Add(mark);
@@ -129,7 +129,7 @@ public sealed class GameModeWindow : Window
             Text = "SKYLYRICS",
             FontSize = 10,
             FontWeight = FontWeights.Bold,
-            Foreground = Brush("#DDF8F0"),
+            Foreground = Brush("#F0F4F0"),
             VerticalAlignment = VerticalAlignment.Center
         });
         brand.Children.Add(new TextBlock
@@ -137,7 +137,7 @@ public sealed class GameModeWindow : Window
             Text = "  /  GAME MODE",
             FontSize = 9,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brush("#9DB8BD"),
+            Foreground = Brush("#A8B1B6"),
             VerticalAlignment = VerticalAlignment.Center
         });
         dragSurface.Child = brand;
@@ -153,7 +153,7 @@ public sealed class GameModeWindow : Window
         _pinButton.Content = _settings.AlwaysOnTop ? "PINNED" : "UNPINNED";
         _pinButton.ToolTip = "Toggle always-on-top";
         _pinButton.Click += (_, _) => UpdateSettings(_settings with { AlwaysOnTop = !_settings.AlwaysOnTop });
-        StyleHeaderButton(_pinButton, "#1E3D3C", "#83E1D2");
+        StyleHeaderButton(_pinButton, "#1C302A", "#A8E6CF");
         var settingsButton = CreateHeaderButton("⚙", "Game Mode settings");
         settingsButton.Click += (_, _) => OpenSettings();
         var closeButton = CreateHeaderButton("×", "Close Game Mode");
@@ -175,7 +175,7 @@ public sealed class GameModeWindow : Window
         _lyric.TextTrimming = TextTrimming.CharacterEllipsis;
         _lyric.MaxHeight = 110;
         _lyric.VerticalAlignment = VerticalAlignment.Center;
-        _lyric.Foreground = Brush("#F5FBFA");
+        _lyric.Foreground = Brush("#F4F5F2");
         _lyric.RenderTransformOrigin = new Point(0.5d, 0.5d);
         var transforms = new TransformGroup();
         transforms.Children.Add(_scale);
@@ -189,12 +189,12 @@ public sealed class GameModeWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _meta.FontSize = 9;
-        _meta.Foreground = Brush("#B4C9CD");
+        _meta.Foreground = Brush("#BCC7C3");
         _meta.TextTrimming = TextTrimming.CharacterEllipsis;
         _meta.VerticalAlignment = VerticalAlignment.Center;
         footer.Children.Add(_meta);
         _status.FontSize = 9;
-        _status.Foreground = Brush("#8DE8D1");
+        _status.Foreground = Brush("#A8E6CF");
         _status.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(_status, 1);
         footer.Children.Add(_status);
@@ -395,11 +395,11 @@ public sealed class GameModeWindow : Window
     {
         var colors = preset switch
         {
-            "ocean" => ("#071B2B", "#0F4760", "#176D72"),
-            "violet" => ("#17152F", "#3B326C", "#76517A"),
-            "sunset" => ("#28151D", "#663844", "#AC6949"),
-            "graphite" => ("#10181D", "#293840", "#48545C"),
-            _ => ("#081D24", "#19534C", "#2E7966")
+            "ocean" => ("#11181B", "#344F49", "#567B6C"),
+            "violet" => ("#25242F", "#4A455F", "#756273"),
+            "sunset" => ("#241A1B", "#59403C", "#8C6751"),
+            "graphite" => ("#10171A", "#323F42", "#56615F"),
+            _ => ("#111C1B", "#2D5B4D", "#608D74")
         };
 
         var brush = new LinearGradientBrush
@@ -427,8 +427,8 @@ public sealed class GameModeWindow : Window
 
     private static Effect? TextEffect(string preset) => preset switch
     {
-        "mint-glow" => new DropShadowEffect { Color = ColorFrom("#67E6C5"), BlurRadius = 15, ShadowDepth = 0, Opacity = 0.72, RenderingBias = RenderingBias.Performance },
-        "ice-glow" => new DropShadowEffect { Color = ColorFrom("#7DDCFF"), BlurRadius = 16, ShadowDepth = 0, Opacity = 0.7, RenderingBias = RenderingBias.Performance },
+        "mint-glow" => new DropShadowEffect { Color = ColorFrom("#A8E6CF"), BlurRadius = 15, ShadowDepth = 0, Opacity = 0.72, RenderingBias = RenderingBias.Performance },
+        "ice-glow" => new DropShadowEffect { Color = ColorFrom("#A3CFCB"), BlurRadius = 16, ShadowDepth = 0, Opacity = 0.7, RenderingBias = RenderingBias.Performance },
         "soft-shadow" => new DropShadowEffect { Color = Colors.Black, BlurRadius = 9, ShadowDepth = 3, Opacity = 0.42, RenderingBias = RenderingBias.Performance },
         _ => null
     };
@@ -450,9 +450,9 @@ public sealed class GameModeWindow : Window
             Margin = new Thickness(4, 0, 0, 0),
             FontSize = 11,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brush("#EAF7F3"),
-            Background = Brush("#1A3437"),
-            BorderBrush = Brush("#41686A"),
+            Foreground = Brush("#E8F0EB"),
+            Background = Brush("#253833"),
+            BorderBrush = Brush("#637B70"),
             BorderThickness = new Thickness(1),
             Cursor = Cursors.Hand
         };
@@ -467,7 +467,7 @@ public sealed class GameModeWindow : Window
         button.Margin = new Thickness(4, 0, 0, 0);
         button.FontSize = 9;
         button.FontWeight = FontWeights.Bold;
-        button.Foreground = Brush("#EAF7F3");
+        button.Foreground = Brush("#E8F0EB");
         button.Background = Brush(background);
         button.BorderBrush = Brush(border);
         button.BorderThickness = new Thickness(1);
