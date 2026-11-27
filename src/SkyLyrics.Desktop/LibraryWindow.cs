@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using Binding = System.Windows.Data.Binding;
 using System.Windows.Media;
 using SkyLyrics.Application.Lyrics;
 using SkyLyrics.Desktop.ViewModels;
