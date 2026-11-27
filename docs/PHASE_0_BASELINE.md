@@ -26,7 +26,7 @@ CI does not launch the WPF window because that requires an interactive desktop s
 - [x] Immutable scene-state and output-sink contracts exist.
 - [x] Output delivery isolates individual sink failures.
 - [x] Unit tests cover core invariants and output routing.
-- [ ] Windows CI run is green on the Phase 0 branch.
+- [x] Windows CI run is green on the Phase 0 branch (8/8 tests passed).
 
 ## Next phase
 
