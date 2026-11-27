@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Playback;
+using SkyLyrics.Application.Settings;
 using SkyLyrics.Core.Playback;
 using SkyLyrics.Core.Scene;
 using Windows.Media.Control;
@@ -14,7 +15,7 @@ namespace SkyLyrics.Infrastructure.Windows.Playback;
 /// shared playback clock. Browser sessions remain labelled as browser sessions because
 /// GSMTC does not expose a reliable website identity.
 /// </summary>
-public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSessionSource
+public sealed class WindowsMediaSessionMonitor : BackgroundService, ISelectablePlaybackSessionSource
 {
     private static readonly TimeSpan InitialReconnectDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaximumReconnectDelay = TimeSpan.FromSeconds(30);
@@ -22,6 +23,9 @@ public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSes
     private readonly ILogger<WindowsMediaSessionMonitor> _logger;
     private readonly TimeProvider _timeProvider;
     private readonly PlaybackClock _clock;
+    private readonly IAppPreferencesStore _preferences;
+    private PlaybackSessionDescriptor[] _availableSessions = [];
+    private string? _selectedSourceAppUserModelId;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
@@ -32,16 +36,24 @@ public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSes
 
     public WindowsMediaSessionMonitor(
         ILogger<WindowsMediaSessionMonitor> logger,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IAppPreferencesStore preferences)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _clock = new PlaybackClock(timeProvider);
+        _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+        _selectedSourceAppUserModelId = _preferences.Current.SelectedMediaSessionSourceAppUserModelId;
+        _preferences.PreferencesChanged += OnPreferencesChanged;
     }
 
     public PlaybackSnapshot? Current => Volatile.Read(ref _current);
 
     public event EventHandler<PlaybackSessionChangedEventArgs>? SnapshotChanged;
+
+    public event EventHandler? AvailableSessionsChanged;
+
+    public IReadOnlyList<PlaybackSessionDescriptor> AvailableSessions => Volatile.Read(ref _availableSessions);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -170,6 +182,7 @@ public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSes
                     .IsSupported)
                 .ToArray();
 
+            UpdateAvailableSessions(sessions);
             var selectedSession = SelectSession(manager, sessions);
             if (selectedSession is null)
             {
@@ -211,13 +224,24 @@ public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSes
         }
     }
 
-    private static GlobalSystemMediaTransportControlsSession? SelectSession(
+    private GlobalSystemMediaTransportControlsSession? SelectSession(
         GlobalSystemMediaTransportControlsSessionManager manager,
         IReadOnlyList<GlobalSystemMediaTransportControlsSession> supportedSessions)
     {
         if (supportedSessions.Count == 0)
         {
             return null;
+        }
+
+        var preferredSource = Volatile.Read(ref _selectedSourceAppUserModelId);
+        if (!string.IsNullOrWhiteSpace(preferredSource))
+        {
+            var preferred = supportedSessions.FirstOrDefault(session =>
+                StringComparer.OrdinalIgnoreCase.Equals(session.SourceAppUserModelId, preferredSource));
+            if (preferred is not null)
+            {
+                return preferred;
+            }
         }
 
         var currentSession = manager.GetCurrentSession();
@@ -243,6 +267,48 @@ public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSes
         }
 
         return supportedSessions[0];
+    }
+
+    private void OnPreferencesChanged(AppPreferences preferences)
+    {
+        Volatile.Write(ref _selectedSourceAppUserModelId, preferences.SelectedMediaSessionSourceAppUserModelId);
+        QueueRefresh(PlaybackSessionChangeKind.Connected, refreshMediaProperties: true);
+    }
+
+    private void UpdateAvailableSessions(
+        IReadOnlyList<GlobalSystemMediaTransportControlsSession> sessions)
+    {
+        var descriptors = sessions
+            .Select(session =>
+            {
+                var identity = MediaSessionIdentityMatcher.Resolve(session.SourceAppUserModelId);
+                var isPlaying = session.GetPlaybackInfo().PlaybackStatus ==
+                                GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+
+                return new PlaybackSessionDescriptor(
+                    session.SourceAppUserModelId,
+                    identity.DisplayName,
+                    isPlaying);
+            })
+            .GroupBy(session => session.SourceAppUserModelId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(session => session.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var previous = Volatile.Read(ref _availableSessions);
+        if (previous.SequenceEqual(descriptors))
+        {
+            return;
+        }
+
+        Volatile.Write(ref _availableSessions, descriptors);
+        AvailableSessionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _preferences.PreferencesChanged -= OnPreferencesChanged;
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task PublishActiveSessionAsync(
