@@ -1,4 +1,7 @@
 using System.Collections.Immutable;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using SkyLyrics.Application.Playback;
 using SkyLyrics.Core.Lyrics;
 using SkyLyrics.Core.Playback;
 using SkyLyrics.Core.Scene;
@@ -16,6 +19,7 @@ public sealed class SyncScheduler : IDisposable
 
     private readonly object _gate = new();
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<SyncScheduler> _logger;
     private readonly PlaybackClock _clock;
     private readonly ITimer _timer;
 
@@ -26,9 +30,12 @@ public sealed class SyncScheduler : IDisposable
     private SceneState _current = SceneState.Empty;
     private bool _disposed;
 
-    public SyncScheduler(TimeProvider? timeProvider = null)
+    public SyncScheduler(
+        TimeProvider? timeProvider = null,
+        ILogger<SyncScheduler>? logger = null)
     {
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _logger = logger ?? NullLogger<SyncScheduler>.Instance;
         _clock = new PlaybackClock(_timeProvider);
         _timer = _timeProvider.CreateTimer(
             static state => ((SyncScheduler)state!).OnBoundaryTimer(),
@@ -436,9 +443,12 @@ public sealed class SyncScheduler : IDisposable
             {
                 handler(this, args);
             }
-            catch
+            catch (Exception exception)
             {
-                // A presentation/output subscriber must not break the synchronization clock.
+                _logger.LogError(
+                    exception,
+                    "Scene state subscriber failed at revision {SceneRevision}.",
+                    state.Revision);
             }
         }
     }
