@@ -41,6 +41,7 @@ public sealed class AppPreferencesStoreTests
             {
                 Theme = "Light",
                 SyncOffsetMilliseconds = -125,
+                SelectedMediaSessionSourceAppUserModelId = "chrome.exe",
                 ReduceMotion = true,
                 ObsOverlayEnabled = true,
                 ObsOverlayPort = 43822,
@@ -68,6 +69,7 @@ public sealed class AppPreferencesStoreTests
 
             Assert.Equal("Light", restored.Current.Theme);
             Assert.Equal(-125, restored.Current.SyncOffsetMilliseconds);
+            Assert.Equal("chrome.exe", restored.Current.SelectedMediaSessionSourceAppUserModelId);
             Assert.True(restored.Current.ReduceMotion);
             Assert.True(restored.Current.ObsOverlayEnabled);
             Assert.Equal(43822, restored.Current.ObsOverlayPort);
@@ -85,6 +87,20 @@ public sealed class AppPreferencesStoreTests
                 Directory.Delete(directory, recursive: true);
             }
         }
+    }
+
+    [Theory]
+    [InlineData("  Spotify.exe  ", "Spotify.exe")]
+    [InlineData("   ", null)]
+    [InlineData(null, null)]
+    public void Normalize_CleansSelectedMediaSource(string? input, string? expected)
+    {
+        var preferences = new AppPreferences
+        {
+            SelectedMediaSessionSourceAppUserModelId = input
+        }.Normalize();
+
+        Assert.Equal(expected, preferences.SelectedMediaSessionSourceAppUserModelId);
     }
 
     [Fact]

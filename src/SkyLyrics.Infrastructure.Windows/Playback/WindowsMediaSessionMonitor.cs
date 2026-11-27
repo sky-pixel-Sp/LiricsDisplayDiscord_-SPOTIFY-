@@ -81,6 +81,7 @@ public sealed class WindowsMediaSessionMonitor : BackgroundService, IPlaybackSes
             {
                 DetachSession();
                 DetachManager();
+                UpdateAvailableSessions([]);
                 _clock.Reset();
                 PublishSnapshot(null, PlaybackSessionChangeKind.Disconnected);
             }

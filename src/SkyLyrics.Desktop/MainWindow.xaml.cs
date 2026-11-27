@@ -8,6 +8,7 @@ using Microsoft.Win32;
 using SkyLyrics.Desktop.ViewModels;
 using SkyLyrics.Desktop.Services;
 using SkyLyrics.Application.Settings;
+using SkyLyrics.Application.Playback;
 using SkyLyrics.Application.Synchronization;
 
 namespace SkyLyrics.Desktop;
@@ -18,18 +19,25 @@ public partial class MainWindow : Window
     private readonly WindowModeService _windowModes;
     private readonly IAppPreferencesStore _preferences;
     private readonly SyncScheduler _scheduler;
+    private readonly ISelectablePlaybackSessionSource _playbackSource;
     private bool _isFullscreen;
     private WindowState _restoreWindowState;
     private WindowStyle _restoreWindowStyle;
     private ResizeMode _restoreResizeMode;
 
-    public MainWindow(ShellViewModel viewModel, WindowModeService windowModes, IAppPreferencesStore preferences, SyncScheduler scheduler)
+    public MainWindow(
+        ShellViewModel viewModel,
+        WindowModeService windowModes,
+        IAppPreferencesStore preferences,
+        SyncScheduler scheduler,
+        ISelectablePlaybackSessionSource playbackSource)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         _viewModel = viewModel;
         _windowModes = windowModes ?? throw new ArgumentNullException(nameof(windowModes));
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+        _playbackSource = playbackSource ?? throw new ArgumentNullException(nameof(playbackSource));
         InitializeComponent();
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -136,7 +144,7 @@ public partial class MainWindow : Window
     public void ShowSettings()
     {
         ShowFromTray();
-        new SettingsWindow(_preferences, _scheduler) { Owner = this }.ShowDialog();
+        new SettingsWindow(_preferences, _scheduler, _playbackSource) { Owner = this }.ShowDialog();
     }
 
     public void ShowDiagnostics()

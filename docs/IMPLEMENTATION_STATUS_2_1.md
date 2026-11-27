@@ -23,13 +23,14 @@ This is baseline CI evidence only. It is not a claim that the application has be
 - Main application close is not converted into a hide-to-tray action.
 - Focus, Mini Player and Game Mode share the same ShellViewModel/SceneState.
 - Game Mode already supports position persistence, resize handles, topmost/pin, settings and close.
-- The GSMTC monitor now recognizes exact Spotify identities, known Windows Media player identities and known browser media-session identities. A browser session is not proof that YouTube Music is the website.
+- The GSMTC monitor recognizes exact Spotify identities, known Windows Media player identities and known browser media-session identities.
+- Settings exposes an Automatic or selected detected media-session source and persists the choice. Browser sessions are still not proof that YouTube Music is the website.
 - Discord Rich Presence uses local Discord IPC.
 - OBS output is loopback-only.
 
 ## Not yet implemented in this preview
 
-- Manual per-session source selection and explicit browser-site confirmation.
+- Explicit browser-site confirmation for YouTube Music; browser selection identifies Chrome/Edge, not the website.
 - Additional unrecognized GSMTC application identities beyond the exact supported identity catalog.
 - Dual-language lyric documents and translation workflow.
 - In-app lyric editor and timestamp calibration.
@@ -47,6 +48,7 @@ These are planned workstreams, not active controls or completed features.
 | 2.1 preview version identity and release metadata | Complete; build, test and package CI passed |
 | Window chrome and window-state QA | Native chrome retained and fullscreen button code fixed; manual device acceptance pending |
 | Multi-source GSMTC recognition and playback adapter | Implemented; Windows CI run 46029075732 passed; device acceptance pending |
+| Detected media-session source picker and saved selection | Implemented; awaiting Windows CI and device acceptance |
 | Explicit YouTube Music website/source confirmation | Pending |
 | Advanced Lyrics Studio | Pending |
 | Extreme Visual Engine | Pending |

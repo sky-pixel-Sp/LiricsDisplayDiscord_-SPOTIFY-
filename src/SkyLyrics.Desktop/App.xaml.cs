@@ -64,6 +64,7 @@ public partial class App : System.Windows.Application
             builder.Services.AddSingleton<ILyricsService, LyricsService>();
             builder.Services.AddSingleton<WindowsMediaSessionMonitor>();
             builder.Services.AddSingleton<IPlaybackSessionSource>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
+            builder.Services.AddSingleton<ISelectablePlaybackSessionSource>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
             builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
 
             builder.Services.AddSingleton<SyncScheduler>();

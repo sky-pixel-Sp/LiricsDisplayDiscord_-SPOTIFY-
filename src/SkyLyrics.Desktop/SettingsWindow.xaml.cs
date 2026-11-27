@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using SkyLyrics.Application.Settings;
+using SkyLyrics.Application.Playback;
 using SkyLyrics.Application.Synchronization;
 using SkyLyrics.Desktop.Services;
 
@@ -11,13 +12,53 @@ public partial class SettingsWindow : Window
 {
     private readonly IAppPreferencesStore _preferences;
     private readonly SyncScheduler _scheduler;
+    private readonly ISelectablePlaybackSessionSource _playbackSource;
 
-    public SettingsWindow(IAppPreferencesStore preferences, SyncScheduler scheduler)
+    private sealed record MediaSourceOption(string SourceAppUserModelId, string DisplayName);
+
+    public SettingsWindow(
+        IAppPreferencesStore preferences,
+        SyncScheduler scheduler,
+        ISelectablePlaybackSessionSource playbackSource)
     {
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+        _playbackSource = playbackSource ?? throw new ArgumentNullException(nameof(playbackSource));
         InitializeComponent();
         LoadPreferences();
+        _playbackSource.AvailableSessionsChanged += OnAvailableSessionsChanged;
+        Closed += (_, _) => _playbackSource.AvailableSessionsChanged -= OnAvailableSessionsChanged;
+    }
+
+    private void OnAvailableSessionsChanged(object? sender, EventArgs e)
+    {
+        if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+        {
+            Dispatcher.BeginInvoke(new Action(RefreshMediaSources));
+        }
+    }
+
+    private void RefreshMediaSources()
+    {
+        var selected = _preferences.Current.SelectedMediaSessionSourceAppUserModelId;
+        var options = new List<MediaSourceOption>
+        {
+            new(string.Empty, "Automatic · follow active playing session")
+        };
+
+        options.AddRange(_playbackSource.AvailableSessions.Select(session =>
+            new MediaSourceOption(
+                session.SourceAppUserModelId,
+                $"{session.DisplayName}{(session.IsPlaying ? " · PLAYING" : string.Empty)}")));
+
+        if (!string.IsNullOrWhiteSpace(selected) &&
+            options.All(option => !StringComparer.OrdinalIgnoreCase.Equals(option.SourceAppUserModelId, selected)))
+        {
+            options.Add(new MediaSourceOption(selected, $"{selected} · SAVED SOURCE NOT CURRENTLY AVAILABLE"));
+        }
+
+        MediaSourceCombo.ItemsSource = options;
+        MediaSourceCombo.SelectedValue = selected ?? string.Empty;
     }
 
     private void LoadPreferences()
@@ -33,6 +74,7 @@ public partial class SettingsWindow : Window
         DiscordApplicationIdBox.Text = current.DiscordApplicationId;
         ObsEnabledCheck.IsChecked = current.ObsOverlayEnabled;
         ObsPortBox.Text = current.ObsOverlayPort.ToString(CultureInfo.InvariantCulture);
+        RefreshMediaSources();
     }
 
     private async void ConfigureGameMode_Click(object sender, RoutedEventArgs e)
@@ -79,8 +121,19 @@ public partial class SettingsWindow : Window
         {
             ActiveProfileId = ThemeProfileCombo.SelectedValue as string ?? "sage"
         };
+        var selectedSource = MediaSourceCombo.SelectedValue as string;
+        if (!string.IsNullOrWhiteSpace(selectedSource) &&
+            !_playbackSource.AvailableSessions.Any(session =>
+                StringComparer.OrdinalIgnoreCase.Equals(session.SourceAppUserModelId, selectedSource)))
+        {
+            StatusText.Text = "The selected media source is no longer available. Choose Automatic or refresh the available sessions.";
+            RefreshMediaSources();
+            return;
+        }
+
         var updated = _preferences.Current with
         {
+            SelectedMediaSessionSourceAppUserModelId = string.IsNullOrWhiteSpace(selectedSource) ? null : selectedSource,
             Theme = theme,
             Customization = customization,
             ReduceMotion = ReduceMotionCheck.IsChecked == true,

@@ -6,6 +6,7 @@ public sealed record AppPreferences
 {
     public string Theme { get; init; } = "Dark";
     public int SyncOffsetMilliseconds { get; init; }
+    public string? SelectedMediaSessionSourceAppUserModelId { get; init; }
     public bool ReduceMotion { get; init; }
     public bool MiniPlayerAlwaysOnTop { get; init; } = true;
     public bool DiscordPresenceEnabled { get; init; }
@@ -22,6 +23,9 @@ public sealed record AppPreferences
         {
             Theme = string.Equals(Theme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark",
             SyncOffsetMilliseconds = Math.Clamp(SyncOffsetMilliseconds, -500, 500),
+            SelectedMediaSessionSourceAppUserModelId = string.IsNullOrWhiteSpace(SelectedMediaSessionSourceAppUserModelId)
+                ? null
+                : SelectedMediaSessionSourceAppUserModelId.Trim(),
             DiscordApplicationId = id,
             ObsOverlayPort = Math.Clamp(ObsOverlayPort, 1024, 65535),
             GameMode = (GameMode ?? new GameModePreferences()).Normalize(),
