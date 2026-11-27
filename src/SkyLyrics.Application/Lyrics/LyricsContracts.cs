@@ -106,6 +106,15 @@ public interface ILyricsCache
     Task PutAsync(LyricsCacheEntry entry, CancellationToken cancellationToken);
 }
 
+public interface ILyricsLibrary
+{
+    Task<IReadOnlyList<LyricsCacheEntry>> GetRecentAsync(
+        int limit,
+        CancellationToken cancellationToken);
+
+    Task<bool> DeleteAsync(string cacheKey, CancellationToken cancellationToken);
+}
+
 public interface ILyricsService
 {
     Task<LyricsLookupResult?> GetExactAsync(

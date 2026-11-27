@@ -42,6 +42,7 @@ public partial class App : System.Windows.Application
 
             builder.Services.AddSingleton<SqliteLyricsCache>();
             builder.Services.AddSingleton<ILyricsCache>(services => services.GetRequiredService<SqliteLyricsCache>());
+            builder.Services.AddSingleton<ILyricsLibrary>(services => services.GetRequiredService<SqliteLyricsCache>());
             builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SqliteLyricsCache>());
             builder.Services.AddSingleton<LrcParser>();
             builder.Services.AddSingleton<LyricsFileParser>();

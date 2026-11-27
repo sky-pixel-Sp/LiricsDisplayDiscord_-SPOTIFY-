@@ -87,6 +87,12 @@
                     </Button>
                     <Border Height="1" Margin="7,12,7,14" Background="{DynamicResource PanelBorder}" />
                     <TextBlock Text="TOOLS" Style="{StaticResource EyebrowTextStyle}" Margin="9,0,0,9" />
+                    <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenLibrary_Click" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/list-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Library" FontSize="12" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="ImportLyrics_Click" Margin="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/file-music.svg" Width="17" Height="17" Margin="0,0,12,0" />

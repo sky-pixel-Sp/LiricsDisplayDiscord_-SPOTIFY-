@@ -11,6 +11,7 @@ using SkyLyrics.Desktop.Services;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Application.Playback;
 using SkyLyrics.Application.Synchronization;
+using SkyLyrics.Application.Lyrics;
 
 namespace SkyLyrics.Desktop;
 
@@ -21,6 +22,8 @@ public partial class MainWindow : Window
     private readonly IAppPreferencesStore _preferences;
     private readonly SyncScheduler _scheduler;
     private readonly ISelectablePlaybackSessionSource _playbackSource;
+    private readonly ILyricsLibrary _lyricsLibrary;
+    private LibraryWindow? _libraryWindow;
     private VisualStudioWindow? _visualStudioWindow;
     private bool _isFullscreen;
     private WindowState _restoreWindowState;
@@ -32,7 +35,8 @@ public partial class MainWindow : Window
         WindowModeService windowModes,
         IAppPreferencesStore preferences,
         SyncScheduler scheduler,
-        ISelectablePlaybackSessionSource playbackSource)
+        ISelectablePlaybackSessionSource playbackSource,
+        ILyricsLibrary lyricsLibrary)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         _viewModel = viewModel;
@@ -40,6 +44,7 @@ public partial class MainWindow : Window
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         _playbackSource = playbackSource ?? throw new ArgumentNullException(nameof(playbackSource));
+        _lyricsLibrary = lyricsLibrary ?? throw new ArgumentNullException(nameof(lyricsLibrary));
         InitializeComponent();
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -153,6 +158,27 @@ public partial class MainWindow : Window
     {
         ShowFromTray();
         new DiagnosticsWindow(_viewModel) { Owner = this }.Show();
+    }
+
+    private void OpenLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_libraryWindow is { IsVisible: true })
+        {
+            _libraryWindow.Activate();
+            return;
+        }
+
+        var window = new LibraryWindow(_viewModel, _lyricsLibrary) { Owner = this };
+        _libraryWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_libraryWindow, window))
+            {
+                _libraryWindow = null;
+            }
+        };
+        window.Show();
+        window.Activate();
     }
 
     private void OpenVisualStudio_Click(object sender, RoutedEventArgs e)

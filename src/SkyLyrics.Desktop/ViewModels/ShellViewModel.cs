@@ -690,6 +690,56 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public string VersionLabel => $"VERSION {AppVersion}";
 
+    public bool LoadCachedLyrics(LyricsCacheEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (_disposed)
+        {
+            return false;
+        }
+
+        var signature = _snapshot is null ? null : CreateSignature(_snapshot);
+        if (signature is null)
+        {
+            LyricsStatusText = "Start a supported media session before restoring cached lyrics.";
+            return false;
+        }
+
+        var document = entry.Document;
+        if (string.IsNullOrWhiteSpace(document.Title) ||
+            string.IsNullOrWhiteSpace(document.Artist) ||
+            !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(document.Title), signature.NormalizedTitle) ||
+            !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(document.Artist), signature.NormalizedArtist))
+        {
+            LyricsStatusText = "This cached record does not match the currently playing track. No lyrics were changed.";
+            return false;
+        }
+
+        CancelLyricsLookup();
+        _requestedSignature = signature;
+        _activeLyricsDocument = document;
+        _syncScheduler.UpdateLyrics(document);
+        OnPropertyChanged(nameof(ActiveLyricsDocument));
+        OnPropertyChanged(nameof(StageEmptyStateText));
+
+        LyricsModeLabel = document.SyncMode switch
+        {
+            LyricsSyncMode.WordSynced => "WORD-SYNCED LYRICS",
+            LyricsSyncMode.LineSynced => "LINE-SYNCED LYRICS",
+            LyricsSyncMode.Unsynced => "UNSYNCED — NO TIMESTAMPS",
+            LyricsSyncMode.Instrumental => "INSTRUMENTAL",
+            _ => "LYRICS"
+        };
+        LyricsText = document.Instrumental
+            ? string.Empty
+            : document.SyncMode == LyricsSyncMode.Unsynced && document.PlainText is not null
+                ? document.PlainText
+                : string.Join(Environment.NewLine, document.Lines.Select(static line => line.Text));
+        LyricsStatusText = $"Restored verified cache entry from {entry.Provider} · cached {entry.CachedAtUtc.ToLocalTime():g}.";
+        return true;
+    }
+
     public async Task LoadLocalLyricsFileAsync(string filePath)
     {
         if (_disposed)

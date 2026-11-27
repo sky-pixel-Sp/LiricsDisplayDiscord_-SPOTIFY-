@@ -8,7 +8,7 @@ using SkyLyrics.Core.Lyrics;
 
 namespace SkyLyrics.Infrastructure.Persistence;
 
-public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, IDisposable
+public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLibrary, IDisposable
 {
     private const int MaximumDecompressedPayloadBytes = 8 * 1024 * 1024;
     private const long DefaultMaximumPayloadBytes = 180L * 1024 * 1024;
@@ -136,6 +136,90 @@ public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, IDisposabl
         await update.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
         return new LyricsCacheEntry(cacheKey, provider, providerId, document, cachedAt);
+    }
+
+    public async Task<IReadOnlyList<LyricsCacheEntry>> GetRecentAsync(
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var boundedLimit = Math.Clamp(limit, 1, 200);
+        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+            var rows = new List<(string CacheKey, string Provider, int? ProviderId, byte[] Payload, long CachedAtUtc)>();
+
+            await using (var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false))
+            await using (var command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    SELECT CacheKey, Provider, ProviderId, Payload, CachedAtUtc
+                    FROM LyricsCache
+                    ORDER BY LastAccessedUtc DESC, CachedAtUtc DESC, CacheKey ASC
+                    LIMIT $limit;
+                    """;
+                command.Parameters.AddWithValue("$limit", boundedLimit);
+
+                await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    rows.Add((
+                        reader.GetString(0),
+                        reader.GetString(1),
+                        reader.IsDBNull(2) ? null : reader.GetInt32(2),
+                        (byte[])reader[3],
+                        reader.GetInt64(4)));
+                }
+            }
+
+            var results = new List<LyricsCacheEntry>(rows.Count);
+            foreach (var row in rows)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    var document = await DecompressDocumentAsync(row.Payload, cancellationToken).ConfigureAwait(false);
+                    results.Add(new LyricsCacheEntry(
+                        row.CacheKey,
+                        row.Provider,
+                        row.ProviderId,
+                        document,
+                        DateTimeOffset.FromUnixTimeMilliseconds(row.CachedAtUtc)));
+                }
+                catch (Exception exception) when (exception is InvalidDataException or JsonException or FormatException)
+                {
+                    _logger.LogWarning(
+                        exception,
+                        "Skipping malformed cached lyrics entry {CacheKey}.",
+                        row.CacheKey);
+                }
+            }
+
+            return results;
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    public async Task<bool> DeleteAsync(string cacheKey, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(cacheKey);
+        await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+            await using var connection = await OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM LyricsCache WHERE CacheKey = $cacheKey;";
+            command.Parameters.AddWithValue("$cacheKey", cacheKey);
+            return await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false) > 0;
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task PutAsync(LyricsCacheEntry entry, CancellationToken cancellationToken)
