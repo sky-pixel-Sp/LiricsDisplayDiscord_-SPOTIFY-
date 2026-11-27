@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Outputs;
+using SkyLyrics.Application.Playback;
+using SkyLyrics.Desktop.ViewModels;
+using SkyLyrics.Infrastructure.Windows.Playback;
 
 namespace SkyLyrics.Desktop;
 
@@ -20,6 +23,14 @@ public partial class App : System.Windows.Application
             var builder = Host.CreateApplicationBuilder(e.Args);
             builder.Logging.ClearProviders();
             builder.Logging.AddDebug();
+
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddSingleton<SpotifyAppIdentityMatcher>();
+            builder.Services.AddSingleton<SpotifyGsmTcSessionMonitor>();
+            builder.Services.AddSingleton<IPlaybackSessionSource>(
+                services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
+            builder.Services.AddSingleton<IHostedService>(
+                services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
 
             builder.Services.AddSingleton<SceneStateRouter>();
             builder.Services.AddSingleton<ShellViewModel>();

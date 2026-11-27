@@ -36,7 +36,7 @@
                     Background="#171F29">
                 <StackPanel Orientation="Horizontal">
                     <Ellipse Width="7" Height="7" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="FOUNDATION READY"
+                    <TextBlock Text="{Binding SessionBadgeText}"
                                Margin="8,0,0,0"
                                FontSize="10"
                                FontWeight="SemiBold"
@@ -60,7 +60,7 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0"
-                           Text="PHASE 0  /  SOLUTION BASELINE"
+                           Text="PHASE 1  /  SPOTIFY DESKTOP SESSION"
                            FontSize="11"
                            Foreground="{StaticResource SecondaryText}" />
 
@@ -73,8 +73,13 @@
 
                 <StackPanel Grid.Row="2"
                             VerticalAlignment="Center"
-                            MaxWidth="650">
+                            MaxWidth="680">
+                    <TextBlock Text="{Binding ArtistLine}"
+                               FontSize="15"
+                               Foreground="{StaticResource AccentBrush}"
+                               TextWrapping="Wrap" />
                     <TextBlock Text="{Binding StatusDescription}"
+                               Margin="0,18,0,0"
                                FontSize="16"
                                LineHeight="27"
                                Foreground="{StaticResource SecondaryText}"
@@ -85,22 +90,43 @@
                             Background="#0C1219"
                             BorderBrush="#1F2A35"
                             BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="NEXT MILESTONE"
-                                       FontSize="10"
-                                       Foreground="{StaticResource AccentBrush}"
-                                       FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding NextMilestone}"
-                                       Margin="0,8,0,0"
-                                       FontSize="15"
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding PlaybackStatusLabel}"
+                                           FontSize="10"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding SourceIdentityLabel}"
+                                           Margin="0,8,0,0"
+                                           FontSize="11"
+                                           Foreground="{StaticResource SecondaryText}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding PositionLabel}"
+                                       VerticalAlignment="Center"
+                                       FontSize="20"
+                                       FontWeight="SemiBold"
                                        Foreground="{StaticResource PrimaryText}" />
-                        </StackPanel>
+                        </Grid>
                     </Border>
+                    <TextBlock Text="NEXT MILESTONE"
+                               Margin="0,26,0,0"
+                               FontSize="10"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding NextMilestone}"
+                               Margin="0,8,0,0"
+                               FontSize="15"
+                               Foreground="{StaticResource PrimaryText}" />
                 </StackPanel>
 
                 <DockPanel Grid.Row="3" LastChildFill="False">
                     <TextBlock DockPanel.Dock="Left"
-                               Text="CORE  ·  APPLICATION  ·  WPF"
+                               Text="CORE  ·  APPLICATION  ·  WINDOWS  ·  WPF"
                                FontSize="10"
                                Foreground="{StaticResource SecondaryText}" />
                     <TextBlock DockPanel.Dock="Right"
@@ -113,7 +139,7 @@
 
         <TextBlock Grid.Row="2"
                    Margin="2,18,0,0"
-                   Text="Spotify playback, lyrics retrieval, synchronization and external outputs are introduced in their assigned phases."
+                   Text="Session metadata only. No audio capture, Spotify private endpoints, lyric lookup or playback control in this phase."
                    FontSize="11"
                    Foreground="{StaticResource SecondaryText}"
                    TextWrapping="Wrap" />

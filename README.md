@@ -26,11 +26,11 @@ The core does not depend on any presentation or external-output implementation. 
 
 ## Implementation status
 
-- The default branch currently contains the product and engineering specifications.
-- The Phase 0 branch adds the .NET solution, immutable scene contract, output-router boundary, WPF composition root, unit tests, and Windows CI.
-- Spotify integration, lyrics retrieval, synchronization, rendering, OBS, and Discord are not part of Phase 0.
+- Phase 0: .NET solution, immutable scene contract, output-router boundary, WPF composition root, unit tests, and Windows CI.
+- Phase 1: Windows GSMTC session monitor, explicit Spotify Desktop identity matcher, monotonic PlaybackClock, live playback status and timeline display.
+- Phase 2 is planned: LRCLIB provider, LRC and Lyricsfile parsing, and SQLite cache.
 
-See docs/PHASE_0_BASELINE.md, docs/PROJECT_SPECIFICATION.md, docs/TECHNICAL_IMPLEMENTATION_PLAN.md, and docs/UI_FIGMA_SPECIFICATION.md.
+See docs/PHASE_0_BASELINE.md, docs/PHASE_1_GSMTC_PLAYBACK_CLOCK.md, docs/PROJECT_SPECIFICATION.md, docs/TECHNICAL_IMPLEMENTATION_PLAN.md, and docs/UI_FIGMA_SPECIFICATION.md.
 
 ## Accuracy and privacy requirements
 
