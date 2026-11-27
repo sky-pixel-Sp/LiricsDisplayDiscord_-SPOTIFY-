@@ -260,24 +260,18 @@ public sealed class LibraryWindow : Window
         }
 
         var doc = item.Entry.Document;
-        _details.Text =
-            $"{item.Title}
-
-" +
-            $"{doc.Artist ?? "Artist unavailable"}
-" +
-            $"{doc.Album ?? "Album unavailable"}
-
-" +
-            $"Provider: {item.Entry.Provider}
-" +
-            $"Provider ID: {item.Entry.ProviderId?.ToString() ?? "Not supplied"}
-" +
-            $"Synchronization: {doc.SyncMode}
-" +
-            $"Lines: {doc.Lines.Length}
-" +
-            $"Cached: {item.Entry.CachedAtUtc.ToLocalTime():f}";
+        _details.Text = string.Join(
+            Environment.NewLine,
+            item.Title,
+            string.Empty,
+            doc.Artist ?? "Artist unavailable",
+            doc.Album ?? "Album unavailable",
+            string.Empty,
+            $"Provider: {item.Entry.Provider}",
+            $"Provider ID: {item.Entry.ProviderId?.ToString() ?? "Not supplied"}",
+            $"Synchronization: {doc.SyncMode}",
+            $"Lines: {doc.Lines.Length}",
+            $"Cached: {item.Entry.CachedAtUtc.ToLocalTime():f}");
     }
 
     private void Restore_Click(object sender, RoutedEventArgs e)
