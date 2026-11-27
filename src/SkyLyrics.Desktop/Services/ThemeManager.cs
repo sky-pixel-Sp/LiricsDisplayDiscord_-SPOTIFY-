@@ -65,6 +65,35 @@ public static class ThemeManager
         resources["PrimaryText"] = Brush(primary);
         resources["SecondaryText"] = Brush(secondary);
         resources["MutedText"] = Brush(Mix(secondary, background, 0.28d));
+        resources["LyricsFontFamily"] = new FontFamily(selected.FontFamily);
+        resources["LyricsActiveFontSize"] = 66d * selected.FontScale;
+        resources["LyricsSecondaryFontSize"] = 24d * selected.FontScale;
+        resources["LyricsUpcomingFontSize"] = 22d * selected.FontScale;
+        resources["LyricsWordFontSize"] = 19d * selected.FontScale;
+        resources["LyricsMiniFontSize"] = 17d * selected.FontScale;
+        resources["LyricsTextAlignment"] = selected.LyricAlignment switch
+        {
+            "Left" => TextAlignment.Left,
+            "Right" => TextAlignment.Right,
+            _ => TextAlignment.Center
+        };
+        resources["LyricsArtworkOpacity"] = selected.ArtworkTreatment switch
+        {
+            "Cover" => 0.24d,
+            "Minimal" => 0.04d,
+            "Hidden" => 0d,
+            _ => 0.10d
+        };
+        resources["LyricsArtworkVisibility"] = selected.ArtworkTreatment == "Hidden"
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        resources["LyricsAnimationDurationMilliseconds"] = selected.AnimationPreset switch
+        {
+            "Static" => 0,
+            "Subtle" => 180,
+            "Pulse" => 260,
+            _ => 420
+        };
     }
 
     private static System.Windows.Media.Color Parse(string value) =>

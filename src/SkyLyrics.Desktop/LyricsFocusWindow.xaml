@@ -6,7 +6,7 @@
         Foreground="{DynamicResource PrimaryText}" FontFamily="Segoe UI Variable Display"
         KeyDown="Window_KeyDown">
     <Grid Margin="58">
-        <Image Source="{Binding AlbumArtwork}" Stretch="UniformToFill" Opacity="0.10"
+        <Image Source="{Binding AlbumArtwork}" Stretch="UniformToFill" Opacity="{DynamicResource LyricsArtworkOpacity}" Visibility="{DynamicResource LyricsArtworkVisibility}"
                RenderOptions.BitmapScalingMode="LowQuality"
                Visibility="{Binding HasAlbumArtwork, Converter={StaticResource BooleanToVisibilityConverter}}" />
         <Rectangle>
@@ -40,15 +40,15 @@
             </Grid>
             <Grid Grid.Row="1">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="1500" Margin="36,20">
-                    <TextBlock Text="{Binding PreviousLyricText}" FontSize="24" Foreground="{DynamicResource SecondaryText}"
+                    <TextBlock Text="{Binding PreviousLyricText}" FontSize="{DynamicResource LyricsSecondaryFontSize}" FontFamily="{DynamicResource LyricsFontFamily}" TextAlignment="{DynamicResource LyricsTextAlignment}" Foreground="{DynamicResource SecondaryText}"
                                Opacity="0.64" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,38" />
-                    <TextBlock Text="{Binding ActiveLyricText}" FontSize="66" FontWeight="SemiBold" LineHeight="82"
+                    <TextBlock Text="{Binding ActiveLyricText}" FontSize="{DynamicResource LyricsActiveFontSize}" FontFamily="{DynamicResource LyricsFontFamily}" TextAlignment="{DynamicResource LyricsTextAlignment}" FontWeight="SemiBold" LineHeight="82"
                                Foreground="{DynamicResource PrimaryText}" TextAlignment="Center" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding StageEmptyStateText}" Visibility="{Binding ShowStageEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}" FontSize="19" Foreground="{DynamicResource SecondaryText}"
                                TextAlignment="Center" TextWrapping="Wrap" Margin="0,19,0,0" />
-                    <TextBlock Text="{Binding ActiveWordText}" FontSize="19" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding ActiveWordText}" FontSize="{DynamicResource LyricsWordFontSize}" FontFamily="{DynamicResource LyricsFontFamily}"
                                Foreground="{DynamicResource AccentBrush}" TextAlignment="Center" Margin="0,24,0,0" />
-                    <TextBlock Text="{Binding UpcomingLyricText}" FontSize="22" Foreground="{DynamicResource SecondaryText}"
+                    <TextBlock Text="{Binding UpcomingLyricText}" FontSize="{DynamicResource LyricsUpcomingFontSize}" FontFamily="{DynamicResource LyricsFontFamily}" TextAlignment="{DynamicResource LyricsTextAlignment}" Foreground="{DynamicResource SecondaryText}"
                                Opacity="0.78" TextAlignment="Center" TextWrapping="Wrap" Margin="0,42,0,0" />
                 </StackPanel>
             </Grid>

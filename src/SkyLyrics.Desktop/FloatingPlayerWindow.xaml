@@ -35,7 +35,7 @@
                 </StackPanel>
             </Grid>
             <StackPanel Grid.Row="2">
-                <TextBlock Text="{Binding ActiveLyricText}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="54" />
+                <TextBlock Text="{Binding ActiveLyricText}" FontSize="{DynamicResource LyricsMiniFontSize}" FontFamily="{DynamicResource LyricsFontFamily}" TextAlignment="{DynamicResource LyricsTextAlignment}" FontWeight="SemiBold" TextWrapping="Wrap" MaxHeight="54" />
                 <TextBlock Text="{Binding StageEmptyStateText}" Visibility="{Binding ShowStageEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}" FontSize="10" Foreground="{DynamicResource SecondaryText}"
                            TextWrapping="Wrap" MaxHeight="32" Margin="0,5,0,0" />
                 <Grid Margin="0,10,0,0">
