@@ -22,6 +22,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Assets\\Icons\\*.svg" />
+    <Resource Include="Assets/Icons/*.svg" />
   </ItemGroup>
 </Project>
