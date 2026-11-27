@@ -7,7 +7,7 @@ using SkyLyrics.Application.Outputs;
 
 namespace SkyLyrics.Desktop;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private IHost? _host;
 
