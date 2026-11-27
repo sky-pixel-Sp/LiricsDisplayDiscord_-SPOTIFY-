@@ -243,6 +243,53 @@ public partial class MainWindow : Window
             });
     }
 
+    private async void EditLyrics_Click(object sender, RoutedEventArgs e)
+    {
+        var document = _viewModel.ActiveLyricsDocument;
+        if (document is null)
+        {
+            MessageBox.Show(
+                this,
+                "Load a lyrics document before opening the editor.",
+                "Lyrics Studio",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        if (document.SyncMode == SkyLyrics.Core.Lyrics.LyricsSyncMode.WordSynced)
+        {
+            MessageBox.Show(
+                this,
+                "This document contains word-level timestamps. The standard LRC editor is disabled for it so those timings cannot be lost. Keep the original word-synced source file.",
+                "Word-synced lyrics are protected",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        string sourceText;
+        try
+        {
+            sourceText = _viewModel.CreateLrcExportText();
+        }
+        catch (InvalidOperationException exception)
+        {
+            MessageBox.Show(this, exception.Message, "Lyrics Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var editor = new LyricsEditorWindow(sourceText, document.Title, document.Artist)
+        {
+            Owner = this
+        };
+
+        if (editor.ShowDialog() == true && !string.IsNullOrWhiteSpace(editor.SavedFilePath))
+        {
+            await _viewModel.LoadLocalLyricsFileAsync(editor.SavedFilePath);
+        }
+    }
+
     private async void ImportLyrics_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog

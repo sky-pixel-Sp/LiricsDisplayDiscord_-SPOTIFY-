@@ -32,8 +32,7 @@ This is baseline CI evidence only. It is not a claim that the application has be
 
 - Explicit browser-site confirmation for YouTube Music; browser selection identifies Chrome/Edge, not the website.
 - Additional unrecognized GSMTC application identities beyond the exact supported identity catalog.
-- Dual-language lyric documents and translation workflow.
-- In-app lyric editor and timestamp calibration.
+- Dual-language lyric documents, translation workflow and timestamp calibration.
 - Extreme Visual Engine with optional real audio-session input.
 - Click-through and expanded Advanced Game Mode behavior.
 - Full Customization Studio and all 2.1 navigation sections.
@@ -50,11 +49,14 @@ These are planned workstreams, not active controls or completed features.
 | Multi-source GSMTC recognition and playback adapter | Implemented; Windows CI run 46029075732 passed; device acceptance pending |
 | Detected media-session source picker and saved selection | Implemented; awaiting Windows CI and device acceptance |
 | Explicit YouTube Music website/source confirmation | Pending |
-| Advanced Lyrics Studio | Pending |
+| LRC editor, validation and export | Implemented in the working branch; CI and device acceptance pending |
+| Dual-language lyrics, translation and word-level editing | Pending |
 | Extreme Visual Engine | Pending |
 | Advanced Game Mode | Pending |
 | Integrations and Customization Studio | Pending |
 | Windows device acceptance and release | Pending |
+
+The LRC editor exports line-synced and unsynced documents. It deliberately blocks word-synced documents in this editor because the standard LRC format cannot safely preserve per-word timestamps.
 
 ## Release gates
 

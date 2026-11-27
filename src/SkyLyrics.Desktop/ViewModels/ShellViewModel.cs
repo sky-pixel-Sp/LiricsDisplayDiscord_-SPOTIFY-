@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -268,6 +269,77 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
                 _ => "No lyric line is active at this playback position."
             };
         }
+    }
+
+    public LyricsDocument? ActiveLyricsDocument => _activeLyricsDocument;
+
+    public string CreateLrcExportText()
+    {
+        var document = _activeLyricsDocument
+            ?? throw new InvalidOperationException("There is no active lyrics document to export.");
+
+        if (document.SyncMode == LyricsSyncMode.WordSynced)
+        {
+            throw new InvalidOperationException(
+                "This document contains word-level timestamps. Exporting it as standard LRC would discard those timings.");
+        }
+
+        var hasTimedLines = document.Lines.Any(static line => line.Start is not null);
+        if (hasTimedLines && document.Lines.Any(static line => line.Start is null))
+        {
+            throw new InvalidOperationException(
+                "This document mixes timed and untimed lines. Standard LRC cannot preserve that structure safely.");
+        }
+
+        var builder = new StringBuilder();
+        AppendMetadata(builder, "ti", document.Title);
+        AppendMetadata(builder, "ar", document.Artist);
+        AppendMetadata(builder, "al", document.Album);
+
+        if (document.Duration is { } duration)
+        {
+            builder.Append("[length:")
+                .Append(FormatLrcTimestamp(duration))
+                .AppendLine("]");
+        }
+
+        if (builder.Length > 0)
+        {
+            builder.AppendLine();
+        }
+
+        foreach (var line in document.Lines)
+        {
+            if (line.Start is { } timestamp)
+            {
+                builder.Append('[')
+                    .Append(FormatLrcTimestamp(timestamp))
+                    .Append(']');
+            }
+
+            builder.AppendLine(line.Text);
+        }
+
+        if (document.Lines.IsEmpty && !string.IsNullOrWhiteSpace(document.PlainText))
+        {
+            builder.AppendLine(document.PlainText);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendMetadata(StringBuilder builder, string tag, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            builder.Append('[').Append(tag).Append(':').Append(value.Trim()).AppendLine("]");
+        }
+    }
+
+    private static string FormatLrcTimestamp(TimeSpan value)
+    {
+        var totalMinutes = (long)value.TotalMinutes;
+        return $"{totalMinutes:00}:{value.Seconds:00}.{value.Milliseconds:000}";
     }
 
     public string ActiveWordText => _sceneState.WordFill?.Word.Text ?? string.Empty;
