@@ -28,8 +28,8 @@ public sealed class LibraryWindow : Window
     private readonly TextBox _search = new();
     private readonly TextBlock _details = new();
     private readonly TextBlock _status = new();
-    private readonly Button _restore = new();
-    private readonly Button _delete = new();
+    private Button _restore = new();
+    private Button _delete = new();
     private bool _loading;
     private bool _restoring;
 
