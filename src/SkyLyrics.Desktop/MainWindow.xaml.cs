@@ -331,7 +331,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var loaded = await _viewModel.LoadTranslationFileAsync(dialog.FileName, languageDialog.Language);
+        var loaded = await _viewModel.LoadTranslationFileAsync(dialog.FileName, languageDialog.LanguageLabel);
         if (!loaded)
         {
             MessageBox.Show(
