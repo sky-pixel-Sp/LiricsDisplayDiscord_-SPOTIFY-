@@ -326,7 +326,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
 
         var languageDialog = new TranslationLanguageWindow { Owner = this };
-        if (languageDialog.ShowDialog() != true || string.IsNullOrWhiteSpace(languageDialog.Language))
+        if (languageDialog.ShowDialog() != true || string.IsNullOrWhiteSpace(languageDialog.LanguageLabel))
         {
             return;
         }

@@ -16,7 +16,7 @@ public sealed class TranslationLanguageWindow : Window
 {
     private readonly TextBox _language = new();
 
-    public string Language => _language.Text.Trim();
+    public string LanguageLabel => _language.Text.Trim();
 
     public TranslationLanguageWindow()
     {
@@ -77,7 +77,7 @@ public sealed class TranslationLanguageWindow : Window
         confirm.Margin = new Thickness(8, 0, 0, 0);
         confirm.Click += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(Language))
+            if (string.IsNullOrWhiteSpace(LanguageLabel))
             {
                 MessageBox.Show(this, "Enter a language label.", "Language required", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
