@@ -197,6 +197,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public SceneState CurrentScene => _sceneState;
+
     public string PreviousLyricText => _sceneState.PreviousLine?.Text ?? string.Empty;
 
     public string ActiveLyricText => _sceneState.ActiveLine?.Text ?? string.Empty;
@@ -373,6 +375,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _sceneState = state;
+        OnPropertyChanged(nameof(CurrentScene));
 
         var artwork = state.Track?.ArtworkBytes ?? ImmutableArray<byte>.Empty;
         if (!_artworkBytes.Equals(artwork))

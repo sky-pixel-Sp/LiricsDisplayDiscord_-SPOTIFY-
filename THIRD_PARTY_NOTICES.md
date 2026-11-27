@@ -2,7 +2,7 @@
 
 ## Lucide SVG assets
 
-The vector icon files in `src/SkyLyrics.Desktop/Assets/Icons` are sourced from the official Lucide repository:
+The vector icon files in `src/SkyLyrics.Desktop/Assets/Icons` and the Windows tray/application ICO derived from the headphones SVG are sourced from the official Lucide repository:
 https://github.com/lucide-icons/lucide
 
 The selected icon paths retain the upstream SVG geometry and are recolored for the SkyLyrics dark theme. Lucide is licensed under the ISC License. Feather-derived glyphs are additionally covered by the MIT license included below.

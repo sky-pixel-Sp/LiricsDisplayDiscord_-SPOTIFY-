@@ -3,13 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         Title="SkyLyrics Desktop"
+        Icon="/SkyLyrics.Desktop;component/Assets/SkyLyrics.ico"
         Width="1180"
         Height="820"
         MinWidth="900"
         MinHeight="620"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource WindowBackground}"
-        Foreground="{StaticResource PrimaryText}"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource PrimaryText}"
         FontFamily="Segoe UI Variable Display">
     <Grid Margin="26">
         <Grid.RowDefinitions>
@@ -22,30 +23,34 @@
         <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,18">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                 <Border Width="34" Height="34" CornerRadius="11"
-                        Background="{StaticResource AccentSoftBrush}" VerticalAlignment="Center">
+                        Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
                     <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/headphones.svg"
                                      Width="19" Height="19"
                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="SKYLYRICS" FontSize="13" FontWeight="Bold"
-                               Foreground="{StaticResource PrimaryText}" />
+                               Foreground="{DynamicResource PrimaryText}" />
                     <TextBlock Text="DESKTOP · CINEMATIC LYRICS" Margin="0,2,0,0"
                                FontSize="9" FontWeight="SemiBold"
-                               Foreground="{StaticResource SecondaryText}" />
+                               Foreground="{DynamicResource SecondaryText}" />
                 </StackPanel>
             </StackPanel>
 
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <Border Padding="12,8" CornerRadius="20" Background="#14212A"
-                        BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" Margin="0,0,12,0">
+                        BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Margin="0,0,12,0">
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="7" Height="7" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                        <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding SessionBadgeText}" Margin="8,0,0,0"
                                    FontSize="9" FontWeight="SemiBold"
-                                   Foreground="{StaticResource PrimaryText}" VerticalAlignment="Center" />
+                                   Foreground="{DynamicResource PrimaryText}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Border>
+                <Button Click="OpenFocus_Click" Margin="0,0,6,0"><TextBlock Text="FOCUS" /></Button>
+                <Button Click="ToggleMini_Click" Margin="0,0,6,0"><TextBlock Text="MINI" /></Button>
+                <Button Click="OpenSettings_Click" Margin="0,0,6,0"><TextBlock Text="SETTINGS" /></Button>
+                <Button Click="OpenDiagnostics_Click" Margin="0,0,6,0"><TextBlock Text="DIAGNOSTICS" /></Button>
                 <Button Click="ImportLyrics_Click">
                     <StackPanel Orientation="Horizontal">
                         <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/list-music.svg"
@@ -57,8 +62,8 @@
         </DockPanel>
 
         <Border Grid.Row="1" Margin="0,0,0,18" Padding="17" CornerRadius="20"
-                Background="{StaticResource PanelBackground}"
-                BorderBrush="{StaticResource PanelBorder}" BorderThickness="1">
+                Background="{DynamicResource PanelBackground}"
+                BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="82" />
@@ -75,21 +80,21 @@
 
                 <StackPanel Grid.Column="1" Margin="18,3,12,3" VerticalAlignment="Center">
                     <TextBlock Text="{Binding StatusTitle}" FontSize="23" FontWeight="SemiBold"
-                               Foreground="{StaticResource PrimaryText}" TextTrimming="CharacterEllipsis" />
+                               Foreground="{DynamicResource PrimaryText}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding ArtistLine}" Margin="0,5,0,0" FontSize="13"
-                               Foreground="{StaticResource AccentBrush}" TextTrimming="CharacterEllipsis" />
+                               Foreground="{DynamicResource AccentBrush}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding ArtworkAvailabilityLabel}" Margin="0,9,0,0"
-                               FontSize="9" FontWeight="SemiBold" Foreground="{StaticResource MutedText}" />
+                               FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource MutedText}" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <TextBlock Text="{Binding PlaybackStatusLabel}" FontSize="10" FontWeight="Bold"
-                               Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Right" />
+                               Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" />
                     <TextBlock Text="{Binding PositionLabel}" Margin="0,8,0,0" FontSize="18"
-                               FontWeight="SemiBold" Foreground="{StaticResource PrimaryText}"
+                               FontWeight="SemiBold" Foreground="{DynamicResource PrimaryText}"
                                HorizontalAlignment="Right" />
                     <TextBlock Text="{Binding SourceIdentityLabel}" Margin="0,6,0,0" FontSize="9"
-                               Foreground="{StaticResource SecondaryText}" HorizontalAlignment="Right" />
+                               Foreground="{DynamicResource SecondaryText}" HorizontalAlignment="Right" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -100,7 +105,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" CornerRadius="24" BorderBrush="{StaticResource PanelBorder}"
+            <Border Grid.Row="0" CornerRadius="24" BorderBrush="{DynamicResource PanelBorder}"
                     BorderThickness="1" Background="#0D141C" ClipToBounds="True">
                 <Grid>
                     <Image x:Name="ArtworkBackdrop" Source="{Binding AlbumArtwork}" Stretch="UniformToFill"
@@ -128,11 +133,11 @@
                                 <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/audio-lines.svg"
                                                  Width="17" Height="17" Margin="0,0,9,0" />
                                 <TextBlock Text="LIVE LYRIC STAGE" FontSize="10" FontWeight="Bold"
-                                           Foreground="{StaticResource SecondaryText}" />
+                                           Foreground="{DynamicResource SecondaryText}" />
                             </StackPanel>
                             <TextBlock DockPanel.Dock="Right" Text="{Binding LyricsModeLabel}"
                                        FontSize="10" FontWeight="SemiBold"
-                                       Foreground="{StaticResource AccentBrush}" />
+                                       Foreground="{DynamicResource AccentBrush}" />
                         </DockPanel>
 
                         <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Stretch"
@@ -146,7 +151,7 @@
                             <TextBlock x:Name="ActiveLyricTextBlock" Text="{Binding ActiveLyricText}"
                                        Visibility="{Binding HasActiveLine, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        FontSize="38" FontWeight="SemiBold" LineHeight="48"
-                                       Foreground="{StaticResource PrimaryText}" TextAlignment="Center"
+                                       Foreground="{DynamicResource PrimaryText}" TextAlignment="Center"
                                        TextWrapping="Wrap" MaxHeight="150" RenderTransformOrigin="0.5,0.5">
                                 <TextBlock.RenderTransform>
                                     <TranslateTransform Y="0" />
@@ -155,13 +160,13 @@
 
                             <TextBlock Text="{Binding StageEmptyStateText}"
                                        Visibility="{Binding ShowStageEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                       FontSize="18" FontWeight="Medium" Foreground="{StaticResource SecondaryText}"
+                                       FontSize="18" FontWeight="Medium" Foreground="{DynamicResource SecondaryText}"
                                        TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,8" />
 
                             <TextBlock Text="{Binding ActiveWordText}"
                                        Visibility="{Binding HasActiveWord, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{StaticResource AccentBrush}" TextAlignment="Center"
+                                       Foreground="{DynamicResource AccentBrush}" TextAlignment="Center"
                                        Margin="0,17,0,0" />
                         </StackPanel>
 
@@ -171,9 +176,9 @@
                                        FontSize="14" Foreground="#A8B6C0" TextWrapping="Wrap" MaxWidth="720" />
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                 <TextBlock Text="{Binding SyncStatusLabel}" FontSize="9" FontWeight="Bold"
-                                           Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding SyncPositionLabel}" Margin="12,0,0,0"
-                                           FontSize="10" Foreground="{StaticResource PrimaryText}" VerticalAlignment="Center" />
+                                           FontSize="10" Foreground="{DynamicResource PrimaryText}" VerticalAlignment="Center" />
                             </StackPanel>
                         </DockPanel>
                     </Grid>
@@ -181,8 +186,8 @@
             </Border>
 
             <Border Grid.Row="1" Margin="0,16,0,0" Padding="20,15" CornerRadius="18"
-                    Background="{StaticResource PanelBackground}"
-                    BorderBrush="{StaticResource PanelBorder}" BorderThickness="1">
+                    Background="{DynamicResource PanelBackground}"
+                    BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -190,13 +195,13 @@
                     </Grid.RowDefinitions>
                     <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,10">
                         <TextBlock DockPanel.Dock="Left" Text="FULL LYRICS" FontSize="9" FontWeight="Bold"
-                                   Foreground="{StaticResource SecondaryText}" />
+                                   Foreground="{DynamicResource SecondaryText}" />
                         <TextBlock DockPanel.Dock="Right" Text="{Binding LyricsStatusText}" FontSize="9"
-                                   Foreground="{StaticResource MutedText}" TextTrimming="CharacterEllipsis" MaxWidth="550" />
+                                   Foreground="{DynamicResource MutedText}" TextTrimming="CharacterEllipsis" MaxWidth="550" />
                     </DockPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <TextBlock Text="{Binding LyricsText}" FontSize="15" LineHeight="25"
-                                   Foreground="{StaticResource PrimaryText}" TextWrapping="Wrap" />
+                                   Foreground="{DynamicResource PrimaryText}" TextWrapping="Wrap" />
                     </ScrollViewer>
                 </Grid>
             </Border>
@@ -204,9 +209,9 @@
 
         <DockPanel Grid.Row="3" LastChildFill="False" Margin="2,16,2,0">
             <TextBlock DockPanel.Dock="Left" Text="SYNC DATA  ·  SOURCE TIMESTAMPS ONLY  ·  NO AUDIO CAPTURE"
-                       FontSize="9" Foreground="{StaticResource MutedText}" />
+                       FontSize="9" Foreground="{DynamicResource MutedText}" />
             <TextBlock DockPanel.Dock="Right" Text="{Binding VersionLabel}" FontSize="9"
-                       Foreground="{StaticResource SecondaryText}" />
+                       Foreground="{DynamicResource SecondaryText}" />
         </DockPanel>
     </Grid>
 </Window>

@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="WindowBackground" Color="#F2F5F6" />
+    <SolidColorBrush x:Key="PanelBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PanelBackgroundRaised" Color="#E6ECEF" />
+    <SolidColorBrush x:Key="PanelBorder" Color="#CCD7DC" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#087F78" />
+    <SolidColorBrush x:Key="PrimaryText" Color="#12212A" />
+    <SolidColorBrush x:Key="SecondaryText" Color="#455B67" />
+    <SolidColorBrush x:Key="MutedText" Color="#657983" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#D8EFEC" />
+    <Style TargetType="{x:Type Button}">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+        <Setter Property="Background" Value="{DynamicResource PanelBackgroundRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PanelBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="14,9" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+</ResourceDictionary>

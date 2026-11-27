@@ -1,0 +1,71 @@
+<Window x:Class="SkyLyrics.Desktop.LyricsFocusWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SkyLyrics · Focus"
+        WindowStyle="None"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackground}"
+        Foreground="{DynamicResource PrimaryText}"
+        FontFamily="Segoe UI Variable Display"
+        KeyDown="Window_KeyDown">
+    <Grid Margin="64">
+        <Image Source="{Binding AlbumArtwork}" Stretch="UniformToFill"
+               Opacity="0.10" RenderOptions.BitmapScalingMode="LowQuality"
+               Visibility="{Binding HasAlbumArtwork, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        <Rectangle>
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#F0091118" Offset="0" />
+                    <GradientStop Color="#E9111D27" Offset="0.52" />
+                    <GradientStop Color="#F0091118" Offset="1" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <DockPanel Grid.Row="0">
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="SKYLYRICS  /  FOCUS MODE" FontSize="11"
+                               FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{Binding StatusTitle}" Margin="0,8,0,0" FontSize="18"
+                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding ArtistLine}" Margin="0,3,0,0" FontSize="12"
+                               Foreground="{DynamicResource SecondaryText}" />
+                </StackPanel>
+                <Button DockPanel.Dock="Right" Content="EXIT FOCUS  ·  ESC"
+                        Click="Exit_Click" VerticalAlignment="Top" />
+            </DockPanel>
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                        MaxWidth="1500">
+                <TextBlock Text="{Binding PreviousLyricText}" FontSize="24"
+                           Foreground="{DynamicResource SecondaryText}" Opacity="0.72"
+                           TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,36" />
+                <TextBlock Text="{Binding ActiveLyricText}" FontSize="64"
+                           FontWeight="SemiBold" TextAlignment="Center"
+                           TextWrapping="Wrap" LineHeight="78" />
+                <TextBlock Text="{Binding StageEmptyStateText}" FontSize="22"
+                           Foreground="{DynamicResource SecondaryText}" TextAlignment="Center"
+                           TextWrapping="Wrap" Margin="0,18,0,0" />
+                <TextBlock Text="{Binding ActiveWordText}" FontSize="20"
+                           FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                           TextAlignment="Center" Margin="0,26,0,0" />
+                <TextBlock Text="{Binding UpcomingLyricText}" FontSize="23"
+                           Foreground="{DynamicResource SecondaryText}" Opacity="0.82"
+                           TextAlignment="Center" TextWrapping="Wrap" Margin="0,42,0,0" />
+            </StackPanel>
+            <DockPanel Grid.Row="2">
+                <TextBlock DockPanel.Dock="Left" Text="{Binding LyricsModeLabel}" FontSize="11"
+                           FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding SyncPositionLabel}" FontSize="13"
+                           Foreground="{DynamicResource PrimaryText}" />
+                <TextBlock Text="{Binding SyncStatusLabel}" FontSize="10"
+                           Foreground="{DynamicResource SecondaryText}" HorizontalAlignment="Center" />
+            </DockPanel>
+        </Grid>
+    </Grid>
+</Window>
