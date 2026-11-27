@@ -33,6 +33,22 @@ public partial class SettingsWindow : Window
         ObsPortBox.Text = current.ObsOverlayPort.ToString(CultureInfo.InvariantCulture);
     }
 
+    private async void ConfigureGameMode_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new GameModeSettingsWindow(_preferences.Current.GameMode) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Result is not { } gameMode) return;
+
+        try
+        {
+            await _preferences.SaveAsync(_preferences.Current with { GameMode = gameMode });
+            StatusText.Text = "Game Mode settings saved and applied.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text = $"Game Mode settings could not be saved: {exception.Message}";
+        }
+    }
+
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(OffsetBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var offset) ||

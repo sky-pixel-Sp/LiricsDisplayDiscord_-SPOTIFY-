@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Input;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Microsoft.Win32;
 using SkyLyrics.Desktop.ViewModels;
 using SkyLyrics.Desktop.Services;
@@ -16,7 +18,10 @@ public partial class MainWindow : Window
     private readonly WindowModeService _windowModes;
     private readonly IAppPreferencesStore _preferences;
     private readonly SyncScheduler _scheduler;
-    private bool _allowClose;
+    private bool _isFullscreen;
+    private WindowState _restoreWindowState;
+    private WindowStyle _restoreWindowStyle;
+    private ResizeMode _restoreResizeMode;
 
     public MainWindow(ShellViewModel viewModel, WindowModeService windowModes, IAppPreferencesStore preferences, SyncScheduler scheduler)
     {
@@ -29,25 +34,95 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Closing += OnClosing;
+        Loaded += OnLoaded;
         Closed += (_, _) =>
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _windowModes.CloseAuxiliaryWindows();
+            if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
+                Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current?.Shutdown()));
         };
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (_allowClose) return;
-        e.Cancel = true;
-        Hide();
-        ShowInTaskbar = false;
+        // Do not hijack the close button into a hide-to-tray action.
+        _windowModes.CloseAuxiliaryWindows();
     }
 
     public void RequestApplicationExit()
     {
-        _allowClose = true;
+        _windowModes.CloseAuxiliaryWindows();
         Close();
+        System.Windows.Application.Current?.Shutdown();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        var workArea = SystemParameters.WorkArea;
+        Width = Math.Min(Width, workArea.Width * 0.94d);
+        Height = Math.Min(Height, workArea.Height * 0.90d);
+        PlayEntranceAnimation();
+    }
+
+    private void PlayEntranceAnimation()
+    {
+        if (!SystemParameters.ClientAreaAnimation || _preferences.Current.ReduceMotion)
+        {
+            RootGrid.Opacity = 1d;
+            if (RootGrid.RenderTransform is TranslateTransform reduced) reduced.Y = 0d;
+            return;
+        }
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        RootGrid.BeginAnimation(OpacityProperty, new DoubleAnimation(0d, 1d, TimeSpan.FromMilliseconds(520))
+        {
+            EasingFunction = ease
+        });
+        if (RootGrid.RenderTransform is TranslateTransform translate)
+            translate.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(14d, 0d, TimeSpan.FromMilliseconds(620)) { EasingFunction = ease });
+    }
+
+    private void ToggleGameMode_Click(object sender, RoutedEventArgs e) => _windowModes.ToggleGameMode();
+    private void ToggleFullscreen_Click(object sender, RoutedEventArgs e) => ToggleFullscreen();
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.F11)
+        {
+            ToggleFullscreen();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape && _isFullscreen)
+        {
+            ToggleFullscreen();
+            e.Handled = true;
+        }
+    }
+
+    private void ToggleFullscreen()
+    {
+        if (!_isFullscreen)
+        {
+            _restoreWindowState = WindowState;
+            _restoreWindowStyle = WindowStyle;
+            _restoreResizeMode = ResizeMode;
+            WindowState = WindowState.Normal;
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            WindowState = WindowState.Maximized;
+            FullscreenButton.Content = "EXIT FULL";
+            _isFullscreen = true;
+            return;
+        }
+
+        WindowState = WindowState.Normal;
+        WindowStyle = _restoreWindowStyle;
+        ResizeMode = _restoreResizeMode;
+        WindowState = _restoreWindowState == WindowState.Minimized ? WindowState.Normal : _restoreWindowState;
+        FullscreenButton.Content = "FULL SCREEN";
+        _isFullscreen = false;
     }
 
     public void ShowFromTray()
@@ -93,10 +168,22 @@ public partial class MainWindow : Window
         {
             ActiveLyricTextBlock.BeginAnimation(OpacityProperty, null);
             ActiveLyricTextBlock.Opacity = 1d;
-            if (ActiveLyricTextBlock.RenderTransform is TranslateTransform reducedMotionTransform)
+            if (ActiveLyricTextBlock.RenderTransform is TransformGroup reducedGroup)
             {
-                reducedMotionTransform.BeginAnimation(TranslateTransform.YProperty, null);
-                reducedMotionTransform.Y = 0d;
+                var reducedMotionTransform = reducedGroup.Children.OfType<TranslateTransform>().FirstOrDefault();
+                if (reducedMotionTransform is not null)
+                {
+                    reducedMotionTransform.BeginAnimation(TranslateTransform.YProperty, null);
+                    reducedMotionTransform.Y = 0d;
+                }
+                var reducedScale = reducedGroup.Children.OfType<ScaleTransform>().FirstOrDefault();
+                if (reducedScale is not null)
+                {
+                    reducedScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                    reducedScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                    reducedScale.ScaleX = 1d;
+                    reducedScale.ScaleY = 1d;
+                }
             }
 
             return;
@@ -104,19 +191,30 @@ public partial class MainWindow : Window
 
         ActiveLyricTextBlock.BeginAnimation(
             OpacityProperty,
-            new DoubleAnimation(0.42d, 1d, TimeSpan.FromMilliseconds(250))
+            new DoubleAnimation(0.18d, 1d, TimeSpan.FromMilliseconds(360))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
             });
 
-        if (ActiveLyricTextBlock.RenderTransform is TranslateTransform transform)
+        if (ActiveLyricTextBlock.RenderTransform is TransformGroup group)
         {
-            transform.BeginAnimation(
-                TranslateTransform.YProperty,
-                new DoubleAnimation(11d, 0d, TimeSpan.FromMilliseconds(280))
-                {
-                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                });
+            var transform = group.Children.OfType<TranslateTransform>().FirstOrDefault();
+            if (transform is not null)
+                transform.BeginAnimation(TranslateTransform.YProperty,
+                    new DoubleAnimation(20d, 0d, TimeSpan.FromMilliseconds(430))
+                    {
+                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                    });
+
+            var scale = group.Children.OfType<ScaleTransform>().FirstOrDefault();
+            if (scale is not null)
+            {
+                var spring = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.16d };
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty,
+                    new DoubleAnimation(0.965d, 1d, TimeSpan.FromMilliseconds(430)) { EasingFunction = spring });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                    new DoubleAnimation(0.965d, 1d, TimeSpan.FromMilliseconds(430)) { EasingFunction = spring });
+            }
         }
     }
 

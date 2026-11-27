@@ -36,5 +36,5 @@ public partial class FloatingPlayerWindow : Window
         DragMove();
     }
 
-    private void Close_Click(object sender, RoutedEventArgs e) => Hide();
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
 }

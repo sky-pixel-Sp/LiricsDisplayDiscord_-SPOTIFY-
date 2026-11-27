@@ -4,21 +4,43 @@
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         Title="SkyLyrics Desktop"
         Icon="/SkyLyrics.Desktop;component/Assets/SkyLyrics.ico"
-        Width="1180"
-        Height="820"
-        MinWidth="900"
-        MinHeight="620"
+        Width="1140"
+        Height="760"
+        MinWidth="960"
+        MinHeight="600"
+        ResizeMode="CanResize"
+        WindowStyle="SingleBorderWindow"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource WindowBackground}"
         Foreground="{DynamicResource PrimaryText}"
-        FontFamily="Segoe UI Variable Display">
-    <Grid Margin="26">
+        FontFamily="Segoe UI Variable Display"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <Grid x:Name="RootGrid" Margin="26" Opacity="0">
+        <Grid.RenderTransform>
+            <TranslateTransform Y="14" />
+        </Grid.RenderTransform>
         <Grid.RowDefinitions>
             <RowDefinition Height="44" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+
+        <!-- Ambient color fields stay visible when Spotify supplies no artwork. -->
+        <Canvas Grid.RowSpan="4" IsHitTestVisible="False" ClipToBounds="True">
+            <Ellipse Width="620" Height="480" Canvas.Left="520" Canvas.Top="-250" Opacity="0.20">
+                <Ellipse.Fill><RadialGradientBrush>
+                    <GradientStop Color="#526DE4C7" Offset="0" />
+                    <GradientStop Color="#006DE4C7" Offset="1" />
+                </RadialGradientBrush></Ellipse.Fill>
+            </Ellipse>
+            <Ellipse Width="500" Height="390" Canvas.Left="-220" Canvas.Top="390" Opacity="0.14">
+                <Ellipse.Fill><RadialGradientBrush>
+                    <GradientStop Color="#3B6877E8" Offset="0" />
+                    <GradientStop Color="#006877E8" Offset="1" />
+                </RadialGradientBrush></Ellipse.Fill>
+            </Ellipse>
+        </Canvas>
 
         <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,18">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
@@ -49,6 +71,8 @@
                 </Border>
                 <Button Click="OpenFocus_Click" Margin="0,0,6,0"><TextBlock Text="FOCUS" /></Button>
                 <Button Click="ToggleMini_Click" Margin="0,0,6,0"><TextBlock Text="MINI" /></Button>
+                <Button Click="ToggleGameMode_Click" Margin="0,0,6,0"><TextBlock Text="GAME MODE" /></Button>
+                <Button x:Name="FullscreenButton" Click="ToggleFullscreen_Click" Margin="0,0,6,0"><TextBlock Text="FULL SCREEN" /></Button>
                 <Button Click="OpenSettings_Click" Margin="0,0,6,0"><TextBlock Text="SETTINGS" /></Button>
                 <Button Click="OpenDiagnostics_Click" Margin="0,0,6,0"><TextBlock Text="DIAGNOSTICS" /></Button>
                 <Button Click="ImportLyrics_Click">
@@ -154,7 +178,10 @@
                                        Foreground="{DynamicResource PrimaryText}" TextAlignment="Center"
                                        TextWrapping="Wrap" MaxHeight="150" RenderTransformOrigin="0.5,0.5">
                                 <TextBlock.RenderTransform>
-                                    <TranslateTransform Y="0" />
+                                    <TransformGroup>
+                                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                                        <TranslateTransform Y="0" />
+                                    </TransformGroup>
                                 </TextBlock.RenderTransform>
                             </TextBlock>
 

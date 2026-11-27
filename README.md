@@ -18,7 +18,7 @@ A native Windows 11 desktop companion for Spotify Desktop. It reads playback met
 
 GSMTC -> PlaybackClock -> SyncScheduler -> immutable SceneState
 
-SceneState -> Main dashboard / Focus view / Floating mini player
+SceneState -> Main dashboard / Focus view / Floating mini player / Resizable Game Mode
 SceneState -> Discord Rich Presence
 SceneState -> OBS Browser overlay
 
@@ -30,8 +30,10 @@ Focus and mini-player windows reuse the same ShellViewModel and SyncScheduler. E
 - Exact lyric retrieval with LRCLIB and local LRC/Lyricsfile import.
 - SQLite cache, line-synced and word-synced modes where timestamps genuinely exist.
 - Premium lyric stage with previous/current/upcoming context and real Spotify artwork.
-- Full-screen Focus/Karaoke window and floating mini player.
-- Notification-area tray menu and global shortcuts: Ctrl+Alt+K, Ctrl+Alt+M, Ctrl+Alt+S.
+- Full-screen Focus/Karaoke window, native main-window minimize/maximize, and F11 fullscreen (ESC restores the window).
+- Game Mode overlay with drag-to-move, edge/corner resizing, saved position/size, configurable opacity/background/text effect/animation, always-on-top toggle, direct close control, tray action and Ctrl+Alt+G.
+- Main-window close exits the app; minimizing uses normal Windows controls. Game Mode is independent of the dashboard visibility and displays the shared synchronized lyric state.
+- Notification-area tray menu and global shortcuts: Ctrl+Alt+K, Ctrl+Alt+M, Ctrl+Alt+S and Ctrl+Alt+G.
 - Dark/Light themes, reduced motion, synchronization offset and topmost mini-player preference.
 - Diagnostics window with live process memory and actual scene/artwork telemetry.
 - Optional Discord Rich Presence; user supplies their own public Discord Application ID.
