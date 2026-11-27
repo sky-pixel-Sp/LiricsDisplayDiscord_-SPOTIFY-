@@ -199,8 +199,6 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public string PreviousLyricText => _sceneState.PreviousLine?.Text ?? string.Empty;
 
-    public string PreviousLyricText => _sceneState.PreviousLine?.Text ?? string.Empty;
-
     public string ActiveLyricText => _sceneState.ActiveLine?.Text ?? string.Empty;
 
     public string UpcomingLyricText => _sceneState.NextLine?.Text ?? string.Empty;
