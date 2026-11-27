@@ -1,4 +1,5 @@
 using SkyLyrics.Application.Settings;
+using Xunit;
 
 namespace SkyLyrics.Tests;
 

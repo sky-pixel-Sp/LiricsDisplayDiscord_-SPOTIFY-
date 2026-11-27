@@ -166,5 +166,7 @@ public sealed class WindowModeService : IDisposable
         _disposed = true;
         _preferences.PreferencesChanged -= OnPreferencesChanged;
         CloseAuxiliaryWindows();
+        _gameModeSaveGate.Wait();
+        _gameModeSaveGate.Dispose();
     }
 }

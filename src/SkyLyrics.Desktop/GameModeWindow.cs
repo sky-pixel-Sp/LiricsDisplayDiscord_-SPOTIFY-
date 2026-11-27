@@ -9,6 +9,10 @@ using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Desktop.ViewModels;
+using Button = System.Windows.Controls.Button;
+using Brush = System.Windows.Media.Brush;
+using Color = System.Windows.Media.Color;
+using Point = System.Windows.Point;
 
 namespace SkyLyrics.Desktop;
 
@@ -50,6 +54,8 @@ public sealed class GameModeWindow : Window
         Topmost = _settings.AlwaysOnTop;
         MinWidth = 420;
         MinHeight = 112;
+        MaxWidth = 1920;
+        MaxHeight = 600;
         Width = _settings.Width;
         Height = _settings.Height;
         WindowStartupLocation = WindowStartupLocation.Manual;

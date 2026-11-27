@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Input;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Microsoft.Win32;
 using SkyLyrics.Desktop.ViewModels;
 using SkyLyrics.Desktop.Services;

@@ -3,6 +3,13 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using SkyLyrics.Application.Settings;
+using Button = System.Windows.Controls.Button;
+using CheckBox = System.Windows.Controls.CheckBox;
+using ComboBox = System.Windows.Controls.ComboBox;
+using Control = System.Windows.Controls.Control;
+using Cursor = System.Windows.Input.Cursor;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace SkyLyrics.Desktop;
 
