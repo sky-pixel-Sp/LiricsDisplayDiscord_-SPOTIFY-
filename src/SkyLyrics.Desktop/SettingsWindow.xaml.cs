@@ -77,6 +77,16 @@ public partial class SettingsWindow : Window
         RefreshMediaSources();
     }
 
+    private void OpenCustomizationStudio_Click(object sender, RoutedEventArgs e)
+    {
+        var studio = new CustomizationStudioWindow(_preferences) { Owner = this };
+        if (studio.ShowDialog() == true)
+        {
+            LoadPreferences();
+            StatusText.Text = "Customization profile applied.";
+        }
+    }
+
     private async void ConfigureGameMode_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new GameModeSettingsWindow(_preferences.Current.GameMode) { Owner = this };
