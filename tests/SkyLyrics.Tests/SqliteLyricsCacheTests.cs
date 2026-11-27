@@ -30,8 +30,8 @@ public sealed class SqliteLyricsCacheTests
                     TimeSpan.FromMilliseconds(1200),
                     TimeSpan.FromMilliseconds(2400),
                     [
-                        new LyricWord("Hello ", TimeSpan.FromMilliseconds(1200), TimeSpan.FromMilliseconds(1700)),
-                        new LyricWord("world", TimeSpan.FromMilliseconds(1700), TimeSpan.FromMilliseconds(2400))
+                        new LyricWord(TimeSpan.FromMilliseconds(1200), TimeSpan.FromMilliseconds(1700), "Hello "),
+                        new LyricWord(TimeSpan.FromMilliseconds(1700), TimeSpan.FromMilliseconds(2400), "world")
                     ])
             ],
             "Hello world");
