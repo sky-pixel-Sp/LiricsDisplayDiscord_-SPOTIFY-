@@ -11,6 +11,7 @@ namespace SkyLyrics.Infrastructure.Persistence;
 public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLibrary, IDisposable
 {
     private const int MaximumDecompressedPayloadBytes = 8 * 1024 * 1024;
+    private const int MaximumLibraryDecompressedBytes = 32 * 1024 * 1024;
     private const long DefaultMaximumPayloadBytes = 180L * 1024 * 1024;
     private const long MaximumDatabaseBytes = 200L * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -142,7 +143,7 @@ public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLib
         int limit,
         CancellationToken cancellationToken)
     {
-        var boundedLimit = Math.Clamp(limit, 1, 200);
+        var boundedLimit = Math.Clamp(limit, 1, 100);
         await _operationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -173,24 +174,34 @@ public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLib
             }
 
             var results = new List<LyricsCacheEntry>(rows.Count);
+            var remainingBytes = MaximumLibraryDecompressedBytes;
             foreach (var row in rows)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (remainingBytes <= 0)
+                {
+                    break;
+                }
+
                 try
                 {
-                    var document = await DecompressDocumentAsync(row.Payload, cancellationToken).ConfigureAwait(false);
+                    var decoded = await DecompressDocumentWithSizeAsync(
+                        row.Payload,
+                        cancellationToken,
+                        remainingBytes).ConfigureAwait(false);
+                    remainingBytes -= decoded.DecompressedBytes;
                     results.Add(new LyricsCacheEntry(
                         row.CacheKey,
                         row.Provider,
                         row.ProviderId,
-                        document,
+                        decoded.Document,
                         DateTimeOffset.FromUnixTimeMilliseconds(row.CachedAtUtc)));
                 }
-                catch (Exception exception) when (exception is InvalidDataException or JsonException or FormatException)
+                catch (Exception exception) when (exception is InvalidDataException or JsonException or FormatException or ArgumentException)
                 {
                     _logger.LogWarning(
                         exception,
-                        "Skipping malformed cached lyrics entry {CacheKey}.",
+                        "Skipping malformed or over-budget cached lyrics entry {CacheKey}.",
                         row.CacheKey);
                 }
             }
@@ -502,6 +513,23 @@ public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLib
         byte[] payload,
         CancellationToken cancellationToken)
     {
+        var decoded = await DecompressDocumentWithSizeAsync(
+            payload,
+            cancellationToken,
+            MaximumDecompressedPayloadBytes).ConfigureAwait(false);
+        return decoded.Document;
+    }
+
+    private static async Task<(LyricsDocument Document, int DecompressedBytes)> DecompressDocumentWithSizeAsync(
+        byte[] payload,
+        CancellationToken cancellationToken,
+        int maximumBytes)
+    {
+        if (maximumBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumBytes));
+        }
+
         await using var input = new MemoryStream(payload, writable: false);
         await using var gzip = new GZipStream(input, CompressionMode.Decompress);
         await using var output = new MemoryStream();
@@ -515,7 +543,7 @@ public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLib
                 break;
             }
 
-            if (output.Length + read > MaximumDecompressedPayloadBytes)
+            if (output.Length + read > maximumBytes)
             {
                 throw new InvalidDataException("Cached lyrics payload exceeds the decompression safety limit.");
             }
@@ -526,7 +554,7 @@ public sealed class SqliteLyricsCache : IHostedService, ILyricsCache, ILyricsLib
         var cached = JsonSerializer.Deserialize<CacheDocumentDto>(output.ToArray(), JsonOptions)
             ?? throw new InvalidDataException("Cached lyrics document could not be deserialized.");
 
-        return FromCacheDocument(cached);
+        return (FromCacheDocument(cached), checked((int)output.Length));
     }
 
     public sealed record CacheDocumentDto(
