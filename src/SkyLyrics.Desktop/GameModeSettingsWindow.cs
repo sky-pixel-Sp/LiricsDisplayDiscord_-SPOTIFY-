@@ -45,8 +45,8 @@ public sealed class GameModeSettingsWindow : Window
         MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.CanResize;
-        Background = Brush("#0D151D");
-        Foreground = Brush("#F1F6F8");
+        Background = Brush("#12161B");
+        Foreground = Brush("#F4F5F2");
         FontFamily = new FontFamily("Segoe UI Variable Display");
 
         _widthBox.Text = _initial.Width.ToString("0", CultureInfo.InvariantCulture);
@@ -68,7 +68,7 @@ public sealed class GameModeSettingsWindow : Window
 
         _topmostCheck.Content = "Keep Game Mode above other windows";
         _topmostCheck.IsChecked = _initial.AlwaysOnTop;
-        _topmostCheck.Foreground = Brush("#E5EEF2");
+        _topmostCheck.Foreground = Brush("#A8B1B6");
         _topmostCheck.Margin = new Thickness(0, 5, 0, 0);
 
         _backgroundBox = CreateChoiceBox(
@@ -114,14 +114,14 @@ public sealed class GameModeSettingsWindow : Window
             Text = "Game Mode",
             FontSize = 25,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brush("#F4FAFC")
+            Foreground = Brush("#F4F5F2")
         });
         heading.Children.Add(new TextBlock
         {
             Text = "Size, placement behavior and the overlay's live visual treatment",
             FontSize = 11,
             Margin = new Thickness(0, 6, 0, 0),
-            Foreground = Brush("#9AAAB5")
+            Foreground = Brush("#A8B1B6")
         });
         Grid.SetRow(heading, 0);
         root.Children.Add(heading);
@@ -146,7 +146,7 @@ public sealed class GameModeSettingsWindow : Window
 
         _status.Text = "Drag the overlay header to move it; drag an edge or corner to resize.";
         _status.FontSize = 9;
-        _status.Foreground = Brush("#9AAAB5");
+        _status.Foreground = Brush("#A8B1B6");
         _status.VerticalAlignment = VerticalAlignment.Center;
         footer.Children.Add(_status);
 
@@ -194,7 +194,7 @@ public sealed class GameModeSettingsWindow : Window
             Text = "OVERLAY OPACITY",
             FontSize = 9,
             FontWeight = FontWeights.Bold,
-            Foreground = Brush("#9AAAB5")
+            Foreground = Brush("#A8B1B6")
         };
         var valueRow = new Grid { Margin = new Thickness(0, 6, 0, 0) };
         valueRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -202,7 +202,7 @@ public sealed class GameModeSettingsWindow : Window
         Grid.SetColumn(_opacitySlider, 0);
         _opacityValue.Margin = new Thickness(10, 0, 0, 0);
         _opacityValue.FontSize = 10;
-        _opacityValue.Foreground = Brush("#DDE9ED");
+        _opacityValue.Foreground = Brush("#B7C2BC");
         _opacityValue.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(_opacityValue, 1);
         valueRow.Children.Add(_opacitySlider);
@@ -222,7 +222,7 @@ public sealed class GameModeSettingsWindow : Window
             Text = "Position is saved when you move or resize the overlay. The overlay can be placed on any connected monitor.",
             FontSize = 10,
             TextWrapping = TextWrapping.Wrap,
-            Foreground = Brush("#9AAAB5"),
+            Foreground = Brush("#A8B1B6"),
             Margin = new Thickness(0, 10, 0, 0)
         });
         return panel;
@@ -246,7 +246,7 @@ public sealed class GameModeSettingsWindow : Window
             Text = labelText,
             FontSize = 9,
             FontWeight = FontWeights.Bold,
-            Foreground = Brush("#9AAAB5"),
+            Foreground = Brush("#A8B1B6"),
             Margin = new Thickness(0, 0, 0, 6)
         });
         panel.Children.Add(input);
@@ -268,7 +268,7 @@ public sealed class GameModeSettingsWindow : Window
             Text = title,
             FontSize = 9,
             FontWeight = FontWeights.Bold,
-            Foreground = Brush("#83E1D2"),
+            Foreground = Brush("#A8E6CF"),
             Margin = new Thickness(0, 0, 0, 12)
         });
         panel.Children.Add(content);
@@ -278,8 +278,8 @@ public sealed class GameModeSettingsWindow : Window
             Padding = new Thickness(15),
             Margin = new Thickness(0, 0, 0, 10),
             CornerRadius = new CornerRadius(14),
-            Background = Brush("#14212A"),
-            BorderBrush = Brush("#2B404D"),
+            Background = Brush("#1B2229"),
+            BorderBrush = Brush("#28323A"),
             BorderThickness = new Thickness(1),
             Child = panel
         };
@@ -306,9 +306,9 @@ public sealed class GameModeSettingsWindow : Window
         input.Height = 34;
         input.Padding = new Thickness(9, 6, 9, 6);
         input.FontSize = 12;
-        input.Background = Brush("#0D171F");
-        input.Foreground = Brush("#F1F6F8");
-        input.BorderBrush = Brush("#344B58");
+        input.Background = Brush("#12161B");
+        input.Foreground = Brush("#F4F5F2");
+        input.BorderBrush = Brush("#28323A");
         input.BorderThickness = new Thickness(1);
     }
 
@@ -362,9 +362,9 @@ public sealed class GameModeSettingsWindow : Window
             Padding = new Thickness(13, 8, 13, 8),
             FontSize = 10,
             FontWeight = FontWeights.SemiBold,
-            Background = Brush(primary ? "#246C59" : "#1B2A34"),
-            Foreground = Brush("#F1F8FA"),
-            BorderBrush = Brush(primary ? "#65CDB6" : "#38505D"),
+            Background = Brush(primary ? "#1C302A" : "#1B2229"),
+            Foreground = Brush("#F4F5F2"),
+            BorderBrush = Brush(primary ? "#A8E6CF" : "#28323A"),
             BorderThickness = new Thickness(1),
             Cursor = System.Windows.Input.Cursors.Hand
         };

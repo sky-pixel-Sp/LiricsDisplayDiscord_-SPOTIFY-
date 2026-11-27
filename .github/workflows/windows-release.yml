@@ -63,7 +63,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\artifacts | Out-Null
-          $version = "1.0.0"
+          $version = "2.0.0"
           if ($env:GITHUB_REF -like "refs/tags/v*") {
             $version = $env:GITHUB_REF.Substring(11)
           }
