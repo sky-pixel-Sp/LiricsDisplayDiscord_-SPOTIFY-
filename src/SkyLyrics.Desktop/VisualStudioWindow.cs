@@ -5,6 +5,16 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Desktop.ViewModels;
+using Border = System.Windows.Controls.Border;
+using Button = System.Windows.Controls.Button;
+using Canvas = System.Windows.Controls.Canvas;
+using ComboBox = System.Windows.Controls.ComboBox;
+using Control = System.Windows.Controls.Control;
+using Grid = System.Windows.Controls.Grid;
+using Image = System.Windows.Controls.Image;
+using Slider = System.Windows.Controls.Slider;
+using StackPanel = System.Windows.Controls.StackPanel;
+using TextBlock = System.Windows.Controls.TextBlock;
 
 namespace SkyLyrics.Desktop;
 
