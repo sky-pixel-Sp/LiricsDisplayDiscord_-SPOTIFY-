@@ -1,0 +1,95 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build, test and package Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.404
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Restore solution
+        run: dotnet restore .\SkyLyrics.sln
+
+      - name: Release build
+        run: dotnet build .\SkyLyrics.sln --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: dotnet test .\tests\SkyLyrics.Tests\SkyLyrics.Tests.csproj --configuration Release --no-build --no-restore
+
+      - name: Publish self-contained Windows x64 application
+        run: >-
+          dotnet publish .\src\SkyLyrics.Desktop\SkyLyrics.Desktop.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output .\publish
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:PublishTrimmed=false
+
+      - name: Verify application executable
+        shell: pwsh
+        run: |
+          if (!(Test-Path .\publish\SkyLyrics.Desktop.exe)) {
+            throw "SkyLyrics.Desktop.exe was not published."
+          }
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\artifacts | Out-Null
+          $version = "1.0.0"
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF.Substring(11)
+          }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" .\installer\windows\SkyLyrics.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Generate SHA-256 checksum
+        shell: pwsh
+        run: |
+          $installer = Get-Item .\artifacts\SkyLyricsDesktop-Setup-win-x64.exe
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content .\artifacts\SHA256SUMS.txt -Encoding ascii
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skylyrics-windows-x64-installer
+          path: .\artifacts\*
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/SkyLyricsDesktop-Setup-win-x64.exe
+            artifacts/SHA256SUMS.txt

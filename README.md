@@ -1,57 +1,83 @@
 # SkyLyrics Desktop
 
-A native Windows desktop companion that detects Spotify Desktop playback and displays correctly matched, timestamped lyrics with cinematic presentation. Its core emits immutable scene snapshots to independent output sinks.
+A native Windows 11 desktop companion for Spotify Desktop. It reads playback metadata and timeline through Windows GSMTC, retrieves matching lyrics from LRCLIB or user-selected local files, and publishes immutable synchronized scene state to desktop and optional external displays.
 
-## Locked product decisions
+## Platform and stack
 
-- Platform: Windows 11 x64
-- Language/runtime: C# / .NET 10 LTS
-- Desktop UI: WPF with MVVM and dependency injection
-- Playback source: Windows Global System Media Transport Controls (GSMTC)
-- Lyrics: LRCLIB plus user-selected local LRC and Lyricsfile YAML files
-- Persistence: SQLite
-- Outputs: WPF cinema/overlay, local OBS overlay, official Discord Rich Presence, and optional Discord Embedded Activity
-- Repository: sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-
+- Windows 11 x64
+- C# / .NET 10 LTS / WPF
+- Windows Global System Media Transport Controls (GSMTC)
+- LRCLIB plus manually imported LRC and Lyricsfile YAML
+- SQLite lyrics cache
+- Real album artwork from the active Spotify media session
+- Lucide SVG vectors rendered with SharpVectors
+- Discord Rich Presence over local Discord desktop IPC
+- OBS Browser Source served locally on 127.0.0.1 only
 
 ## Architecture
 
 GSMTC -> PlaybackClock -> SyncScheduler -> immutable SceneState
 
-SceneState -> WPF output
-SceneState -> OBS output
+SceneState -> Main dashboard / Focus view / Floating mini player
 SceneState -> Discord Rich Presence
-SceneState -> Discord Embedded Activity
+SceneState -> OBS Browser overlay
 
-The core does not depend on any presentation or external-output implementation. Each sink can be independently enabled or disabled.
+Focus and mini-player windows reuse the same ShellViewModel and SyncScheduler. External outputs use a bounded scene queue so a slow sink cannot block playback synchronization.
 
-## Implementation status
+## Product features
 
-- Phase 0: .NET solution, immutable scene contract, output-router boundary, WPF composition root, unit tests, and Windows CI.
-- Phase 1: Windows GSMTC session monitor, explicit Spotify Desktop identity matcher, monotonic PlaybackClock, live playback status and timeline display.
-- Phase 2: LRCLIB provider, local LRC/Lyricsfile import, truthful sync-mode labels, generation-safe track lookup, and compressed SQLite cache.
-- Phase 3: monotonic lyric synchronization, binary-search line selection, one-shot boundary timers, bounded offset, word timing projection, and immutable SceneState publication.
-- Phase 4: cinematic WPF lyric stage, animated line transitions, source-backed Spotify artwork thumbnails, previous/current/next lyric context, and licensed Lucide SVG icons.
+- Spotify Desktop detection, track metadata, playback state and monotonic timeline.
+- Exact lyric retrieval with LRCLIB and local LRC/Lyricsfile import.
+- SQLite cache, line-synced and word-synced modes where timestamps genuinely exist.
+- Premium lyric stage with previous/current/upcoming context and real Spotify artwork.
+- Full-screen Focus/Karaoke window and floating mini player.
+- Notification-area tray menu and global shortcuts: Ctrl+Alt+K, Ctrl+Alt+M, Ctrl+Alt+S.
+- Dark/Light themes, reduced motion, synchronization offset and topmost mini-player preference.
+- Diagnostics window with live process memory and actual scene/artwork telemetry.
+- Optional Discord Rich Presence; user supplies their own public Discord Application ID.
+- Optional OBS Browser Source overlay bound to loopback; no LAN listener.
 
-See docs/PHASE_0_BASELINE.md, docs/PHASE_3_SYNC_SCHEDULER.md, docs/PHASE_4_CINEMATIC_RENDERER.md, docs/PHASE_1_GSMTC_PLAYBACK_CLOCK.md, docs/PHASE_2_LYRICS_CACHE.md, docs/PROJECT_SPECIFICATION.md, docs/TECHNICAL_IMPLEMENTATION_PLAN.md, and docs/UI_FIGMA_SPECIFICATION.md.
+## Accuracy, privacy and safety
 
-## Accuracy and privacy requirements
+- Never invent lyric text, translations, artwork, track metadata or timestamps.
+- Unsynchronized lyrics are labelled as unsynchronized. Word highlighting only uses source word timestamps.
+- Artwork is read from Spotify's GSMTC thumbnail stream, kept memory-only and size-limited.
+- No Spotify private endpoints, DRM bypass, audio loopback capture or audio fingerprinting.
+- Discord uses local desktop IPC and a public Application ID; it does not request user account tokens or passwords.
+- OBS binds only to 127.0.0.1, only accepts GET, limits request headers and displays data via textContent.
 
-- Never invent lyrics, timestamps, word timings, artwork, or track metadata.
-- Plain lyrics must be labelled Unsynced.
-- Never synthesize word timings by splitting a line evenly.
-- Use Windows GSMTC for playback metadata and position.
-- Do not use private Spotify endpoints, capture audio, or bypass DRM.
-- Discord integration must use official Rich Presence / Embedded App SDK paths only.
-- OBS serving must bind to loopback (127.0.0.1) only.
+## Build from source
 
-## Build
+Requires the .NET 10 SDK and Windows desktop targeting.
 
-Requires the .NET 10 SDK and Windows desktop targeting support.
-
-PowerShell commands:
+PowerShell:
     dotnet restore .\SkyLyrics.sln
     dotnet build .\SkyLyrics.sln --configuration Release --no-restore
     dotnet test .\tests\SkyLyrics.Tests\SkyLyrics.Tests.csproj --configuration Release
     dotnet run --project .\src\SkyLyrics.Desktop\SkyLyrics.Desktop.csproj
 
-The desktop project targets Windows x64. The Linux/macOS command-line build path is not a supported runtime target for this application.
+## Windows installer
+
+The repository includes installer/windows/SkyLyrics.iss and the Windows Release workflow. A tag named v1.0.0 triggers a self-contained Windows x64 publish, tests, Inno Setup compilation and SHA-256 checksum generation. The unsigned installer is published to the GitHub Release. A valid code-signing certificate is required for a signed release.
+
+## Discord setup
+
+1. Create a Discord application in the Discord Developer Portal.
+2. Copy its public Application ID.
+3. Open SkyLyrics Settings, enable Discord Rich Presence and enter the ID.
+4. Keep Discord Desktop running.
+
+Rich Presence is disabled by default and no account login token is requested.
+
+## OBS setup
+
+1. Open SkyLyrics Settings and enable OBS Browser Overlay.
+2. Save the settings. The listener binds only to 127.0.0.1.
+3. In OBS, add a Browser Source with URL http://127.0.0.1:43821/overlay.
+4. Use the custom port shown in Settings if the default port was changed.
+
+## CI and release boundary
+
+Windows CI restores, builds Release and runs the test suite on windows-latest. The release workflow is separate and runs on a version tag or manual workflow dispatch.
+
+A successful CI build does not replace manual Windows 11 acceptance. Live Spotify reconnect/artwork, hotkey collisions, tray behaviour, DPI scaling, Discord IPC and OBS Browser Source must be exercised on the actual Windows desktop. The idle memory budget also requires measurement rather than assertion.
