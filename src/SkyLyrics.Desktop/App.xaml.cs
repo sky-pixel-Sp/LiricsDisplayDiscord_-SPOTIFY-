@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Lyrics;
 using SkyLyrics.Application.Outputs;
 using SkyLyrics.Application.Playback;
+using SkyLyrics.Application.Synchronization;
 using SkyLyrics.Desktop.ViewModels;
 using SkyLyrics.Infrastructure.Lyrics;
 using SkyLyrics.Infrastructure.Persistence;
@@ -49,7 +50,7 @@ public partial class App : System.Windows.Application
                     Timeout = TimeSpan.FromSeconds(15)
                 };
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                    "SkyLyricsDesktop/0.2.0 (https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-)");
+                    "SkyLyricsDesktop/0.3.0 (https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-)");
                 client.DefaultRequestHeaders.Accept.Add(
                     new MediaTypeWithQualityHeaderValue("application/json"));
                 return client;
@@ -66,6 +67,7 @@ public partial class App : System.Windows.Application
                 services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
 
             builder.Services.AddSingleton<SceneStateRouter>();
+            builder.Services.AddSingleton<SyncScheduler>();
             builder.Services.AddSingleton<ShellViewModel>();
             builder.Services.AddSingleton<MainWindow>();
 

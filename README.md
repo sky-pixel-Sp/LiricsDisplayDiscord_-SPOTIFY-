@@ -29,7 +29,7 @@ The core does not depend on any presentation or external-output implementation. 
 - Phase 0: .NET solution, immutable scene contract, output-router boundary, WPF composition root, unit tests, and Windows CI.
 - Phase 1: Windows GSMTC session monitor, explicit Spotify Desktop identity matcher, monotonic PlaybackClock, live playback status and timeline display.
 - Phase 2: LRCLIB provider, local LRC/Lyricsfile import, truthful sync-mode labels, generation-safe track lookup, and compressed SQLite cache.
-- Phase 3 is planned: event-driven SyncScheduler and immutable SceneState publication.
+- Phase 3: monotonic lyric synchronization, binary-search line selection, one-shot boundary timers, bounded offset, word timing projection, and immutable SceneState publication.
 
 See docs/PHASE_0_BASELINE.md, docs/PHASE_1_GSMTC_PLAYBACK_CLOCK.md, docs/PHASE_2_LYRICS_CACHE.md, docs/PROJECT_SPECIFICATION.md, docs/TECHNICAL_IMPLEMENTATION_PLAN.md, and docs/UI_FIGMA_SPECIFICATION.md.
 
