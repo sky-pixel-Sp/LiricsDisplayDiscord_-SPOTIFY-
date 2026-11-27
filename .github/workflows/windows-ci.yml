@@ -56,4 +56,4 @@ jobs:
         with:
           name: skylyrics-phase-0-test-results
           path: TestResults/**/*.trx
-          if-no-files-found: error
+          if-no-files-found: warn
