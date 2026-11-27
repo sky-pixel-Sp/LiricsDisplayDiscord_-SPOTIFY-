@@ -14,7 +14,11 @@ public sealed record TrackScene(
     string? Title,
     string? Artist,
     string? Album,
-    Uri? ArtworkUri);
+    Uri? ArtworkUri,
+    ImmutableArray<byte> ArtworkBytes = default)
+{
+    public bool HasArtwork => !ArtworkBytes.IsDefaultOrEmpty;
+}
 
 public sealed record LyricWordScene
 {
@@ -95,7 +99,8 @@ public sealed record SceneState
         WordFillState? wordFill,
         TimeSpan position,
         PlaybackStatus playbackStatus,
-        DateTimeOffset updatedAt)
+        DateTimeOffset updatedAt,
+        LyricLineScene? previousLine = null)
     {
         if (revision < 0)
         {
@@ -114,6 +119,7 @@ public sealed record SceneState
 
         Revision = revision;
         Track = track;
+        PreviousLine = previousLine;
         ActiveLine = activeLine;
         NextLine = nextLine;
         WordFill = wordFill;
@@ -128,6 +134,7 @@ public sealed record SceneState
 
     public long Revision { get; }
     public TrackScene? Track { get; }
+    public LyricLineScene? PreviousLine { get; }
     public LyricLineScene? ActiveLine { get; }
     public LyricLineScene? NextLine { get; }
     public WordFillState? WordFill { get; }

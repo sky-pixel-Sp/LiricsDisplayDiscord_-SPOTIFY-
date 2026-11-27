@@ -1,5 +1,9 @@
+using System.Collections.Immutable;
 using System.ComponentModel;
+using System.IO;
 using System.Reflection;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Lyrics;
@@ -23,6 +27,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private readonly Dispatcher _dispatcher;
     private PlaybackSnapshot? _snapshot;
     private SceneState _sceneState = SceneState.Empty;
+    private LyricsDocument? _activeLyricsDocument;
+    private ImmutableArray<byte> _artworkBytes;
+    private ImageSource? _albumArtwork;
     private LyricsTrackSignature? _requestedSignature;
     private CancellationTokenSource? _lyricsCancellation;
     private long _lyricsGeneration;
@@ -190,9 +197,71 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public string PreviousLyricText => _sceneState.PreviousLine?.Text ?? string.Empty;
+
     public string ActiveLyricText => _sceneState.ActiveLine?.Text ?? string.Empty;
 
     public string UpcomingLyricText => _sceneState.NextLine?.Text ?? string.Empty;
+
+    public bool HasPreviousLyric => !string.IsNullOrWhiteSpace(PreviousLyricText);
+
+    public bool HasActiveLine => _sceneState.ActiveLine is not null;
+
+    public bool ShowStageEmptyState => !HasActiveLine;
+
+    public bool HasUpcomingLyric => !string.IsNullOrWhiteSpace(UpcomingLyricText);
+
+    public bool HasActiveWord => !string.IsNullOrWhiteSpace(ActiveWordText);
+
+    public ImageSource? AlbumArtwork
+    {
+        get => _albumArtwork;
+        private set
+        {
+            if (ReferenceEquals(_albumArtwork, value))
+            {
+                return;
+            }
+
+            _albumArtwork = value;
+            OnPropertyChanged(nameof(AlbumArtwork));
+            OnPropertyChanged(nameof(HasAlbumArtwork));
+            OnPropertyChanged(nameof(ArtworkAvailabilityLabel));
+        }
+    }
+
+    public bool HasAlbumArtwork => _albumArtwork is not null;
+
+    public string ArtworkAvailabilityLabel => HasAlbumArtwork
+        ? "ARTWORK · SPOTIFY MEDIA SESSION"
+        : "ARTWORK NOT PROVIDED BY SPOTIFY SESSION";
+
+    public string StageEmptyStateText
+    {
+        get
+        {
+            if (_snapshot is null)
+            {
+                return "Connect Spotify Desktop to begin.";
+            }
+
+            if (_activeLyricsDocument is null)
+            {
+                return _lyricsStatusText;
+            }
+
+            return _activeLyricsDocument.SyncMode switch
+            {
+                LyricsSyncMode.Unsynced =>
+                    "These lyrics have no source timestamps. Playback highlighting is unavailable.",
+                LyricsSyncMode.Instrumental =>
+                    "Instrumental recording · no vocal lyrics supplied.",
+                _ when _sceneState.NextLine is not null =>
+                    "Waiting for the next source lyric timestamp.",
+                _ => "No lyric line is active at this playback position."
+            };
+        }
+    }
 
     public string ActiveWordText => _sceneState.WordFill?.Word.Text ?? string.Empty;
 
@@ -228,6 +297,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         var cancellation = new CancellationTokenSource();
         _lyricsCancellation = cancellation;
 
+        _activeLyricsDocument = null;
+        _syncScheduler.UpdateLyrics(null);
+        OnPropertyChanged(nameof(StageEmptyStateText));
         LyricsStatusText = "Importing local lyrics file…";
         LyricsModeLabel = "IMPORTING";
 
@@ -244,6 +316,33 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         {
             _logger.LogWarning(exception, "Local lyrics import failed for {FilePath}.", filePath);
             DispatchLyricsResult(generation, null, "The selected lyrics file could not be imported.");
+        }
+    }
+
+    private static BitmapImage? DecodeArtwork(ImmutableArray<byte> artworkBytes)
+    {
+        if (artworkBytes.IsDefaultOrEmpty)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(artworkBytes.ToArray(), writable: false);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
+            image.DecodePixelWidth = 512;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch
+        {
+            // Invalid provider artwork is treated as unavailable; no synthetic cover is substituted.
+            return null;
         }
     }
 
@@ -274,8 +373,23 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         _sceneState = state;
+
+        var artwork = state.Track?.ArtworkBytes ?? ImmutableArray<byte>.Empty;
+        if (!_artworkBytes.Equals(artwork))
+        {
+            _artworkBytes = artwork;
+            AlbumArtwork = DecodeArtwork(artwork);
+        }
+
+        OnPropertyChanged(nameof(PreviousLyricText));
         OnPropertyChanged(nameof(ActiveLyricText));
         OnPropertyChanged(nameof(UpcomingLyricText));
+        OnPropertyChanged(nameof(HasPreviousLyric));
+        OnPropertyChanged(nameof(HasActiveLine));
+        OnPropertyChanged(nameof(ShowStageEmptyState));
+        OnPropertyChanged(nameof(HasUpcomingLyric));
+        OnPropertyChanged(nameof(HasActiveWord));
+        OnPropertyChanged(nameof(StageEmptyStateText));
         OnPropertyChanged(nameof(ActiveWordText));
         OnPropertyChanged(nameof(ActiveWordProgressLabel));
         OnPropertyChanged(nameof(SyncPositionLabel));
@@ -322,6 +436,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         {
             CancelLyricsLookup();
             _requestedSignature = null;
+            _activeLyricsDocument = null;
+            _syncScheduler.UpdateLyrics(null);
+            OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "NO LYRICS";
             LyricsText = string.Empty;
             LyricsStatusText = "Waiting for Spotify playback.";
@@ -358,6 +475,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _lyricsCancellation = cancellation;
         var generation = Interlocked.Increment(ref _lyricsGeneration);
 
+        _activeLyricsDocument = null;
+        _syncScheduler.UpdateLyrics(null);
+        OnPropertyChanged(nameof(StageEmptyStateText));
         LyricsStatusText = "Checking local cache and LRCLIB…";
         LyricsModeLabel = "LOOKING UP";
         LyricsText = string.Empty;
@@ -420,7 +540,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         if (error is not null)
         {
+            _activeLyricsDocument = null;
             _syncScheduler.UpdateLyrics(null);
+            OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "LOOKUP FAILED";
             LyricsText = string.Empty;
             LyricsStatusText = error;
@@ -429,7 +551,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         if (result is null)
         {
+            _activeLyricsDocument = null;
             _syncScheduler.UpdateLyrics(null);
+            OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
             LyricsStatusText = "LRCLIB did not return a matching lyrics record.";
@@ -437,7 +561,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var document = result.Document;
+        _activeLyricsDocument = document;
         _syncScheduler.UpdateLyrics(document);
+        OnPropertyChanged(nameof(StageEmptyStateText));
         LyricsModeLabel = document.SyncMode switch
         {
             LyricsSyncMode.WordSynced => "WORD-SYNCED LYRICS",

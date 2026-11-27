@@ -54,6 +54,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: skylyrics-phase-0-test-results
+          name: skylyrics-windows-test-results
           path: TestResults/**/*.trx
           if-no-files-found: warn
