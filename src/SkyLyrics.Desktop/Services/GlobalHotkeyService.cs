@@ -26,11 +26,7 @@ public sealed class GlobalHotkeyService : IDisposable
         _windowModes = windowModes ?? throw new ArgumentNullException(nameof(windowModes));
         _window.SourceInitialized += OnSourceInitialized;
         _window.Closed += OnWindowClosed;
-        if (_window.IsSourceInitialized)
-        {
-            OnSourceInitialized(_window, EventArgs.Empty);
-        }
-    }
+}
 
     public event EventHandler<string>? RegistrationChanged;
 

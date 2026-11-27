@@ -11,7 +11,7 @@ public static class ThemeManager
 
     public static void Apply(string? theme)
     {
-        var application = Application.Current;
+        var application = System.Windows.Application.Current;
         if (application is null)
         {
             return;

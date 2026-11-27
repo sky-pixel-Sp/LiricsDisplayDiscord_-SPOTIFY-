@@ -90,9 +90,8 @@ public partial class App : System.Windows.Application
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             var windowModes = _host.Services.GetRequiredService<WindowModeService>();
             MainWindow = mainWindow;
-            mainWindow.Show();
-
             _hotkeys = new GlobalHotkeyService(mainWindow, windowModes);
+            mainWindow.Show();
             _tray = new SystemTrayService(
                 mainWindow.ShowFromTray,
                 windowModes.ShowFocusView,
@@ -108,11 +107,11 @@ public partial class App : System.Windows.Application
         catch (Exception exception)
         {
             Debug.WriteLine(exception);
-            MessageBox.Show(
+            System.Windows.MessageBox.Show(
                 $"SkyLyrics Desktop could not start.{Environment.NewLine}{Environment.NewLine}{exception.Message}",
                 "SkyLyrics Desktop",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
             Shutdown(-1);
         }
     }

@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Controls;
+using WpfButton = System.Windows.Controls.Button;
 using SkyLyrics.Desktop.ViewModels;
 
 namespace SkyLyrics.Desktop;
@@ -25,7 +25,7 @@ public partial class FloatingPlayerWindow : Window
         DependencyObject? current = e.OriginalSource as DependencyObject;
         while (current is not null)
         {
-            if (current is Button)
+            if (current is WpfButton)
             {
                 return;
             }

@@ -1,7 +1,6 @@
 using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
-using Application = System.Windows.Application;
 
 namespace SkyLyrics.Desktop.Services;
 
@@ -26,7 +25,7 @@ public sealed class SystemTrayService : IDisposable
         _showDiagnostics = showDiagnostics ?? throw new ArgumentNullException(nameof(showDiagnostics));
         _exit = exit ?? throw new ArgumentNullException(nameof(exit));
 
-        var resource = Application.GetResourceStream(
+        var resource = System.Windows.Application.GetResourceStream(
             new Uri("pack://application:,,,/SkyLyrics.Desktop;component/Assets/SkyLyrics.ico"))
             ?? throw new InvalidOperationException("The packaged SkyLyrics tray icon resource is missing.");
         using var iconStream = resource.Stream;
@@ -60,7 +59,7 @@ public sealed class SystemTrayService : IDisposable
 
     private static void Dispatch(Action action)
     {
-        var dispatcher = Application.Current?.Dispatcher;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.HasShutdownStarted) return;
         if (dispatcher.CheckAccess()) action();
         else dispatcher.BeginInvoke(action);
