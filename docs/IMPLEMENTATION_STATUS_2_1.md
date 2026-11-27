@@ -50,12 +50,15 @@ These are planned workstreams, not active controls or completed features.
 | Detected media-session source picker and saved selection | Implemented; awaiting Windows CI and device acceptance |
 | Explicit YouTube Music website/source confirmation | Pending |
 | LRC editor, validation and export | Implemented in the working branch; CI and device acceptance pending |
-| Dual-language lyrics, translation and word-level editing | Pending |
+| Manual dual-document lyrics with user-labelled, locally persisted per-track translation sidecars | Implemented in working branch; CI and device acceptance pending |
+| AI translation provider and in-app word-level translation editor | Pending; requires an opt-in provider integration and timestamp-safe design |
 | Metadata-reactive album ambience, fluid gradient and particle field | Implemented in working branch; CI and device performance acceptance pending |
 | Real audio-reactive spectrum/waveform input | Pending; requires explicit opt-in Windows audio-session capture implementation |
 | Advanced Game Mode | Drag/resize/topmost baseline plus click-through toggle and global restore hotkey implemented; CI and device/game compatibility QA pending |
 | Integrations and Customization Studio | Pending |
 | Windows device acceptance and release | Pending |
+
+Local translations are attached per track by a user-selected file and an explicitly entered language label. Timed translation lines follow the shared scene position; unsynced translation text is presented as an unsynced lane. The original document remains the source of the playback clock and word karaoke.
 
 The LRC editor exports line-synced and unsynced documents. It deliberately blocks word-synced documents in this editor because the standard LRC format cannot safely preserve per-word timestamps.
 

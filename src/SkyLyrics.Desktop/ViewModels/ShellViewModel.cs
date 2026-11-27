@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Lyrics;
 using SkyLyrics.Application.Playback;
+using SkyLyrics.Application.Settings;
 using SkyLyrics.Application.Synchronization;
 using SkyLyrics.Core.Lyrics;
 using SkyLyrics.Core.Playback;
@@ -25,6 +26,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         ?? "2.1.0-preview.1";
 
     private readonly IPlaybackSessionSource _playbackSource;
+    private readonly IAppPreferencesStore _preferences;
     private readonly ILyricsService _lyricsService;
     private readonly SyncScheduler _syncScheduler;
     private readonly ILogger<ShellViewModel> _logger;
@@ -32,6 +34,10 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private PlaybackSnapshot? _snapshot;
     private SceneState _sceneState = SceneState.Empty;
     private LyricsDocument? _activeLyricsDocument;
+    private LyricsDocument? _activeTranslationDocument;
+    private CancellationTokenSource? _translationCancellation;
+    private long _translationGeneration;
+    private string _translationStatusText = "No translation attached to this track.";
     private ImmutableArray<byte> _artworkBytes;
     private ImageSource? _albumArtwork;
     private LyricsTrackSignature? _requestedSignature;
@@ -47,15 +53,18 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         IPlaybackSessionSource playbackSource,
         ILyricsService lyricsService,
         SyncScheduler syncScheduler,
+        IAppPreferencesStore preferences,
         ILogger<ShellViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(playbackSource);
         ArgumentNullException.ThrowIfNull(lyricsService);
         ArgumentNullException.ThrowIfNull(syncScheduler);
+        ArgumentNullException.ThrowIfNull(preferences);
         ArgumentNullException.ThrowIfNull(logger);
 
         _playbackSource = playbackSource;
         _lyricsService = lyricsService;
+        _preferences = preferences;
         _syncScheduler = syncScheduler;
         _sceneState = syncScheduler.Current;
         _syncScheduler.SceneChanged += OnSceneChanged;
@@ -273,6 +282,324 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public LyricsDocument? ActiveLyricsDocument => _activeLyricsDocument;
 
+    public bool HasTranslation => _activeTranslationDocument is not null;
+
+    public bool HasTranslationDisplay => !string.IsNullOrWhiteSpace(TranslationDisplayText);
+
+    public string TranslationModeLabel => _activeTranslationDocument is null
+        ? string.Empty
+        : $"TRANSLATION · {_activeTranslationDocument.Language ?? "Unspecified language"} · " +
+          (_activeTranslationDocument.SyncMode switch
+          {
+              LyricsSyncMode.LineSynced => "LINE-SYNCED",
+              LyricsSyncMode.WordSynced => "TIMED SOURCE",
+              LyricsSyncMode.Unsynced => "UNSYNCED",
+              LyricsSyncMode.Instrumental => "INSTRUMENTAL",
+              _ => "LOCAL"
+          });
+
+    public string TranslationStatusText => _translationStatusText;
+
+    public string TranslationFullText => _activeTranslationDocument is not { } document || document.Instrumental
+        ? string.Empty
+        : document.PlainText ?? string.Join(
+            Environment.NewLine,
+            document.Lines.Select(static line => line.Text));
+
+    public string TranslationDisplayText
+    {
+        get
+        {
+            var document = _activeTranslationDocument;
+            if (document is null || document.Instrumental)
+            {
+                return string.Empty;
+            }
+
+            if (document.SyncMode is LyricsSyncMode.LineSynced or LyricsSyncMode.WordSynced)
+            {
+                return document.Lines
+                    .Where(line => line.Start is { } start && start <= _sceneState.Position)
+                    .OrderBy(static line => line.Start)
+                    .LastOrDefault()?.Text ?? string.Empty;
+            }
+
+            return document.PlainText ?? string.Join(
+                Environment.NewLine,
+                document.Lines.Select(static line => line.Text));
+        }
+    }
+
+    public async Task<bool> LoadTranslationFileAsync(string filePath, string language)
+    {
+        if (_disposed || string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(language))
+        {
+            return false;
+        }
+
+        var signature = _requestedSignature ?? (_snapshot is null ? null : CreateSignature(_snapshot));
+        if (signature is null)
+        {
+            SetTranslationStatus("Start a supported media session before attaching a translation.");
+            return false;
+        }
+
+        CancelTranslationLookup();
+        var generation = Interlocked.Increment(ref _translationGeneration);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _translationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+        var token = _translationCancellation.Token;
+        SetTranslationStatus("Loading local translation…");
+
+        return await LoadTranslationCoreAsync(
+            filePath,
+            language,
+            signature,
+            generation,
+            token,
+            persistPreference: true).ConfigureAwait(false);
+    }
+
+    public async Task RemoveTranslationAsync()
+    {
+        var signature = _requestedSignature ?? (_snapshot is null ? null : CreateSignature(_snapshot));
+        if (signature is null)
+        {
+            ClearTranslationState("No active track translation to remove.");
+            return;
+        }
+
+        var trackKey = CreateTranslationTrackKey(signature);
+        var remaining = _preferences.Current.LocalTranslations
+            .Where(profile => !StringComparer.Ordinal.Equals(profile.TrackKey, trackKey))
+            .ToImmutableArray();
+
+        try
+        {
+            await _preferences.SaveAsync(_preferences.Current with { LocalTranslations = remaining })
+                .ConfigureAwait(false);
+            ClearTranslationState("Local translation removed for this track.");
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Could not remove local translation preference.");
+            SetTranslationStatus("Could not remove the saved translation reference.");
+        }
+    }
+
+    private async Task<bool> LoadTranslationCoreAsync(
+        string filePath,
+        string language,
+        LyricsTrackSignature signature,
+        long generation,
+        CancellationToken cancellationToken,
+        bool persistPreference)
+    {
+        try
+        {
+            var result = await _lyricsService.LoadLocalFileAsync(filePath, cancellationToken)
+                .ConfigureAwait(false);
+            var source = result.Document;
+
+            if (!string.IsNullOrWhiteSpace(source.Title) &&
+                !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(source.Title), signature.NormalizedTitle))
+            {
+                throw new InvalidDataException("The selected translation title does not match the active track.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.Artist) &&
+                !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(source.Artist), signature.NormalizedArtist))
+            {
+                throw new InvalidDataException("The selected translation artist does not match the active track.");
+            }
+
+            var translated = new LyricsDocument(
+                source.Title ?? signature.Title,
+                source.Artist ?? signature.Artist,
+                source.Album ?? signature.Album,
+                source.Duration ?? signature.Duration,
+                source.Instrumental,
+                source.Lines,
+                source.PlainText,
+                source.Diagnostics,
+                language.Trim());
+
+            if (persistPreference)
+            {
+                var profile = new LocalTranslationPreference(
+                    CreateTranslationTrackKey(signature),
+                    Path.GetFullPath(filePath),
+                    language.Trim());
+                var profiles = _preferences.Current.LocalTranslations
+                    .Where(existing => !StringComparer.Ordinal.Equals(existing.TrackKey, profile.TrackKey))
+                    .Append(profile)
+                    .ToImmutableArray();
+
+                await _preferences.SaveAsync(
+                    _preferences.Current with { LocalTranslations = profiles },
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (_disposed ||
+                generation != Interlocked.Read(ref _translationGeneration) ||
+                !Equals(signature, _requestedSignature ?? (_snapshot is null ? null : CreateSignature(_snapshot))))
+            {
+                return false;
+            }
+
+            DispatchTranslation(generation, translated, null);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Local translation load failed for {FilePath}.", filePath);
+            DispatchTranslation(generation, null, "The selected translation could not be loaded or did not match this track.");
+            return false;
+        }
+    }
+
+    private void LoadSavedTranslationForTrack(LyricsTrackSignature signature)
+    {
+        CancelTranslationLookup();
+        var generation = Interlocked.Increment(ref _translationGeneration);
+        _activeTranslationDocument = null;
+        OnPropertyChanged(nameof(HasTranslation));
+        OnPropertyChanged(nameof(HasTranslationDisplay));
+        OnPropertyChanged(nameof(TranslationDisplayText));
+        OnPropertyChanged(nameof(TranslationFullText));
+        OnPropertyChanged(nameof(TranslationModeLabel));
+
+        var key = CreateTranslationTrackKey(signature);
+        var saved = _preferences.Current.LocalTranslations
+            .FirstOrDefault(profile => StringComparer.Ordinal.Equals(profile.TrackKey, key));
+        if (saved is null)
+        {
+            SetTranslationStatus("No translation attached to this track.");
+            return;
+        }
+
+        if (!File.Exists(saved.FilePath))
+        {
+            SetTranslationStatus("The saved local translation file is unavailable. Re-import it to restore this lane.");
+            return;
+        }
+
+        _translationCancellation = new CancellationTokenSource();
+        SetTranslationStatus($"Loading saved {saved.Language} translation…");
+        _ = LoadTranslationCoreAsync(
+            saved.FilePath,
+            saved.Language,
+            signature,
+            generation,
+            _translationCancellation.Token,
+            persistPreference: false);
+    }
+
+    private void DispatchTranslation(long generation, LyricsDocument? document, string? status)
+    {
+        if (_disposed || _dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        void Apply()
+        {
+            if (_disposed || generation != Interlocked.Read(ref _translationGeneration))
+            {
+                return;
+            }
+
+            _activeTranslationDocument = document;
+            SetTranslationStatus(status ?? (document is null
+                ? "No translation attached to this track."
+                : $"Loaded local {document.Language ?? "unlabelled"} translation."));
+            OnPropertyChanged(nameof(HasTranslation));
+            OnPropertyChanged(nameof(HasTranslationDisplay));
+            OnPropertyChanged(nameof(TranslationDisplayText));
+            OnPropertyChanged(nameof(TranslationFullText));
+            OnPropertyChanged(nameof(TranslationModeLabel));
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            Apply();
+        }
+        else
+        {
+            _dispatcher.BeginInvoke(new Action(Apply));
+        }
+    }
+
+    private void SetTranslationStatus(string status)
+    {
+        if (_dispatcher.CheckAccess())
+        {
+            _translationStatusText = status;
+            OnPropertyChanged(nameof(TranslationStatusText));
+            return;
+        }
+
+        if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _translationStatusText = status;
+                OnPropertyChanged(nameof(TranslationStatusText));
+            }));
+        }
+    }
+
+    private void ClearTranslationState(string status)
+    {
+        CancelTranslationLookup();
+
+        void Apply()
+        {
+            _activeTranslationDocument = null;
+            _translationStatusText = status;
+            OnPropertyChanged(nameof(TranslationStatusText));
+            OnPropertyChanged(nameof(HasTranslation));
+            OnPropertyChanged(nameof(HasTranslationDisplay));
+            OnPropertyChanged(nameof(TranslationDisplayText));
+            OnPropertyChanged(nameof(TranslationFullText));
+            OnPropertyChanged(nameof(TranslationModeLabel));
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            Apply();
+        }
+        else if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+        {
+            _dispatcher.BeginInvoke(new Action(Apply));
+        }
+    }
+
+    private void CancelTranslationLookup()
+    {
+        Interlocked.Increment(ref _translationGeneration);
+        var previous = _translationCancellation;
+        _translationCancellation = null;
+        if (previous is null) return;
+        previous.Cancel();
+        previous.Dispose();
+    }
+
+    private static string CreateTranslationTrackKey(LyricsTrackSignature signature)
+    {
+        var identity = string.Join(
+            "\u001f",
+            signature.NormalizedTitle,
+            signature.NormalizedArtist,
+            signature.NormalizedAlbum);
+        var hash = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
     public string CreateLrcExportText()
     {
         var document = _activeLyricsDocument
@@ -371,6 +698,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         CancelLyricsLookup();
+        ClearTranslationState("Translation lane cleared after importing a different source document.");
         _requestedSignature = null;
         var generation = Interlocked.Increment(ref _lyricsGeneration);
         var cancellation = new CancellationTokenSource();
@@ -474,6 +802,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ActiveWordProgressLabel));
         OnPropertyChanged(nameof(SyncPositionLabel));
         OnPropertyChanged(nameof(SyncStatusLabel));
+        OnPropertyChanged(nameof(TranslationDisplayText));
+        OnPropertyChanged(nameof(HasTranslationDisplay));
     }
 
     private void OnSnapshotChanged(object? sender, PlaybackSessionChangedEventArgs e)
@@ -514,6 +844,14 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         if (snapshot is null)
         {
+            CancelTranslationLookup();
+            _activeTranslationDocument = null;
+            SetTranslationStatus("Waiting for a supported media session.");
+            OnPropertyChanged(nameof(HasTranslation));
+            OnPropertyChanged(nameof(HasTranslationDisplay));
+            OnPropertyChanged(nameof(TranslationModeLabel));
+            OnPropertyChanged(nameof(TranslationDisplayText));
+            OnPropertyChanged(nameof(TranslationFullText));
             CancelLyricsLookup();
             _requestedSignature = null;
             _activeLyricsDocument = null;
@@ -533,6 +871,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
             LyricsStatusText = "Track title or artist metadata is missing; lookup was skipped.";
+            ClearTranslationState("Translation is unavailable without a stable track identity.");
             return;
         }
 
@@ -562,6 +901,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         LyricsModeLabel = "LOOKING UP";
         LyricsText = string.Empty;
 
+        LoadSavedTranslationForTrack(signature);
         _ = LoadLyricsAsync(signature, generation, cancellation.Token);
     }
 
@@ -737,5 +1077,6 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _playbackSource.SnapshotChanged -= OnSnapshotChanged;
         _syncScheduler.SceneChanged -= OnSceneChanged;
         CancelLyricsLookup();
+        CancelTranslationLookup();
     }
 }

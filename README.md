@@ -8,7 +8,7 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 
 - Windows GSMTC playback metadata and timeline for Spotify Desktop, recognized Windows Media sessions, and browser media sessions.
 - LRCLIB lyric lookup, exact-match validation and local SQLite caching.
-- User-selected LRC and Lyricsfile YAML import.
+- User-selected LRC and Lyricsfile YAML import, validated local LRC editor/export, and per-track user-labelled translation sidecars.
 - Line synchronization and source-provided word synchronization.
 - Shared playback clock and immutable scene state.
 - Main workspace, Focus/Karaoke, Mini Player and Game Mode windows.

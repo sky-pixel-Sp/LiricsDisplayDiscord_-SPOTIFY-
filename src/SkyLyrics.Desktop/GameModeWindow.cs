@@ -521,11 +521,6 @@ public sealed class GameModeWindow : Window
 
     private void ApplyClickThrough()
     {
-        if (!IsSourceInitialized)
-        {
-            return;
-        }
-
         var handle = new WindowInteropHelper(this).Handle;
         if (handle == IntPtr.Zero)
         {

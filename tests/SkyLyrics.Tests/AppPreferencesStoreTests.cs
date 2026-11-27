@@ -104,6 +104,25 @@ public sealed class AppPreferencesStoreTests
     }
 
     [Fact]
+    public void Normalize_DeduplicatesLocalTranslationsByTrackKeyAndKeepsLatest()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "translation.lrc");
+        var key = new string('d', 64);
+        var preferences = new AppPreferences
+        {
+            LocalTranslations =
+            [
+                new LocalTranslationPreference(key, path, "Japanese"),
+                new LocalTranslationPreference(key.ToUpperInvariant(), path, "Indonesian")
+            ]
+        }.Normalize();
+
+        var profile = Assert.Single(preferences.LocalTranslations);
+        Assert.Equal(key, profile.TrackKey);
+        Assert.Equal("Indonesian", profile.Language);
+    }
+
+    [Fact]
     public void Normalize_ClampsVisualSettingsToSupportedModesAndBudgets()
     {
         var preferences = new AppPreferences

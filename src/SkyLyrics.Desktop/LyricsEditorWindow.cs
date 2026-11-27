@@ -3,6 +3,14 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
 using SkyLyrics.Infrastructure.Lyrics;
+using System.IO;
+using FontFamily = System.Windows.Media.FontFamily;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using HorizontalAlignmentKind = System.Windows.HorizontalAlignment;
+using OrientationKind = System.Windows.Controls.Orientation;
+using MessageBox = System.Windows.MessageBox;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using Button = System.Windows.Controls.Button;
 using TextBox = System.Windows.Controls.TextBox;
 
@@ -100,8 +108,8 @@ public sealed class LyricsEditorWindow : Window
 
         var actions = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right
+            Orientation = OrientationKind.Horizontal,
+            HorizontalAlignment = HorizontalAlignmentKind.Right
         };
         var cancel = CreateButton("Cancel", false);
         cancel.Margin = new Thickness(0, 0, 8, 0);

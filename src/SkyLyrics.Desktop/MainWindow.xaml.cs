@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using MessageBox = System.Windows.MessageBox;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -310,6 +311,41 @@ public partial class MainWindow : Window
         {
             await _viewModel.LoadLocalLyricsFileAsync(editor.SavedFilePath);
         }
+    }
+
+    private async void ImportTranslation_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Import a local translation file",
+            Filter = "Lyrics files|*.lrc;*.yaml;*.yml;*.lyricsfile.yaml|LRC files|*.lrc|Lyricsfile YAML|*.yaml;*.yml;*.lyricsfile.yaml",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog(this) != true) return;
+
+        var languageDialog = new TranslationLanguageWindow { Owner = this };
+        if (languageDialog.ShowDialog() != true || string.IsNullOrWhiteSpace(languageDialog.Language))
+        {
+            return;
+        }
+
+        var loaded = await _viewModel.LoadTranslationFileAsync(dialog.FileName, languageDialog.Language);
+        if (!loaded)
+        {
+            MessageBox.Show(
+                this,
+                _viewModel.TranslationStatusText,
+                "Translation not loaded",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private async void RemoveTranslation_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.RemoveTranslationAsync();
     }
 
     private async void ImportLyrics_Click(object sender, RoutedEventArgs e)

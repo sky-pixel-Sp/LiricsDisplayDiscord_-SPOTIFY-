@@ -1,6 +1,12 @@
+using System.Collections.Immutable;
 using SkyLyrics.Application.Customization;
 
 namespace SkyLyrics.Application.Settings;
+
+public sealed record LocalTranslationPreference(
+    string TrackKey,
+    string FilePath,
+    string Language);
 
 public sealed record AppPreferences
 {
@@ -14,6 +20,8 @@ public sealed record AppPreferences
     public bool ObsOverlayEnabled { get; init; }
     public GameModePreferences GameMode { get; init; } = new();
     public VisualStudioPreferences Visuals { get; init; } = new();
+    public ImmutableArray<LocalTranslationPreference> LocalTranslations { get; init; } =
+        ImmutableArray<LocalTranslationPreference>.Empty;
     public int ObsOverlayPort { get; init; } = 43821;
     public CustomizationPreferences Customization { get; init; } = new();
 
@@ -31,9 +39,40 @@ public sealed record AppPreferences
             ObsOverlayPort = Math.Clamp(ObsOverlayPort, 1024, 65535),
             GameMode = (GameMode ?? new GameModePreferences()).Normalize(),
             Visuals = (Visuals ?? new VisualStudioPreferences()).Normalize(),
+            LocalTranslations = NormalizeLocalTranslations(LocalTranslations),
             Customization = (Customization ?? new CustomizationPreferences()).Normalize(),
             DiscordPresenceEnabled = DiscordPresenceEnabled && IsValidDiscordApplicationId(id)
         };
+    }
+
+    private static ImmutableArray<LocalTranslationPreference> NormalizeLocalTranslations(
+        ImmutableArray<LocalTranslationPreference> profiles)
+    {
+        if (profiles.IsDefaultOrEmpty)
+        {
+            return ImmutableArray<LocalTranslationPreference>.Empty;
+        }
+
+        return profiles
+            .Where(profile =>
+                profile is not null &&
+                profile.TrackKey is { Length: 64 } &&
+                profile.TrackKey.All(Uri.IsHexDigit) &&
+                !string.IsNullOrWhiteSpace(profile.FilePath) &&
+                Path.IsPathFullyQualified(profile.FilePath) &&
+                !string.IsNullOrWhiteSpace(profile.Language))
+            .Select(profile => profile with
+            {
+                TrackKey = profile.TrackKey.ToLowerInvariant(),
+                FilePath = profile.FilePath.Trim(),
+                Language = profile.Language.Trim().Length > 64
+                    ? profile.Language.Trim()[..64]
+                    : profile.Language.Trim()
+            })
+            .GroupBy(profile => profile.TrackKey, StringComparer.Ordinal)
+            .Select(group => group.Last())
+            .TakeLast(256)
+            .ToImmutableArray();
     }
 
     public static bool IsValidDiscordApplicationId(string? value) =>

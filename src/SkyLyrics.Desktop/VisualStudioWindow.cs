@@ -15,6 +15,13 @@ using Image = System.Windows.Controls.Image;
 using Slider = System.Windows.Controls.Slider;
 using StackPanel = System.Windows.Controls.StackPanel;
 using TextBlock = System.Windows.Controls.TextBlock;
+using FontFamily = System.Windows.Media.FontFamily;
+using Rectangle = System.Windows.Shapes.Rectangle;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using Point = System.Windows.Point;
+using HorizontalAlignmentKind = System.Windows.HorizontalAlignment;
+using MessageBox = System.Windows.MessageBox;
 
 namespace SkyLyrics.Desktop;
 
@@ -152,7 +159,7 @@ public sealed class VisualStudioWindow : Window
 
         var context = new StackPanel
         {
-            HorizontalAlignment = HorizontalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignmentKind.Center,
             VerticalAlignment = VerticalAlignment.Center,
             MaxWidth = 760,
             Margin = new Thickness(45)
@@ -163,7 +170,7 @@ public sealed class VisualStudioWindow : Window
             FontSize = 10,
             FontWeight = FontWeights.Bold,
             Foreground = Brush("#A8E6CF"),
-            HorizontalAlignment = HorizontalAlignment.Center
+            HorizontalAlignment = HorizontalAlignmentKind.Center
         });
         _trackTitle.FontSize = 36;
         _trackTitle.FontWeight = FontWeights.SemiBold;

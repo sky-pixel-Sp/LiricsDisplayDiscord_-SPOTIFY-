@@ -93,6 +93,18 @@
                             <TextBlock Text="Import lyrics" FontSize="12" />
                         </StackPanel>
                     </Button>
+                    <Button Style="{StaticResource SidebarNavButtonStyle}" Click="ImportTranslation_Click" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/file-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Import translation" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SidebarNavButtonStyle}" Click="RemoveTranslation_Click" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/file-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Remove translation" FontSize="12" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenDiagnostics_Click" Margin="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/activity.svg" Width="17" Height="17" Margin="0,0,12,0" />
@@ -177,6 +189,15 @@
                                        Visibility="{Binding HasActiveWord, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
                                        TextAlignment="Center" Margin="0,16,0,0" />
+                            <StackPanel Visibility="{Binding HasTranslationDisplay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Margin="0,16,0,0">
+                                <TextBlock Text="{Binding TranslationModeLabel}" FontSize="9"
+                                           FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+                                           TextAlignment="Center" />
+                                <TextBlock Text="{Binding TranslationDisplayText}" FontSize="20"
+                                           Foreground="{DynamicResource SecondaryText}" TextAlignment="Center"
+                                           TextWrapping="Wrap" MaxHeight="90" Margin="0,6,0,0" />
+                            </StackPanel>
                         </StackPanel>
                         <DockPanel Grid.Row="2" LastChildFill="False">
                             <TextBlock DockPanel.Dock="Left" Text="{Binding UpcomingLyricText}"
@@ -199,8 +220,21 @@
                                    Foreground="{DynamicResource MutedText}" TextTrimming="CharacterEllipsis" MaxWidth="360" />
                     </DockPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <TextBlock Text="{Binding LyricsText}" FontSize="12" LineHeight="19"
-                                   Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" />
+                        <StackPanel>
+                            <TextBlock Text="ORIGINAL LYRICS" Style="{StaticResource EyebrowTextStyle}" Margin="0,0,0,6" />
+                            <TextBlock Text="{Binding LyricsText}" FontSize="12" LineHeight="19"
+                                       Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding TranslationModeLabel}"
+                                       Visibility="{Binding HasTranslation, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Style="{StaticResource EyebrowTextStyle}" Margin="0,14,0,6" />
+                            <TextBlock Text="{Binding TranslationFullText}"
+                                       Visibility="{Binding HasTranslation, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       FontSize="12" LineHeight="19" Foreground="{DynamicResource SecondaryText}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding TranslationStatusText}"
+                                       Visibility="{Binding HasTranslation, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       FontSize="9" Foreground="{DynamicResource MutedText}" Margin="0,8,0,0" />
+                        </StackPanel>
                     </ScrollViewer>
                 </Grid>
             </Border>
