@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using SkyLyrics.Application.Customization;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Infrastructure.Persistence;
 using Xunit;
@@ -42,7 +43,25 @@ public sealed class AppPreferencesStoreTests
                 SyncOffsetMilliseconds = -125,
                 ReduceMotion = true,
                 ObsOverlayEnabled = true,
-                ObsOverlayPort = 43822
+                ObsOverlayPort = 43822,
+                Customization = new CustomizationPreferences
+                {
+                    ActiveProfileId = "my-night",
+                    Profiles =
+                    [
+                        CustomizationPreferences.Sage,
+                        CustomizationPreferences.Midnight,
+                        CustomizationPreferences.Paper,
+                        new ThemeProfile
+                        {
+                            Id = "my-night",
+                            Name = "My Night",
+                            AccentColor = "#AABBCC",
+                            FontScale = 1.15d,
+                            AnimationPreset = "Subtle"
+                        }
+                    ]
+                }
             });
 
             await restored.StartAsync(CancellationToken.None);
@@ -52,6 +71,10 @@ public sealed class AppPreferencesStoreTests
             Assert.True(restored.Current.ReduceMotion);
             Assert.True(restored.Current.ObsOverlayEnabled);
             Assert.Equal(43822, restored.Current.ObsOverlayPort);
+            Assert.Equal("my-night", restored.Current.Customization.ActiveProfileId);
+            var active = Assert.Single(restored.Current.Customization.Profiles, profile => profile.Id == "my-night");
+            Assert.Equal("#AABBCC", active.AccentColor);
+            Assert.Equal(1.15d, active.FontScale);
         }
         finally
         {

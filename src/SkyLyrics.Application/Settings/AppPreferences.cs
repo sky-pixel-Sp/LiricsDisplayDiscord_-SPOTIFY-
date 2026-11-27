@@ -1,3 +1,5 @@
+using SkyLyrics.Application.Customization;
+
 namespace SkyLyrics.Application.Settings;
 
 public sealed record AppPreferences
@@ -11,6 +13,7 @@ public sealed record AppPreferences
     public bool ObsOverlayEnabled { get; init; }
     public GameModePreferences GameMode { get; init; } = new();
     public int ObsOverlayPort { get; init; } = 43821;
+    public CustomizationPreferences Customization { get; init; } = new();
 
     public AppPreferences Normalize()
     {
@@ -22,6 +25,7 @@ public sealed record AppPreferences
             DiscordApplicationId = id,
             ObsOverlayPort = Math.Clamp(ObsOverlayPort, 1024, 65535),
             GameMode = (GameMode ?? new GameModePreferences()).Normalize(),
+            Customization = (Customization ?? new CustomizationPreferences()).Normalize(),
             DiscordPresenceEnabled = DiscordPresenceEnabled && IsValidDiscordApplicationId(id)
         };
     }

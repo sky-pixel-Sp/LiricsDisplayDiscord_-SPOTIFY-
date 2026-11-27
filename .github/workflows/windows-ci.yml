@@ -7,10 +7,12 @@ on:
       - "feat/**"
       - "fix/**"
       - "redesign/**"
+      - "feature/**"
   pull_request:
     branches:
       - main
       - "feat/**"
+      - "redesign/**"
   workflow_dispatch:
 
 permissions:
