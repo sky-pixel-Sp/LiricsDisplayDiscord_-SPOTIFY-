@@ -67,20 +67,23 @@ public static class ThemeManager
         resources["MutedText"] = Brush(Mix(secondary, background, 0.28d));
     }
 
-    private static Color Parse(string value) =>
-        (Color)ColorConverter.ConvertFromString(value);
+    private static System.Windows.Media.Color Parse(string value) =>
+        (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value);
 
-    private static SolidColorBrush Brush(Color color)
+    private static SolidColorBrush Brush(System.Windows.Media.Color color)
     {
         var brush = new SolidColorBrush(color);
         brush.Freeze();
         return brush;
     }
 
-    private static Color Mix(Color first, Color second, double amount)
+    private static System.Windows.Media.Color Mix(
+        System.Windows.Media.Color first,
+        System.Windows.Media.Color second,
+        double amount)
     {
         var t = Math.Clamp(amount, 0d, 1d);
-        return Color.FromRgb(
+        return System.Windows.Media.Color.FromRgb(
             (byte)Math.Round(first.R + ((second.R - first.R) * t)),
             (byte)Math.Round(first.G + ((second.G - first.G) * t)),
             (byte)Math.Round(first.B + ((second.B - first.B) * t)));
