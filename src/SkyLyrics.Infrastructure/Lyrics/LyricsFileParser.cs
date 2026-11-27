@@ -8,7 +8,7 @@ namespace SkyLyrics.Infrastructure.Lyrics;
 public sealed class LyricsFileParser
 {
     private const int MaximumDocumentCharacters = 2 * 1024 * 1024;
-    private const long MaximumTimestampMilliseconds = TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerMillisecond;
+    private const long MaximumTimestampMilliseconds = long.MaxValue / TimeSpan.TicksPerMillisecond;
 
     private readonly IDeserializer _deserializer = new DeserializerBuilder()
         .WithNamingConvention(UnderscoredNamingConvention.Instance)
