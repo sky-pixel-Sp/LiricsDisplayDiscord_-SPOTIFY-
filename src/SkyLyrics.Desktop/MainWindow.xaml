@@ -200,7 +200,8 @@
             </Border>
         </Grid>
 
-        <StackPanel Grid.Row="2" Grid.Column="2">
+        <ScrollViewer Grid.Row="2" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
             <Border Style="{StaticResource PanelCardStyle}" Padding="15">
                 <StackPanel>
                     <TextBlock Text="NOW PLAYING" Style="{StaticResource EyebrowTextStyle}" />
@@ -263,6 +264,7 @@
                                TextWrapping="Wrap" MaxHeight="40" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
-        </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
