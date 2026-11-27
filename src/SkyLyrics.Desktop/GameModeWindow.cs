@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -35,12 +37,16 @@ public sealed class GameModeWindow : Window
     private readonly TextBlock _meta = new();
     private readonly TextBlock _status = new();
     private readonly Button _pinButton = new();
+    private readonly Button _clickThroughButton = new();
     private readonly ScaleTransform _scale = new(1d, 1d);
     private readonly TranslateTransform _translate = new();
     private readonly DispatcherTimer _geometryTimer;
     private GameModePreferences _settings;
     private string _lastLyric = string.Empty;
     private bool _applyingSettings;
+
+    private const int GwlExStyle = -20;
+    private const long WsExTransparent = 0x00000020L;
 
     public GameModeWindow(
         ShellViewModel viewModel,
@@ -76,6 +82,7 @@ public sealed class GameModeWindow : Window
         LocationChanged += (_, _) => ScheduleGeometrySave();
         SizeChanged += (_, _) => ScheduleGeometrySave();
         Closed += OnClosed;
+        SourceInitialized += (_, _) => ApplyClickThrough();
 
         BuildVisualTree();
         ApplySettings(_settings);
@@ -154,11 +161,15 @@ public sealed class GameModeWindow : Window
         _pinButton.ToolTip = "Toggle always-on-top";
         _pinButton.Click += (_, _) => UpdateSettings(_settings with { AlwaysOnTop = !_settings.AlwaysOnTop });
         StyleHeaderButton(_pinButton, "#1C302A", "#A8E6CF");
+        _clickThroughButton.Click += (_, _) => ToggleClickThrough();
+        _clickThroughButton.ToolTip = "Toggle click-through; use Ctrl+Alt+Shift+G to restore interaction";
+        StyleHeaderButton(_clickThroughButton, "#253833", "#637B70");
         var settingsButton = CreateHeaderButton("⚙", "Game Mode settings");
         settingsButton.Click += (_, _) => OpenSettings();
         var closeButton = CreateHeaderButton("×", "Close Game Mode");
         closeButton.Click += (_, _) => Close();
         actions.Children.Add(_pinButton);
+        actions.Children.Add(_clickThroughButton);
         actions.Children.Add(settingsButton);
         actions.Children.Add(closeButton);
         Grid.SetColumn(actions, 1);
@@ -291,6 +302,9 @@ public sealed class GameModeWindow : Window
 
     public GameModePreferences Settings => _settings;
 
+    public void ToggleClickThrough() =>
+        UpdateSettings(_settings with { ClickThrough = !_settings.ClickThrough });
+
     public void ApplySettings(GameModePreferences settings)
     {
         _applyingSettings = true;
@@ -302,9 +316,12 @@ public sealed class GameModeWindow : Window
         Topmost = _settings.AlwaysOnTop;
         Opacity = _settings.Opacity;
         _pinButton.Content = _settings.AlwaysOnTop ? "PINNED" : "UNPINNED";
+        _clickThroughButton.Content = _settings.ClickThrough ? "CLICK-THROUGH ON" : "INTERACTIVE";
+        _clickThroughButton.BorderBrush = Brush(_settings.ClickThrough ? "#A8E6CF" : "#637B70");
         _surface.Background = BackgroundBrush(_settings.BackgroundId);
         _lyric.Effect = TextEffect(_settings.TextEffectId);
         _applyingSettings = false;
+        ApplyClickThrough();
     }
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -332,7 +349,8 @@ public sealed class GameModeWindow : Window
         }
 
         _meta.Text = $"{_viewModel.StatusTitle}  ·  {_viewModel.ArtistLine}";
-        _status.Text = $"{_viewModel.SyncStatusLabel}  ·  {_viewModel.SyncPositionLabel}";
+        _status.Text = $"{_viewModel.SyncStatusLabel}  ·  {_viewModel.SyncPositionLabel}" +
+            (_settings.ClickThrough ? "  ·  CLICK-THROUGH ON · CTRL+ALT+SHIFT+G TO RESTORE" : string.Empty);
 
         if (string.Equals(next, _lastLyric, StringComparison.Ordinal)) return;
         _lastLyric = next;
@@ -500,6 +518,36 @@ public sealed class GameModeWindow : Window
         }).Normalize();
         _persist(_settings);
     }
+
+    private void ApplyClickThrough()
+    {
+        if (!IsSourceInitialized)
+        {
+            return;
+        }
+
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var currentStyle = GetWindowLongPtr(handle, GwlExStyle).ToInt64();
+        var updatedStyle = _settings.ClickThrough
+            ? currentStyle | WsExTransparent
+            : currentStyle & ~WsExTransparent;
+
+        if (updatedStyle != currentStyle)
+        {
+            SetWindowLongPtr(handle, GwlExStyle, new IntPtr(updatedStyle));
+        }
+    }
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr(IntPtr handle, int index);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr(IntPtr handle, int index, IntPtr newValue);
 
     private void OnClosed(object? sender, EventArgs e)
     {

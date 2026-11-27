@@ -35,6 +35,16 @@ public sealed class GameModePreferencesTests
         Assert.Equal("cinematic", result.AnimationId);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Normalize_PreservesClickThroughPreference(bool enabled)
+    {
+        var result = new GameModePreferences { ClickThrough = enabled }.Normalize();
+
+        Assert.Equal(enabled, result.ClickThrough);
+    }
+
     [Fact]
     public void Normalize_PreservesValidGeometryAndTopmostPreference()
     {

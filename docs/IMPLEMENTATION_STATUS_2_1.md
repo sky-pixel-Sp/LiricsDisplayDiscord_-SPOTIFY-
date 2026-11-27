@@ -53,11 +53,13 @@ These are planned workstreams, not active controls or completed features.
 | Dual-language lyrics, translation and word-level editing | Pending |
 | Metadata-reactive album ambience, fluid gradient and particle field | Implemented in working branch; CI and device performance acceptance pending |
 | Real audio-reactive spectrum/waveform input | Pending; requires explicit opt-in Windows audio-session capture implementation |
-| Advanced Game Mode | Pending |
+| Advanced Game Mode | Drag/resize/topmost baseline plus click-through toggle and global restore hotkey implemented; CI and device/game compatibility QA pending |
 | Integrations and Customization Studio | Pending |
 | Windows device acceptance and release | Pending |
 
 The LRC editor exports line-synced and unsynced documents. It deliberately blocks word-synced documents in this editor because the standard LRC format cannot safely preserve per-word timestamps.
+
+Game Mode click-through is optional and reversible with the global shortcut `Ctrl+Alt+Shift+G`; users should keep the main application open to retain a reliable hotkey path while the overlay ignores pointer input.
 
 ## Release gates
 

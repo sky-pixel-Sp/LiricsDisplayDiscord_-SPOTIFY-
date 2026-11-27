@@ -8,6 +8,7 @@ public sealed record GameModePreferences
     public double Height { get; init; } = 176d;
     public double Opacity { get; init; } = 0.96d;
     public bool AlwaysOnTop { get; init; } = true;
+    public bool ClickThrough { get; init; }
     public string BackgroundId { get; init; } = "aurora";
     public string TextEffectId { get; init; } = "mint-glow";
     public string AnimationId { get; init; } = "cinematic";

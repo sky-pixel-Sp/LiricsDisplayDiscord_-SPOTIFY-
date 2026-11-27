@@ -26,6 +26,7 @@ public sealed class GameModeSettingsWindow : Window
     private readonly TextBox _heightBox = new();
     private readonly Slider _opacitySlider = new();
     private readonly CheckBox _topmostCheck = new();
+    private readonly CheckBox _clickThroughCheck = new();
     private readonly ComboBox _backgroundBox = new();
     private readonly ComboBox _effectBox = new();
     private readonly ComboBox _animationBox = new();
@@ -70,6 +71,11 @@ public sealed class GameModeSettingsWindow : Window
         _topmostCheck.IsChecked = _initial.AlwaysOnTop;
         _topmostCheck.Foreground = Brush("#A8B1B6");
         _topmostCheck.Margin = new Thickness(0, 5, 0, 0);
+
+        _clickThroughCheck.Content = "Enable click-through (Ctrl+Alt+Shift+G restores interaction)";
+        _clickThroughCheck.IsChecked = _initial.ClickThrough;
+        _clickThroughCheck.Foreground = Brush("#A8B1B6");
+        _clickThroughCheck.Margin = new Thickness(0, 12, 0, 0);
 
         _backgroundBox = CreateChoiceBox(
             new[]
@@ -217,6 +223,7 @@ public sealed class GameModeSettingsWindow : Window
     {
         var panel = new StackPanel();
         panel.Children.Add(_topmostCheck);
+        panel.Children.Add(_clickThroughCheck);
         panel.Children.Add(new TextBlock
         {
             Text = "Position is saved when you move or resize the overlay. The overlay can be placed on any connected monitor.",
@@ -334,6 +341,7 @@ public sealed class GameModeSettingsWindow : Window
             Height = height,
             Opacity = _opacitySlider.Value,
             AlwaysOnTop = _topmostCheck.IsChecked == true,
+            ClickThrough = _clickThroughCheck.IsChecked == true,
             BackgroundId = _backgroundBox.SelectedValue as string ?? _initial.BackgroundId,
             TextEffectId = _effectBox.SelectedValue as string ?? _initial.TextEffectId,
             AnimationId = _animationBox.SelectedValue as string ?? _initial.AnimationId
@@ -348,6 +356,7 @@ public sealed class GameModeSettingsWindow : Window
         _heightBox.Text = "176";
         _opacitySlider.Value = 0.96;
         _topmostCheck.IsChecked = true;
+        _clickThroughCheck.IsChecked = false;
         _backgroundBox.SelectedValue = "aurora";
         _effectBox.SelectedValue = "mint-glow";
         _animationBox.SelectedValue = "cinematic";
