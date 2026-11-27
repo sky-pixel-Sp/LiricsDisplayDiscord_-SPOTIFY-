@@ -15,6 +15,11 @@ using Color = System.Windows.Media.Color;
 using Point = System.Windows.Point;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using Cursor = System.Windows.Input.Cursor;
+using Brushes = System.Windows.Media.Brushes;
+using Cursors = System.Windows.Input.Cursors;
+using Orientation = System.Windows.Controls.Orientation;
+using Panel = System.Windows.Controls.Panel;
+using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace SkyLyrics.Desktop;
 

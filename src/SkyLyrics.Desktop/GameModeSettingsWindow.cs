@@ -10,6 +10,10 @@ using Control = System.Windows.Controls.Control;
 using Cursor = System.Windows.Input.Cursor;
 using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using TextBox = System.Windows.Controls.TextBox;
+using FontFamily = System.Windows.Media.FontFamily;
+using Orientation = System.Windows.Controls.Orientation;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using Color = System.Windows.Media.Color;
 
 namespace SkyLyrics.Desktop;
 

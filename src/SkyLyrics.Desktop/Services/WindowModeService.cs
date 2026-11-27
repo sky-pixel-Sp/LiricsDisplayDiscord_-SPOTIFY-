@@ -120,7 +120,7 @@ public sealed class WindowModeService : IDisposable
 
     private void OnPreferencesChanged(AppPreferences preferences)
     {
-        var dispatcher = Application.Current?.Dispatcher;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) return;
         dispatcher.BeginInvoke(new Action(() =>
         {

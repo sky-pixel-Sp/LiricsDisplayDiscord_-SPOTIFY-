@@ -39,8 +39,8 @@ public partial class MainWindow : Window
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _windowModes.CloseAuxiliaryWindows();
-            if (Application.Current is { Dispatcher.HasShutdownStarted: false })
-                Dispatcher.BeginInvoke(new Action(() => Application.Current?.Shutdown()));
+            if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
+                Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current?.Shutdown()));
         };
     }
 
@@ -54,7 +54,7 @@ public partial class MainWindow : Window
     {
         _windowModes.CloseAuxiliaryWindows();
         Close();
-        Application.Current?.Shutdown();
+        System.Windows.Application.Current?.Shutdown();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
