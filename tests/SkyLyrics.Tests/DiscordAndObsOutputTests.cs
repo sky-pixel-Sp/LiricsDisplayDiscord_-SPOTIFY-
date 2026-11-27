@@ -50,6 +50,26 @@ public sealed class DiscordAndObsOutputTests
     }
 
     [Fact]
+    public void DiscordPresenceMapper_DoesNotAssumeSpotifyWhenArtistMetadataIsMissing()
+    {
+        var now = DateTimeOffset.FromUnixTimeSeconds(1_800_000_000);
+        var scene = new SceneState(
+            5,
+            new TrackScene("Browser track", null, null, null),
+            null, null, null,
+            TimeSpan.FromSeconds(12),
+            PlaybackStatus.Playing,
+            now);
+
+        var activity = DiscordPresenceMapper.Map(scene, now);
+
+        Assert.NotNull(activity);
+        Assert.Equal("Browser track", activity.Details);
+        Assert.Equal("Artist unavailable", activity.State);
+        Assert.DoesNotContain("Spotify", activity.State, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void DiscordPresenceMapper_ClearsForMissingTrackAndStoppedPlayback()
     {
         Assert.Null(DiscordPresenceMapper.Map(SceneState.Empty, DateTimeOffset.UtcNow));

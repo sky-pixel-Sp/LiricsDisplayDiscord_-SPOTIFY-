@@ -23,7 +23,7 @@ public static class DiscordPresenceMapper
         }
 
         var artist = string.IsNullOrWhiteSpace(track.Artist)
-            ? "Spotify Desktop"
+            ? "Artist unavailable"
             : track.Artist.Trim();
         var state = scene.PlaybackStatus == PlaybackStatus.Paused
             ? $"{artist} · Paused"
