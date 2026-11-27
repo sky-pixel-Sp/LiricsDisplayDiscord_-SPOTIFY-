@@ -87,6 +87,12 @@ public partial class App : System.Windows.Application
 
             var preferences = _host.Services.GetRequiredService<IAppPreferencesStore>();
             ThemeManager.Apply(preferences.Current.Theme);
+            var activeProfile = preferences.Current.Customization.Profiles
+                .First(profile => string.Equals(
+                    profile.Id,
+                    preferences.Current.Customization.ActiveProfileId,
+                    StringComparison.OrdinalIgnoreCase));
+            ThemeManager.ApplyProfile(activeProfile);
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             var windowModes = _host.Services.GetRequiredService<WindowModeService>();
             MainWindow = mainWindow;

@@ -24,6 +24,8 @@ public partial class SettingsWindow : Window
     {
         var current = _preferences.Current;
         ThemeCombo.SelectedIndex = string.Equals(current.Theme, "Light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        ThemeProfileCombo.ItemsSource = current.Customization.Profiles;
+        ThemeProfileCombo.SelectedValue = current.Customization.ActiveProfileId;
         ReduceMotionCheck.IsChecked = current.ReduceMotion;
         MiniPlayerTopmostCheck.IsChecked = current.MiniPlayerAlwaysOnTop;
         OffsetBox.Text = current.SyncOffsetMilliseconds.ToString(CultureInfo.InvariantCulture);
@@ -73,9 +75,14 @@ public partial class SettingsWindow : Window
         }
 
         var theme = (ThemeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Dark";
+        var customization = _preferences.Current.Customization with
+        {
+            ActiveProfileId = ThemeProfileCombo.SelectedValue as string ?? "sage"
+        };
         var updated = _preferences.Current with
         {
             Theme = theme,
+            Customization = customization,
             ReduceMotion = ReduceMotionCheck.IsChecked == true,
             MiniPlayerAlwaysOnTop = MiniPlayerTopmostCheck.IsChecked == true,
             SyncOffsetMilliseconds = offset,
@@ -90,6 +97,9 @@ public partial class SettingsWindow : Window
             await _preferences.SaveAsync(updated);
             _scheduler.SetOffset(TimeSpan.FromMilliseconds(offset));
             ThemeManager.Apply(theme);
+            var activeProfile = updated.Customization.Normalize().Profiles
+                .First(profile => string.Equals(profile.Id, customization.ActiveProfileId, StringComparison.OrdinalIgnoreCase));
+            ThemeManager.ApplyProfile(activeProfile);
             StatusText.Text = "Settings saved. Output configuration is refreshed immediately.";
             DialogResult = true;
         }
