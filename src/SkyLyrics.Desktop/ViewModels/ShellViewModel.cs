@@ -23,7 +23,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(playbackSource);
 
         _playbackSource = playbackSource;
-        _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        _dispatcher = System.Windows.Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         _snapshot = playbackSource.Current;
         _playbackSource.SnapshotChanged += OnSnapshotChanged;
     }
