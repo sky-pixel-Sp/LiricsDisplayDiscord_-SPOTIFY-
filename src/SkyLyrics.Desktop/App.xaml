@@ -1,13 +1,13 @@
 <Application x:Class="SkyLyrics.Desktop.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             ShutdownMode="OnMainWindowClose">
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <SolidColorBrush x:Key="WindowBackground" Color="#0A0D12" />
-        <SolidColorBrush x:Key="PanelBackground" Color="#111821" />
-        <SolidColorBrush x:Key="PanelBorder" Color="#25313D" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#83E1D2" />
-        <SolidColorBrush x:Key="PrimaryText" Color="#F1F5F8" />
-        <SolidColorBrush x:Key="SecondaryText" Color="#93A1AE" />
+        <ResourceDictionary>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/SkyLyrics.Desktop;component/Themes/Dark.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

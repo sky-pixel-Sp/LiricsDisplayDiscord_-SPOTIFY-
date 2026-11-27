@@ -162,7 +162,7 @@ public sealed class SyncScheduler : IDisposable
         var position = GetEffectivePositionLocked();
         var status = _playback?.PlaybackStatus ?? PlaybackStatus.Unknown;
         var track = _playback?.Track is { } metadata
-            ? new TrackScene(metadata.Title, metadata.Artist, metadata.Album, null)
+            ? new TrackScene(metadata.Title, metadata.Artist, metadata.Album, null, metadata.ArtworkBytes)
             : null;
 
         var groups = GetTimedGroupsLocked();
@@ -170,6 +170,8 @@ public sealed class SyncScheduler : IDisposable
         var activeGroup = insertionIndex > 0 ? groups[insertionIndex - 1] : null;
         var nextGroup = insertionIndex < groups.Length ? groups[insertionIndex] : null;
 
+        var previousGroup = insertionIndex > 1 ? groups[insertionIndex - 2] : null;
+        var previousLine = previousGroup is null ? null : ToScene(previousGroup);
         var activeLine = activeGroup is null ? null : ToScene(activeGroup);
         var nextLine = nextGroup is null ? null : ToScene(nextGroup);
         var wordFill = activeGroup is null
@@ -179,6 +181,7 @@ public sealed class SyncScheduler : IDisposable
         if (!force && IsEquivalent(
                 _current,
                 track,
+                previousLine,
                 activeLine,
                 nextLine,
                 wordFill,
@@ -198,7 +201,8 @@ public sealed class SyncScheduler : IDisposable
             wordFill,
             position,
             status,
-            _timeProvider.GetUtcNow());
+            _timeProvider.GetUtcNow(),
+            previousLine);
 
         Volatile.Write(ref _current, scene);
         RescheduleLocked(groups, insertionIndex, activeGroup, position);
@@ -390,12 +394,14 @@ public sealed class SyncScheduler : IDisposable
     private static bool IsEquivalent(
         SceneState current,
         TrackScene? track,
+        LyricLineScene? previousLine,
         LyricLineScene? activeLine,
         LyricLineScene? nextLine,
         WordFillState? wordFill,
         TimeSpan position,
         PlaybackStatus status) =>
         Equals(current.Track, track) &&
+        Equals(current.PreviousLine, previousLine) &&
         Equals(current.ActiveLine, activeLine) &&
         Equals(current.NextLine, nextLine) &&
         Equals(current.WordFill, wordFill) &&
@@ -406,7 +412,12 @@ public sealed class SyncScheduler : IDisposable
         StringComparer.OrdinalIgnoreCase.Equals(
             left.SourceAppUserModelId,
             right.SourceAppUserModelId) &&
-        Equals(left.Track, right.Track);
+        (left.Track is null
+            ? right.Track is null
+            : right.Track is not null &&
+              StringComparer.OrdinalIgnoreCase.Equals(left.Track.Title, right.Track.Title) &&
+              StringComparer.OrdinalIgnoreCase.Equals(left.Track.Artist, right.Track.Artist) &&
+              StringComparer.OrdinalIgnoreCase.Equals(left.Track.Album, right.Track.Album));
 
     private static TimeSpan SaturatingAdd(TimeSpan left, TimeSpan right)
     {

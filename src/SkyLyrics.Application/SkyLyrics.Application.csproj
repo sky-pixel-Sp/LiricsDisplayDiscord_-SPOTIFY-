@@ -7,5 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\SkyLyrics.Core\SkyLyrics.Core.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
   </ItemGroup>
 </Project>

@@ -1,9 +1,11 @@
+using System.Collections.Immutable;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Playback;
 using SkyLyrics.Core.Playback;
 using SkyLyrics.Core.Scene;
 using Windows.Media.Control;
+using Windows.Storage.Streams;
 
 namespace SkyLyrics.Infrastructure.Windows.Playback;
 
@@ -247,11 +249,15 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
                     .AsTask(cancellationToken)
                     .ConfigureAwait(false);
 
+                var artwork = await ReadArtworkAsync(mediaProperties.Thumbnail, cancellationToken)
+                    .ConfigureAwait(false);
+
                 _track = new TrackMetadata(
                     mediaProperties.Title,
                     mediaProperties.Artist,
                     mediaProperties.AlbumTitle,
-                    mediaProperties.AlbumArtist);
+                    mediaProperties.AlbumArtist,
+                    artwork);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -296,7 +302,8 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
         {
             kind = PlaybackSessionChangeKind.Connected;
         }
-        else if (!Equals(current.Track, snapshot.Track))
+        else if (!SameTrackMetadata(current.Track, snapshot.Track) ||
+                 requestedKind == PlaybackSessionChangeKind.TrackChanged)
         {
             kind = PlaybackSessionChangeKind.TrackChanged;
         }
@@ -306,6 +313,64 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
         }
 
         PublishSnapshot(snapshot, kind);
+    }
+
+    private const int MaximumArtworkBytes = 8 * 1024 * 1024;
+
+    private async Task<ImmutableArray<byte>> ReadArtworkAsync(
+        IRandomAccessStreamReference? thumbnail,
+        CancellationToken cancellationToken)
+    {
+        if (thumbnail is null)
+        {
+            return ImmutableArray<byte>.Empty;
+        }
+
+        try
+        {
+            using var stream = await thumbnail.OpenReadAsync()
+                .AsTask(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (stream.Size == 0 || stream.Size > MaximumArtworkBytes)
+            {
+                _logger.LogDebug(
+                    "Spotify artwork was skipped because its payload size {ArtworkSize} is outside the supported range.",
+                    stream.Size);
+                return ImmutableArray<byte>.Empty;
+            }
+
+            using var reader = new DataReader(stream.GetInputStreamAt(0));
+            await reader.LoadAsync((uint)stream.Size)
+                .AsTask(cancellationToken)
+                .ConfigureAwait(false);
+
+            var bytes = new byte[(int)stream.Size];
+            reader.ReadBytes(bytes);
+            return ImmutableArray.CreateRange(bytes);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "The active GSMTC session did not expose readable album artwork.");
+            return ImmutableArray<byte>.Empty;
+        }
+    }
+
+    private static bool SameTrackMetadata(TrackMetadata? left, TrackMetadata? right)
+    {
+        if (left is null || right is null)
+        {
+            return left is null && right is null;
+        }
+
+        return StringComparer.Ordinal.Equals(left.Title, right.Title) &&
+               StringComparer.Ordinal.Equals(left.Artist, right.Artist) &&
+               StringComparer.Ordinal.Equals(left.Album, right.Album) &&
+               StringComparer.Ordinal.Equals(left.AlbumArtist, right.AlbumArtist);
     }
 
     private void PublishSnapshot(

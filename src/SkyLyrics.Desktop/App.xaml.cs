@@ -8,9 +8,13 @@ using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Lyrics;
 using SkyLyrics.Application.Outputs;
 using SkyLyrics.Application.Playback;
+using SkyLyrics.Application.Settings;
 using SkyLyrics.Application.Synchronization;
+using SkyLyrics.Desktop.Outputs;
+using SkyLyrics.Desktop.Services;
 using SkyLyrics.Desktop.ViewModels;
 using SkyLyrics.Infrastructure.Lyrics;
+using SkyLyrics.Infrastructure.Outputs;
 using SkyLyrics.Infrastructure.Persistence;
 using SkyLyrics.Infrastructure.Windows.Playback;
 
@@ -19,11 +23,12 @@ namespace SkyLyrics.Desktop;
 public partial class App : System.Windows.Application
 {
     private IHost? _host;
+    private SystemTrayService? _tray;
+    private GlobalHotkeyService? _hotkeys;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-
         try
         {
             var builder = Host.CreateApplicationBuilder(e.Args);
@@ -31,13 +36,13 @@ public partial class App : System.Windows.Application
             builder.Logging.AddDebug();
 
             builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddSingleton<AppPreferencesStore>();
+            builder.Services.AddSingleton<IAppPreferencesStore>(services => services.GetRequiredService<AppPreferencesStore>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<AppPreferencesStore>());
 
             builder.Services.AddSingleton<SqliteLyricsCache>();
-            builder.Services.AddSingleton<ILyricsCache>(
-                services => services.GetRequiredService<SqliteLyricsCache>());
-            builder.Services.AddSingleton<IHostedService>(
-                services => services.GetRequiredService<SqliteLyricsCache>());
-
+            builder.Services.AddSingleton<ILyricsCache>(services => services.GetRequiredService<SqliteLyricsCache>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SqliteLyricsCache>());
             builder.Services.AddSingleton<LrcParser>();
             builder.Services.AddSingleton<LyricsFileParser>();
             builder.Services.AddSingleton<LocalLyricsLoader>();
@@ -50,48 +55,74 @@ public partial class App : System.Windows.Application
                     Timeout = TimeSpan.FromSeconds(15)
                 };
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                    "SkyLyricsDesktop/0.3.0 (https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-)");
-                client.DefaultRequestHeaders.Accept.Add(
-                    new MediaTypeWithQualityHeaderValue("application/json"));
+                    "SkyLyricsDesktop/1.0.0 (https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-)");
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 return client;
             });
 
             builder.Services.AddSingleton<ILyricsProvider, LrclibClient>();
             builder.Services.AddSingleton<ILyricsService, LyricsService>();
-
             builder.Services.AddSingleton<SpotifyAppIdentityMatcher>();
             builder.Services.AddSingleton<SpotifyGsmTcSessionMonitor>();
-            builder.Services.AddSingleton<IPlaybackSessionSource>(
-                services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
-            builder.Services.AddSingleton<IHostedService>(
-                services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
+            builder.Services.AddSingleton<IPlaybackSessionSource>(services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
 
-            builder.Services.AddSingleton<SceneStateRouter>();
             builder.Services.AddSingleton<SyncScheduler>();
             builder.Services.AddSingleton<ShellViewModel>();
+            builder.Services.AddSingleton<WindowModeService>();
             builder.Services.AddSingleton<MainWindow>();
+
+            builder.Services.AddSingleton<DiscordPresenceSink>();
+            builder.Services.AddSingleton<IOutputSink>(services => services.GetRequiredService<DiscordPresenceSink>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<DiscordPresenceSink>());
+            builder.Services.AddSingleton<ObsOverlayServerSink>();
+            builder.Services.AddSingleton<IOutputSink>(services => services.GetRequiredService<ObsOverlayServerSink>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<ObsOverlayServerSink>());
+            builder.Services.AddSingleton<SceneStateRouter>();
+            builder.Services.AddSingleton<SceneStateOutputBridge>();
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SceneStateOutputBridge>());
 
             _host = builder.Build();
             await _host.StartAsync();
 
+            var preferences = _host.Services.GetRequiredService<IAppPreferencesStore>();
+            ThemeManager.Apply(preferences.Current.Theme);
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+            var windowModes = _host.Services.GetRequiredService<WindowModeService>();
             MainWindow = mainWindow;
+            _hotkeys = new GlobalHotkeyService(mainWindow, windowModes);
             mainWindow.Show();
+            _tray = new SystemTrayService(
+                mainWindow.ShowFromTray,
+                windowModes.ShowFocusView,
+                windowModes.ToggleMiniPlayer,
+                mainWindow.ShowSettings,
+                mainWindow.ShowDiagnostics,
+                () => Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    mainWindow.RequestApplicationExit();
+                    Shutdown();
+                })));
         }
         catch (Exception exception)
         {
             Debug.WriteLine(exception);
-            MessageBox.Show(
+            System.Windows.MessageBox.Show(
                 $"SkyLyrics Desktop could not start.{Environment.NewLine}{Environment.NewLine}{exception.Message}",
                 "SkyLyrics Desktop",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
             Shutdown(-1);
         }
     }
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        _hotkeys?.Dispose();
+        _hotkeys = null;
+        _tray?.Dispose();
+        _tray = null;
+
         if (_host is not null)
         {
             try

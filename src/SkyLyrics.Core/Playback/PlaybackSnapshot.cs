@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using SkyLyrics.Core.Scene;
 
 namespace SkyLyrics.Core.Playback;
@@ -6,7 +7,11 @@ public sealed record TrackMetadata(
     string? Title,
     string? Artist,
     string? Album,
-    string? AlbumArtist);
+    string? AlbumArtist,
+    ImmutableArray<byte> ArtworkBytes = default)
+{
+    public bool HasArtwork => !ArtworkBytes.IsDefaultOrEmpty;
+}
 
 public sealed record PlaybackSnapshot
 {
