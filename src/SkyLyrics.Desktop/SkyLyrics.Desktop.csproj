@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SkyLyrics.Core\SkyLyrics.Core.csproj" />
     <ProjectReference Include="..\SkyLyrics.Application\SkyLyrics.Application.csproj" />
+    <ProjectReference Include="..\SkyLyrics.Infrastructure.Windows\SkyLyrics.Infrastructure.Windows.csproj" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
   </ItemGroup>
