@@ -76,7 +76,7 @@
                     <Button x:Name="FullscreenButton" Style="{StaticResource SidebarNavButtonStyle}" Click="ToggleFullscreen_Click" Margin="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/maximize-2.svg" Width="17" Height="17" Margin="0,0,12,0" />
-                            <TextBlock Text="FULL SCREEN" FontSize="12" />
+                            <TextBlock x:Name="FullscreenLabel" Text="FULL SCREEN" FontSize="12" />
                         </StackPanel>
                     </Button>
                     <Border Height="1" Margin="7,12,7,14" Background="{DynamicResource PanelBorder}" />

@@ -112,7 +112,7 @@ public partial class MainWindow : Window
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
             WindowState = WindowState.Maximized;
-            FullscreenButton.Content = "EXIT FULL";
+            FullscreenLabel.Text = "EXIT FULL";
             _isFullscreen = true;
             return;
         }
@@ -121,7 +121,7 @@ public partial class MainWindow : Window
         WindowStyle = _restoreWindowStyle;
         ResizeMode = _restoreResizeMode;
         WindowState = _restoreWindowState == WindowState.Minimized ? WindowState.Normal : _restoreWindowState;
-        FullscreenButton.Content = "FULL SCREEN";
+        FullscreenLabel.Text = "FULL SCREEN";
         _isFullscreen = false;
     }
 
