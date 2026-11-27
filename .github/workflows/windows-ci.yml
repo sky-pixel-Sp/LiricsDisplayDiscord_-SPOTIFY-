@@ -19,9 +19,9 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: Build and test (Windows x64)
+    name: Build, test and package (Windows x64)
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - name: Checkout source
@@ -49,6 +49,49 @@ jobs:
           --no-restore
           --logger "trx;LogFileName=SkyLyrics.Tests.trx"
           --results-directory .\TestResults
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Publish self-contained Windows x64 application
+        run: >-
+          dotnet publish .\src\SkyLyrics.Desktop\SkyLyrics.Desktop.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output .\publish
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:PublishTrimmed=false
+
+      - name: Compile Windows installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\artifacts | Out-Null
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=1.0.0" .\installer\windows\SkyLyrics.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Verify installer and generate SHA-256
+        shell: pwsh
+        run: |
+          $installer = Get-Item .\artifacts\SkyLyricsDesktop-Setup-win-x64.exe
+          if ($installer.Length -lt 1MB) {
+            throw "Installer is unexpectedly small; package output is not accepted."
+          }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content .\artifacts\SHA256SUMS.txt -Encoding ascii
+          Write-Host "Installer size: $($installer.Length) bytes"
+          Write-Host "SHA-256: $hash"
+
+      - name: Upload Windows x64 installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: skylyrics-windows-x64-installer
+          path: .\artifacts\*
+          if-no-files-found: error
 
       - name: Upload test results
         if: always()
