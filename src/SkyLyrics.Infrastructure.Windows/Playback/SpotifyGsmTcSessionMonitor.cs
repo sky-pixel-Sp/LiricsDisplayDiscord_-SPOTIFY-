@@ -318,7 +318,7 @@ public sealed class SpotifyGsmTcSessionMonitor : BackgroundService, IPlaybackSes
     private const int MaximumArtworkBytes = 8 * 1024 * 1024;
 
     private async Task<ImmutableArray<byte>> ReadArtworkAsync(
-        RandomAccessStreamReference? thumbnail,
+        IRandomAccessStreamReference? thumbnail,
         CancellationToken cancellationToken)
     {
         if (thumbnail is null)

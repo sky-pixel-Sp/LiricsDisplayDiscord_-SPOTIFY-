@@ -412,12 +412,12 @@ public sealed class SyncScheduler : IDisposable
         StringComparer.OrdinalIgnoreCase.Equals(
             left.SourceAppUserModelId,
             right.SourceAppUserModelId) &&
-        left.Track is null
+        (left.Track is null
             ? right.Track is null
             : right.Track is not null &&
               StringComparer.OrdinalIgnoreCase.Equals(left.Track.Title, right.Track.Title) &&
               StringComparer.OrdinalIgnoreCase.Equals(left.Track.Artist, right.Track.Artist) &&
-              StringComparer.OrdinalIgnoreCase.Equals(left.Track.Album, right.Track.Album);
+              StringComparer.OrdinalIgnoreCase.Equals(left.Track.Album, right.Track.Album));
 
     private static TimeSpan SaturatingAdd(TimeSpan left, TimeSpan right)
     {
