@@ -150,7 +150,7 @@ public sealed class SyncSchedulerTests
             ])));
 
         Assert.Equal("Hello", scheduler.Current.WordFill?.Word.Text);
-        Assert.Equal(0.5d, scheduler.Current.WordFill?.Progress, 3);
+        Assert.Equal(0.5d, scheduler.Current.WordFill!.Progress, precision: 3);
     }
 
     [Fact]
