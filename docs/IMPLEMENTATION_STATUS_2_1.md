@@ -15,10 +15,11 @@ https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-/actions/runs/4602
 
 This is baseline CI evidence only. It is not a claim that the application has been manually validated on the user's device or that future 2.1 features are implemented.
 
-## Verified in source at baseline
+## Verified in the current working branch
 
 - MainWindow uses WPF native window chrome with CanResize and SingleBorderWindow.
 - F11 toggles borderless fullscreen; Escape restores the previous window state.
+- The fullscreen toggle updates its named label without replacing the button's icon or content tree.
 - Main application close is not converted into a hide-to-tray action.
 - Focus, Mini Player and Game Mode share the same ShellViewModel/SceneState.
 - Game Mode already supports position persistence, resize handles, topmost/pin, settings and close.
@@ -28,8 +29,8 @@ This is baseline CI evidence only. It is not a claim that the application has be
 
 ## Not yet implemented in this preview
 
-- YouTube Music session routing/source selection.
-- General Windows Media and other GSMTC source selection.
+- Manual per-session source selection and explicit browser-site confirmation.
+- Additional unrecognized GSMTC application identities beyond the exact supported identity catalog.
 - Dual-language lyric documents and translation workflow.
 - In-app lyric editor and timestamp calibration.
 - Extreme Visual Engine with optional real audio-session input.
@@ -43,9 +44,9 @@ These are planned workstreams, not active controls or completed features.
 | Workstream | Status |
 |---|---|
 | Baseline selection and isolated work branch | Complete |
-| 2.1 preview version identity and release metadata | In progress |
-| Window chrome and window-state QA | Pending |
-| Multi-source GSMTC recognition and playback adapter | Implemented in the working branch; awaiting Windows CI and device acceptance |
+| 2.1 preview version identity and release metadata | Complete; build, test and package CI passed |
+| Window chrome and window-state QA | Native chrome retained and fullscreen button code fixed; manual device acceptance pending |
+| Multi-source GSMTC recognition and playback adapter | Implemented; Windows CI run 46029075732 passed; device acceptance pending |
 | Explicit YouTube Music website/source confirmation | Pending |
 | Advanced Lyrics Studio | Pending |
 | Extreme Visual Engine | Pending |
@@ -56,3 +57,12 @@ These are planned workstreams, not active controls or completed features.
 ## Release gates
 
 A workstream is complete only after implementation, automated tests, successful Windows CI, matching documentation and the required manual acceptance. A visible control without a working operation is not accepted. A connector must never show Connected without a real handshake or a verified media-session match.
+
+## Verified preview artifact
+
+- Windows CI run: https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-/actions/runs/46029075732
+- Artifact: `skylyrics-windows-x64-installer`
+- Installer size: 78,671,364 bytes
+- SHA-256: `7bf079a5b1df1d304947a20cc8dfeb9c25aa62a669d035ffd186a92eaedafc8d`
+- The downloaded installer checksum was recomputed locally and matched the checksum file bundled in the artifact.
+- This confirms package integrity; installation and interactive behavior still require manual acceptance on Windows 11.
