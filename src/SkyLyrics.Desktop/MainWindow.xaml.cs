@@ -60,6 +60,7 @@ public partial class MainWindow : Window
         ApplyInitialWindowPlacement();
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _preferences.PreferencesChanged += OnPreferencesChanged;
         _geometrySaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450d) };
         _geometrySaveTimer.Tick += GeometrySaveTimer_Tick;
         Closing += OnClosing;
@@ -75,6 +76,7 @@ public partial class MainWindow : Window
         {
             _geometrySaveTimer.Stop();
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _preferences.PreferencesChanged -= OnPreferencesChanged;
             _windowModes.CloseAuxiliaryWindows();
             if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
                 Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current?.Shutdown()));
@@ -167,6 +169,8 @@ public partial class MainWindow : Window
     {
         UpdateResponsiveLayout();
         PlayEntranceAnimation();
+        ApplyAmbientMotionPreferences();
+        AnimateArtwork();
     }
 
     private void ScheduleGeometrySave()
@@ -366,6 +370,68 @@ public partial class MainWindow : Window
     private void OpenSettings_Click(object sender, RoutedEventArgs e) => ShowSettings();
     private void OpenDiagnostics_Click(object sender, RoutedEventArgs e) => ShowDiagnostics();
 
+    private void OnPreferencesChanged(AppPreferences preferences)
+    {
+        if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+        {
+            Dispatcher.BeginInvoke(new Action(ApplyAmbientMotionPreferences));
+        }
+    }
+
+    private void ApplyAmbientMotionPreferences()
+    {
+        var settings = _preferences.Current;
+        var motionEnabled = SystemParameters.ClientAreaAnimation && !settings.ReduceMotion;
+        var quality = settings.CinematicQualityTier;
+
+        if (!motionEnabled || quality is "lite" or "reduced")
+        {
+            StopFloatingNote(FloatingNoteOne);
+            StopFloatingNote(FloatingNoteTwo);
+            StopFloatingNote(FloatingNoteThree);
+            return;
+        }
+
+        StartFloatingNote(FloatingNoteOne, -22d, TimeSpan.FromSeconds(3.8d));
+        StartFloatingNote(FloatingNoteTwo, 18d, TimeSpan.FromSeconds(4.7d));
+        if (quality == "cinematic")
+        {
+            StartFloatingNote(FloatingNoteThree, -15d, TimeSpan.FromSeconds(5.2d));
+        }
+        else
+        {
+            StopFloatingNote(FloatingNoteThree);
+        }
+    }
+
+    private static void StartFloatingNote(System.Windows.FrameworkElement note, double distance, TimeSpan duration)
+    {
+        if (note.RenderTransform is not TranslateTransform transform)
+        {
+            return;
+        }
+
+        transform.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(0d, distance, duration)
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
+    }
+
+    private static void StopFloatingNote(System.Windows.FrameworkElement note)
+    {
+        if (note.RenderTransform is not TranslateTransform transform)
+        {
+            return;
+        }
+
+        transform.BeginAnimation(TranslateTransform.YProperty, null);
+        transform.Y = 0d;
+    }
+
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ShellViewModel.ActiveLyricLineIndex))
@@ -488,8 +554,28 @@ public partial class MainWindow : Window
             OpacityProperty,
             new DoubleAnimation(0d, 0.15d, TimeSpan.FromMilliseconds(420))
             {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
             });
+
+        if (ArtworkBackdrop.RenderTransform is ScaleTransform scale)
+        {
+            scale.BeginAnimation(
+                ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(1.035d, 1.085d, TimeSpan.FromSeconds(16d))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                });
+            scale.BeginAnimation(
+                ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(1.035d, 1.085d, TimeSpan.FromSeconds(16d))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = RepeatBehavior.Forever,
+                    EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+                });
+        }
     }
 
     private async void EditLyrics_Click(object sender, RoutedEventArgs e)
