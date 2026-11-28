@@ -110,6 +110,33 @@ public sealed class LyricsServiceTests
     }
 
     [Fact]
+    public async Task SearchAsyncReturnsRankedCandidatesWithValidationReasons()
+    {
+        var matching = CreateProviderResult("Matching line");
+        var similar = new LyricsProviderResult(
+            "LRCLIB",
+            14,
+            new LyricsDocument(
+                "Night Drives",
+                "Example Artist",
+                null,
+                TimeSpan.FromSeconds(100),
+                false,
+                [new LyricLine("Similar title lyrics", TimeSpan.FromSeconds(1))]));
+        var provider = new FakeProvider(null, [similar, matching]);
+        var service = CreateService(provider, new FakeCache());
+
+        var candidates = await service.SearchAsync(CreateSignature(), CancellationToken.None);
+
+        Assert.Equal(2, candidates.Count);
+        Assert.Equal(7, candidates[0].Result.ProviderId);
+        Assert.True(candidates[0].IsExactSignatureMatch);
+        Assert.Contains("Judul cocok", candidates[0].MatchReason);
+        Assert.False(candidates[1].IsExactSignatureMatch);
+        Assert.Contains("Judul berbeda", candidates[1].MatchReason);
+    }
+
+    [Fact]
     public async Task ManuallySelectedCandidateIsRevalidatedAndCached()
     {
         var cache = new FakeCache();
@@ -185,8 +212,19 @@ public sealed class LyricsServiceTests
                 false,
                 [new LyricLine(text, TimeSpan.FromSeconds(1))]));
 
-    private sealed class FakeProvider(LyricsProviderResult? result) : ILyricsProvider
+    private sealed class FakeProvider : ILyricsProvider
     {
+        private readonly LyricsProviderResult? _result;
+        private readonly IReadOnlyList<LyricsProviderResult> _searchResults;
+
+        public FakeProvider(
+            LyricsProviderResult? result,
+            IReadOnlyList<LyricsProviderResult>? searchResults = null)
+        {
+            _result = result;
+            _searchResults = searchResults ?? [];
+        }
+
         public string Name => "LRCLIB";
         public int ExactCalls { get; private set; }
 
@@ -195,18 +233,18 @@ public sealed class LyricsServiceTests
             CancellationToken cancellationToken)
         {
             ExactCalls++;
-            return Task.FromResult(result);
+            return Task.FromResult(_result);
         }
 
         public Task<IReadOnlyList<LyricsProviderResult>> SearchAsync(
             LyricsTrackSignature signature,
             CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<LyricsProviderResult>>([]);
+            Task.FromResult(_searchResults);
 
         public Task<LyricsProviderResult?> GetByIdAsync(
             int providerId,
             CancellationToken cancellationToken) =>
-            Task.FromResult(result);
+            Task.FromResult(_result);
     }
 
     private sealed class FakeCache : ILyricsCache, ILyricsLibrary
