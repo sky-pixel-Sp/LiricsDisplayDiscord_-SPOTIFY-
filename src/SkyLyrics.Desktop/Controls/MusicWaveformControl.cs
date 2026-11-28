@@ -113,7 +113,7 @@ public sealed class MusicWaveformControl : FrameworkElement
 
     private void UpdateRenderingSubscription()
     {
-        var shouldAnimate = IsLoaded && IsVisible && MotionEnabled && IsPlaying &&
+        var shouldAnimate = IsLoaded && IsVisible && MotionEnabled && SystemParameters.ClientAreaAnimation && IsPlaying &&
                             !StringComparer.OrdinalIgnoreCase.Equals(QualityTier, "reduced") &&
                             _effectiveQualityLevel != CinematicQualityLevel.Reduced;
 
