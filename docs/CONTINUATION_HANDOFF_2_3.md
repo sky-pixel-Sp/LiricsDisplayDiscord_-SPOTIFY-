@@ -1,39 +1,48 @@
 # SkyLyrics Desktop 2.3 — Continuation Handoff
 
-## Current repository state
+## Repository state
 
 - Repository: `sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-`
 - Working branch: `feature/skylyrics-2.3-real-assets`
 - Base branch: `feature/skylyrics-2.2-perfecting`
-- Audited branch head: `f09976d100827e2788d712d329fae41ea39277b1`
-- The working branch existed before implementation and pointed at the same commit as the base branch.
-- No project files have been changed by the P0 audit package.
+- Last implementation commit verified by Windows CI #263: `48de3a08fd59080f585a8fdcb8ad57aff3cf4bdc`
+- Verified version: `2.3.0.263`
+- Current package build: Release, self-contained Windows x64.
+- The original 2.3 branch existed at the same baseline commit as 2.2; no history rewrite was performed.
 
-## Completed
+## Completed implementation packages
 
-1. Confirmed repository, branch names, baseline head, solution layout, WPF target, Windows CI and installer pipeline.
-2. Inventoried the 2.2 visuals. The repository contains SVG scenes, SVG textures, SVG note/icon art, fonts and HLSL sources, but no raster background or animated media library.
-3. Recorded preserved functional boundaries, especially GSMTC timeline and lyric synchronization.
-4. Queried 21st.dev for native-product visual references. The references are inspiration only and will be adapted to WPF.
-5. Added P0 inventory, license register, initial catalog status, and implementation status.
+1. P0 audit: repository structure, existing media, working systems, build/publish workflows and license evidence inventoried.
+2. P4 foundation: disk-based asset discovery, deterministic IDs, header metadata, SHA-256, file size, source/license manifest ingestion, catalog JSON export service, native WPF browser, category/search/favorites, real source preview, apply/preview/reset and safe fallback.
+3. P5 foundation: separate Asset Library navigation and main workspace raster background loading from selected local asset.
+4. Build integration: 2.3 project metadata, Windows CI and Inno Setup version updated.
+5. Windows CI #263: restore, Release build, 187/187 tests, self-contained win-x64 publish, Inno Setup compile, checksum verification and artifact upload all succeeded.
 
-## Outstanding work
+## Verified artifacts
 
-- P1: create and commit genuinely distinct raster background masters and optimized variants.
-- P2: produce actual animated media files with a documented duration/frame rate and reduced-motion alternative.
-- P3: produce visualizer/texture/artwork files and clearly separate audio-reactive data from decorative timeline motion.
-- P4: implement filesystem discovery, generated catalog, preview, filtering, favorites, and persistence.
-- P5: integrate the Asset Library and selected background into existing WPF windows.
-- P6: add decode/cache/memory controls and visibility-aware animation lifecycle.
-- P7: add and run tests; execute Windows x64 installer workflow.
-- P8: inspect artifacts and perform manual Windows 11 acceptance.
+- Installer filename: `SkyLyricsDesktop-Setup-win-x64-2.3.0.263.exe`
+- Installer size: 78,889,626 bytes.
+- Published app size: 84,612,607 bytes.
+- Installer SHA-256: `e37f7bdd020ab46a3772c2a568416adb8418cf501e894084d58e0b1818779e49`
+- Test results: `SkyLyrics.Tests.trx`, 187 passed, 0 failed.
+- CI workflow run ID: `46113480272`.
+- GitHub artifact IDs: installer `15250157439`, tests `15250232355`.
 
-## Test evidence
+## Explicitly incomplete
 
-- P0 is a source-tree inspection only.
-- No build, unit-test, installer, memory, animation-playback, or device-acceptance test has been run for 2.3.
-- Do not mark any package verified until its specific test evidence is available.
+- No raster or animated files are committed under `src/SkyLyrics.Desktop/Assets/Library`; the committed asset catalog remains empty.
+- The Aurora Fjord master/display/thumbnail starter package exists only in the working artifact area and is excluded from the build; license review is required before public redistribution.
+- Seven additional background themes remain.
+- No actual ambient loop, particles, music-note animation, splash animation, texture pack, artwork pack or visualizer scene pack has been committed.
+- The visualizer selection is only persisted; it is not an audio-reactive engine. GSMTC metadata is not an audio sample source.
+- Main workspace background is integrated; Focus/Karaoke, Mini Player, Game Mode and splash background integration remain.
+- Full asset cache lifecycle, resource cleanup and measured memory/decoder performance remain.
+- No physical-device Windows 11 manual acceptance has been performed.
+
+## Test evidence and limits
+
+CI #263 passed all automated checks described above. Asset tests validate metadata parsing, checksum calculation, missing/corrupt handling and preference normalization. They do not validate the playback quality of a real shipped GIF/video, do not profile memory on the user's device, and do not verify the visual output of all auxiliary windows.
 
 ## Exact next action
 
-Implement the asset metadata/discovery service and the native WPF Asset Library window on this branch, preserving the existing lyrics Library window as a separate destination. Add unit tests for catalog discovery, stable IDs, file size, SHA-256, malformed media handling, and missing-file behavior. Then add the first approved raster master and its display/thumbnail derivatives, generate the catalog from those exact files, update this handoff with the resulting commit, and run Windows CI.
+Complete P1 with the eight distinct background themes and repository-resident master/display/thumbnail files. Add the Aurora starter package only after recording the publisher's license approval in `ASSET_LICENSES_2_3.md`. Generate `ASSET_CATALOG_2_3.json` from those exact committed bytes with the catalog service and verify each reported dimension, byte size and SHA-256 against the files. Then add real animation/overlay/texture/visualizer media before continuing to Focus/Karaoke, Mini Player and Game Mode integration.
