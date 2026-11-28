@@ -48,7 +48,7 @@ public sealed class LibraryWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = Brush("#0B0D10");
         Foreground = Brush("#F4F5F2");
-        FontFamily = new FontFamily("Segoe UI Variable Display");
+        FontFamily = (System.Windows.Application.Current!.Resources["PoppinsFontFamily"] as System.Windows.Media.FontFamily ?? new System.Windows.Media.FontFamily("Segoe UI Variable Display"));
 
         _view = CollectionViewSource.GetDefaultView(_items);
         _view.Filter = FilterItem;
