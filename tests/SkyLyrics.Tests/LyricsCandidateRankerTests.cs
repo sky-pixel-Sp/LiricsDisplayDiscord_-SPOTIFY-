@@ -34,7 +34,7 @@ public sealed class LyricsCandidateRankerTests
 
         var ranked = LyricsCandidateRanker.Rank(
             signature,
-            [Make("Song", "Artist", "Album", 203, 1)]);
+            [Make("Song", "Artist", "Album", 203.01, 1)]);
 
         Assert.False(ranked[0].IsExactSignatureMatch);
     }
