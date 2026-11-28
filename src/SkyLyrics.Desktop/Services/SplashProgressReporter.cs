@@ -6,6 +6,7 @@ namespace SkyLyrics.Desktop.Services;
 public sealed class SplashProgressReporter(
     SplashWindow splash,
     Func<bool> isEnabled,
+    Func<bool> reduceMotion,
     double progress,
     string stage) : IHostedService
 {
@@ -33,6 +34,7 @@ public sealed class SplashProgressReporter(
             return;
         }
 
+        splash.SetMotionEnabled(!reduceMotion());
         if (!splash.IsVisible)
         {
             splash.Show();
