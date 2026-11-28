@@ -43,6 +43,9 @@ public sealed class AppPreferencesStoreTests
                 SyncOffsetMilliseconds = -125,
                 SelectedMediaSessionSourceAppUserModelId = "chrome.exe",
                 ReduceMotion = true,
+                SplashEnabled = false,
+                LyricAnimationLeadMilliseconds = 110,
+                CinematicQualityTier = "cinematic",
                 ObsOverlayEnabled = true,
                 ObsOverlayPort = 43822,
                 Customization = new CustomizationPreferences
@@ -71,6 +74,9 @@ public sealed class AppPreferencesStoreTests
             Assert.Equal(-125, restored.Current.SyncOffsetMilliseconds);
             Assert.Equal("chrome.exe", restored.Current.SelectedMediaSessionSourceAppUserModelId);
             Assert.True(restored.Current.ReduceMotion);
+            Assert.False(restored.Current.SplashEnabled);
+            Assert.Equal(110, restored.Current.LyricAnimationLeadMilliseconds);
+            Assert.Equal("cinematic", restored.Current.CinematicQualityTier);
             Assert.True(restored.Current.ObsOverlayEnabled);
             Assert.Equal(43822, restored.Current.ObsOverlayPort);
             Assert.Equal("my-night", restored.Current.Customization.ActiveProfileId);
@@ -87,6 +93,19 @@ public sealed class AppPreferencesStoreTests
                 Directory.Delete(directory, recursive: true);
             }
         }
+    }
+
+    [Fact]
+    public void Normalize_ClampsLyricAnimationLeadAndValidatesCinematicQuality()
+    {
+        var preferences = new AppPreferences
+        {
+            LyricAnimationLeadMilliseconds = 240,
+            CinematicQualityTier = "unknown"
+        }.Normalize();
+
+        Assert.Equal(120, preferences.LyricAnimationLeadMilliseconds);
+        Assert.Equal("balanced", preferences.CinematicQualityTier);
     }
 
     [Theory]
