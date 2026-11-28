@@ -5,7 +5,7 @@
         Title="SkyLyrics Desktop" Icon="/SkyLyrics.Desktop;component/Assets/SkyLyrics.ico"
         Width="1280" Height="800" MinWidth="980" MinHeight="610"
         ResizeMode="CanResize" WindowStyle="SingleBorderWindow"
-        WindowStartupLocation="CenterScreen" Background="{DynamicResource WindowBackground}"
+        WindowStartupLocation="Manual" Background="{DynamicResource WindowBackground}"
         Foreground="{DynamicResource PrimaryText}" FontFamily="Segoe UI Variable Display"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid x:Name="RootGrid" Margin="20" Opacity="0">
