@@ -157,7 +157,7 @@
                 </Border>
             </Grid>
 
-            <Border Grid.Row="1" CornerRadius="24" Padding="25,20" Background="{DynamicResource PanelBackground}"
+            <Border x:Name="LyricStageBorder" Grid.Row="1" CornerRadius="24" Padding="25,20" Background="{DynamicResource PanelBackground}"
                     BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" ClipToBounds="True">
                 <Grid>
                     <Image x:Name="ArtworkBackdrop" Source="{Binding AlbumArtworkBackdrop}" Stretch="UniformToFill" Opacity="0.15"
@@ -178,8 +178,27 @@
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
+                    <Rectangle Opacity=".16" IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <RadialGradientBrush Center="0.16,0.18" RadiusX=".95" RadiusY=".9">
+                                <GradientStop Color="{Binding ArtworkAccentColor}" Offset="0" />
+                                <GradientStop Color="#002A5848" Offset="1" />
+                            </RadialGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <Rectangle Opacity=".075" IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <RadialGradientBrush Center="0.88,0.78" RadiusX=".78" RadiusY=".75">
+                                <GradientStop Color="#789BE4" Offset="0" />
+                                <GradientStop Color="#00789BE4" Offset="1" />
+                            </RadialGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
                     <svgc:SvgViewbox x:Name="BokehTexture" Source="/SkyLyrics.Desktop;component/Assets/Textures/bokeh.svg"
-                                      Stretch="Fill" Opacity=".15" IsHitTestVisible="False" />
+                                      Stretch="Fill" Opacity=".15" IsHitTestVisible="False"
+                                      RenderTransformOrigin="0.5,0.5">
+                        <svgc:SvgViewbox.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></svgc:SvgViewbox.RenderTransform>
+                    </svgc:SvgViewbox>
                     <svgc:SvgViewbox x:Name="LightLeakTexture" Source="/SkyLyrics.Desktop;component/Assets/Textures/light-leak.svg"
                                       Stretch="Fill" Opacity=".13" IsHitTestVisible="False" />
                     <svgc:SvgViewbox x:Name="GrainTextureLayer"
@@ -278,6 +297,10 @@
                                        FontWeight="SemiBold" Foreground="{DynamicResource PrimaryText}" VerticalAlignment="Center" />
                         </DockPanel>
                     </Grid>
+                    <Border x:Name="LetterboxTopBar" Background="#050608" Height="0"
+                            VerticalAlignment="Top" Panel.ZIndex="100" IsHitTestVisible="False" />
+                    <Border x:Name="LetterboxBottomBar" Background="#050608" Height="0"
+                            VerticalAlignment="Bottom" Panel.ZIndex="100" IsHitTestVisible="False" />
                 </Grid>
             </Border>
 
