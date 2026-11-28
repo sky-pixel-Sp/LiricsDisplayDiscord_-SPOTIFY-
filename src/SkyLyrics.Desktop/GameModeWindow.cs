@@ -75,6 +75,8 @@ public sealed class GameModeWindow : Window
         _settings = (settings ?? new GameModePreferences()).Normalize();
 
         Title = "SkyLyrics · Game Mode";
+        FontFamily = System.Windows.Application.Current!.Resources["PoppinsFontFamily"] as System.Windows.Media.FontFamily
+            ?? new System.Windows.Media.FontFamily("Segoe UI Variable Display");
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true;
