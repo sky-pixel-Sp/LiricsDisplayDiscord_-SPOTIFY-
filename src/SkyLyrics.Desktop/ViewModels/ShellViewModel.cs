@@ -42,7 +42,12 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private ImageSource? _albumArtwork;
     private LyricsTrackSignature? _requestedSignature;
     private CancellationTokenSource? _lyricsCancellation;
+    private CancellationTokenSource? _candidateSearchCancellation;
+    private ImmutableArray<LyricsSearchCandidate> _lyricsCandidates = ImmutableArray<LyricsSearchCandidate>.Empty;
     private long _lyricsGeneration;
+    private bool _canSearchLyricsCandidates;
+    private bool _isSearchingLyricsCandidates;
+    private string _candidateSearchStatus = string.Empty;
     private bool _disposed;
 
     private string _lyricsStatusText = "Waiting for media playback.";
@@ -211,6 +216,19 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(LyricsText));
         }
     }
+
+    public ImmutableArray<LyricsSearchCandidate> LyricsCandidates => _lyricsCandidates;
+
+    public bool HasLyricsCandidates => !_lyricsCandidates.IsDefaultOrEmpty;
+
+    public bool CanSearchLyricsCandidates => _canSearchLyricsCandidates && !_isSearchingLyricsCandidates;
+
+    public bool IsSearchingLyricsCandidates => _isSearchingLyricsCandidates;
+
+    public string CandidateSearchStatus => _candidateSearchStatus;
+
+    public string CandidateSearchButtonText =>
+        _isSearchingLyricsCandidates ? "Mencari kandidat…" : "Pilih kandidat";
 
     public SceneState CurrentScene => _sceneState;
 
@@ -711,14 +729,17 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var document = entry.Document;
-        if (string.IsNullOrWhiteSpace(document.Title) ||
-            string.IsNullOrWhiteSpace(document.Artist) ||
-            !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(document.Title), signature.NormalizedTitle) ||
-            !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(document.Artist), signature.NormalizedArtist))
+        var validation = LyricsMatchValidator.Validate(signature, document);
+        if (!validation.IsMatch)
         {
-            LyricsStatusText = "This cached record does not match the currently playing track. No lyrics were changed.";
+            SetCandidateSearchEnabled(true);
+            CandidateSearchStatusBackingField = validation.Reason;
+            LyricsModeLabel = "NO MATCH";
+            LyricsStatusText = "Tidak ada lirik yang cocok";
             return false;
         }
+
+        ResetCandidateSearchState();
 
         CancelLyricsLookup();
         _requestedSignature = signature;
@@ -752,6 +773,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         CancelLyricsLookup();
+        ResetCandidateSearchState();
         ClearTranslationState("Translation lane cleared after importing a different source document.");
         _requestedSignature = null;
         var generation = Interlocked.Increment(ref _lyricsGeneration);
@@ -909,6 +931,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(TranslationDisplayText));
             OnPropertyChanged(nameof(TranslationFullText));
             CancelLyricsLookup();
+            ResetCandidateSearchState();
             _requestedSignature = null;
             _activeLyricsDocument = null;
             _syncScheduler.UpdateLyrics(null);
@@ -923,6 +946,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         if (signature is null)
         {
             CancelLyricsLookup();
+            ResetCandidateSearchState();
             _requestedSignature = null;
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
@@ -944,6 +968,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private void StartLyricsLookup(LyricsTrackSignature signature)
     {
         CancelLyricsLookup();
+        ResetCandidateSearchState();
         _requestedSignature = signature;
 
         var cancellation = new CancellationTokenSource();
@@ -959,6 +984,193 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         LoadSavedTranslationForTrack(signature);
         _ = LoadLyricsAsync(signature, generation, cancellation.Token);
+    }
+
+    public async Task SearchLyricsCandidatesAsync()
+    {
+        if (_disposed || !CanSearchLyricsCandidates || _requestedSignature is not { } signature)
+        {
+            return;
+        }
+
+        CancelCandidateSearch();
+        var generation = Interlocked.Read(ref _lyricsGeneration);
+        var cancellation = new CancellationTokenSource();
+        _candidateSearchCancellation = cancellation;
+        SetCandidateSearchInProgress(true);
+        SetLyricsCandidates(ImmutableArray<LyricsSearchCandidate>.Empty);
+        CandidateSearchStatusBackingField = "Mencari kandidat di LRCLIB…";
+
+        try
+        {
+            var candidates = await _lyricsService.SearchAsync(signature, cancellation.Token)
+                .ConfigureAwait(false);
+            DispatchCandidateSearchResult(generation, candidates, null);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Manual lyrics candidate search failed for {TrackTitle} by {TrackArtist}.",
+                signature.Title,
+                signature.Artist);
+            DispatchCandidateSearchResult(generation, [], "Pencarian kandidat gagal. Periksa koneksi lalu coba lagi.");
+        }
+    }
+
+    public async Task<bool> SelectLyricsCandidateAsync(LyricsSearchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        if (_disposed || _requestedSignature is not { } signature)
+        {
+            return false;
+        }
+
+        var generation = Interlocked.Read(ref _lyricsGeneration);
+        var validation = LyricsMatchValidator.Validate(signature, candidate.Result.Document);
+        if (!validation.IsMatch)
+        {
+            CandidateSearchStatusBackingField = $"Kandidat ditolak: {validation.Reason}";
+            return false;
+        }
+
+        try
+        {
+            var result = await _lyricsService.SelectCandidateAsync(
+                signature,
+                candidate,
+                CancellationToken.None).ConfigureAwait(false);
+
+            if (result is null)
+            {
+                DispatchCandidateSearchResult(
+                    generation,
+                    _lyricsCandidates,
+                    $"Kandidat ditolak: {validation.Reason}");
+                return false;
+            }
+
+            DispatchLyricsResult(generation, result, null);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Selected lyrics candidate could not be applied.");
+            DispatchCandidateSearchResult(
+                generation,
+                _lyricsCandidates,
+                "Kandidat tidak dapat digunakan. Silakan pilih kandidat lain.");
+            return false;
+        }
+    }
+
+    private void DispatchCandidateSearchResult(
+        long generation,
+        IReadOnlyList<LyricsSearchCandidate> candidates,
+        string? error)
+    {
+        if (_disposed || _dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        void Apply()
+        {
+            if (_disposed || generation != Interlocked.Read(ref _lyricsGeneration))
+            {
+                return;
+            }
+
+            SetCandidateSearchInProgress(false);
+            SetLyricsCandidates(candidates.ToImmutableArray());
+            CandidateSearchStatusBackingField = error ??
+                (candidates.Count == 0
+                    ? "LRCLIB tidak menemukan kandidat."
+                    : $"{candidates.Count} kandidat ditemukan. Hanya kandidat dengan judul, artis, dan durasi cocok yang dapat digunakan.");
+            var previous = _candidateSearchCancellation;
+            _candidateSearchCancellation = null;
+            previous?.Dispose();
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            Apply();
+        }
+        else
+        {
+            _dispatcher.BeginInvoke(new Action(Apply));
+        }
+    }
+
+    private void SetLyricsCandidates(ImmutableArray<LyricsSearchCandidate> candidates)
+    {
+        _lyricsCandidates = candidates;
+        OnPropertyChanged(nameof(LyricsCandidates));
+        OnPropertyChanged(nameof(HasLyricsCandidates));
+    }
+
+    private void SetCandidateSearchEnabled(bool enabled)
+    {
+        if (_canSearchLyricsCandidates == enabled)
+        {
+            return;
+        }
+
+        _canSearchLyricsCandidates = enabled;
+        OnPropertyChanged(nameof(CanSearchLyricsCandidates));
+    }
+
+    private void SetCandidateSearchInProgress(bool searching)
+    {
+        if (_isSearchingLyricsCandidates == searching)
+        {
+            return;
+        }
+
+        _isSearchingLyricsCandidates = searching;
+        OnPropertyChanged(nameof(IsSearchingLyricsCandidates));
+        OnPropertyChanged(nameof(CanSearchLyricsCandidates));
+        OnPropertyChanged(nameof(CandidateSearchButtonText));
+    }
+
+    private void ResetCandidateSearchState()
+    {
+        CancelCandidateSearch();
+        SetCandidateSearchEnabled(false);
+        SetCandidateSearchInProgress(false);
+        SetLyricsCandidates(ImmutableArray<LyricsSearchCandidate>.Empty);
+        CandidateSearchStatusBackingField = string.Empty;
+    }
+
+    private void CancelCandidateSearch()
+    {
+        var previous = _candidateSearchCancellation;
+        _candidateSearchCancellation = null;
+        if (previous is null)
+        {
+            return;
+        }
+
+        previous.Cancel();
+        previous.Dispose();
+    }
+
+    private string CandidateSearchStatusBackingField
+    {
+        get => _candidateSearchStatus;
+        set
+        {
+            if (_candidateSearchStatus == value)
+            {
+                return;
+            }
+
+            _candidateSearchStatus = value;
+            OnPropertyChanged(nameof(CandidateSearchStatus));
+        }
     }
 
     private async Task LoadLyricsAsync(
@@ -1032,10 +1244,13 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
-            LyricsStatusText = "LRCLIB did not return a matching lyrics record.";
+            SetCandidateSearchEnabled(true);
+            LyricsStatusText = "Tidak ada lirik yang cocok";
+            CandidateSearchStatusBackingField = string.Empty;
             return;
         }
 
+        ResetCandidateSearchState();
         var document = result.Document;
         _activeLyricsDocument = document;
         _syncScheduler.UpdateLyrics(document);
@@ -1101,6 +1316,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private void CancelLyricsLookup()
     {
         Interlocked.Increment(ref _lyricsGeneration);
+        CancelCandidateSearch();
         var previous = _lyricsCancellation;
         _lyricsCancellation = null;
 
