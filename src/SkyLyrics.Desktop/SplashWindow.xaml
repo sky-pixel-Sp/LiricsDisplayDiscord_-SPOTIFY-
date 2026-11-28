@@ -34,7 +34,7 @@
                              Opacity="0" RenderTransformOrigin="0.5,0.5">
                 <svgc:SvgViewbox.RenderTransform><ScaleTransform ScaleX=".86" ScaleY=".86"/></svgc:SvgViewbox.RenderTransform>
             </svgc:SvgViewbox>
-            <TextBlock x:Name="BrandTitle" Text="SKYLYRICS" FontFamily="Segoe UI Variable Display"
+            <TextBlock x:Name="BrandTitle" Text="SKYLYRICS" FontFamily="{StaticResource BebasNeueFontFamily}"
                        FontSize="43" FontWeight="Bold" Foreground="#E8FFF5"
                        HorizontalAlignment="Center" Margin="0,16,0,0" Opacity="0"/>
             <TextBlock Text="YOUR MUSIC, IN SYNC" FontSize="10" FontWeight="SemiBold"
