@@ -19,7 +19,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 35
     env:
-      APP_VERSION: 2.2.0-preview.1
+      APP_VERSION: 2.3.0-preview.1
 
     steps:
       - name: Checkout source
@@ -33,7 +33,7 @@ jobs:
       - name: Resolve release version
         shell: pwsh
         run: |
-          $version = "2.2.0-preview.1"
+          $version = "2.3.0-preview.1"
           if ($env:GITHUB_REF -like "refs/tags/v*") {
             $version = $env:GITHUB_REF.Substring(11)
           }

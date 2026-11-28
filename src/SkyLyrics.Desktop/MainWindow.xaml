@@ -11,6 +11,8 @@
         Foreground="{DynamicResource PrimaryText}" FontFamily="{StaticResource PoppinsFontFamily}"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid x:Name="RootGrid" Margin="20" Opacity="0">
+        <Image x:Name="AmbientBackgroundImage" Grid.RowSpan="3" Grid.ColumnSpan="3"
+               Stretch="UniformToFill" Opacity="0.22" IsHitTestVisible="False" />
         <Grid.RenderTransform><TranslateTransform Y="10" /></Grid.RenderTransform>
         <Grid.RowDefinitions><RowDefinition Height="58" /><RowDefinition Height="12" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions><ColumnDefinition Width="204" /><ColumnDefinition Width="*" /><ColumnDefinition Width="272" /></Grid.ColumnDefinitions>
@@ -93,6 +95,12 @@
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/list-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
                             <TextBlock Text="Library" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenAssetLibrary_Click" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/activity.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Asset Library" FontSize="12" />
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="ImportLyrics_Click" Margin="0,0,0,6">

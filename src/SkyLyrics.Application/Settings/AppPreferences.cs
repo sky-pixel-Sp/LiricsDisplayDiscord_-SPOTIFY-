@@ -29,6 +29,7 @@ public sealed record AppPreferences
         ImmutableArray<LocalTranslationPreference>.Empty;
     public int ObsOverlayPort { get; init; } = 43821;
     public CustomizationPreferences Customization { get; init; } = new();
+    public AssetLibraryPreferences AssetLibrary { get; init; } = new();
 
     public AppPreferences Normalize()
     {
@@ -51,6 +52,7 @@ public sealed record AppPreferences
             Visuals = (Visuals ?? new VisualStudioPreferences()).Normalize(),
             LocalTranslations = NormalizeLocalTranslations(LocalTranslations),
             Customization = (Customization ?? new CustomizationPreferences()).Normalize(),
+            AssetLibrary = (AssetLibrary ?? new AssetLibraryPreferences()).Normalize(),
             DiscordPresenceEnabled = DiscordPresenceEnabled && IsValidDiscordApplicationId(id)
         };
     }

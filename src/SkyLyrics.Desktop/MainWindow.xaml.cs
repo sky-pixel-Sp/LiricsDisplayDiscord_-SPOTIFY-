@@ -15,6 +15,7 @@ using SkyLyrics.Application.Settings;
 using SkyLyrics.Application.Playback;
 using SkyLyrics.Application.Synchronization;
 using SkyLyrics.Application.Lyrics;
+using SkyLyrics.Infrastructure.Assets;
 
 namespace SkyLyrics.Desktop;
 
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
     private readonly ILyricsLibrary _lyricsLibrary;
     private LibraryWindow? _libraryWindow;
     private VisualStudioWindow? _visualStudioWindow;
+    private AssetLibraryWindow? _assetLibraryWindow;
     private bool _isFullscreen;
     private WindowState _restoreWindowState;
     private WindowStyle _restoreWindowStyle;
@@ -65,6 +67,7 @@ public partial class MainWindow : Window
         _playbackSource = playbackSource ?? throw new ArgumentNullException(nameof(playbackSource));
         _lyricsLibrary = lyricsLibrary ?? throw new ArgumentNullException(nameof(lyricsLibrary));
         InitializeComponent();
+        ApplyLibraryBackground(_preferences.Current.AssetLibrary.SelectedBackgroundId);
         _effectiveQualityLevel = ResolveQualityLevel(_preferences.Current.CinematicQualityTier);
         MusicWaveform.EffectiveQualityChanged += OnEffectiveQualityChanged;
         ApplyInitialWindowPlacement();
@@ -379,6 +382,82 @@ public partial class MainWindow : Window
         window.Activate();
     }
 
+    private void OpenAssetLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_assetLibraryWindow is { IsVisible: true })
+        {
+            _assetLibraryWindow.Activate();
+            return;
+        }
+
+        var window = new AssetLibraryWindow(_preferences) { Owner = this };
+        _assetLibraryWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_assetLibraryWindow, window))
+            {
+                _assetLibraryWindow = null;
+            }
+        };
+        window.Show();
+        window.Activate();
+    }
+
+    private void ApplyLibraryBackground(string assetId)
+    {
+        AmbientBackgroundImage.Source = null;
+        AmbientBackgroundImage.Opacity = 0;
+
+        if (string.IsNullOrWhiteSpace(assetId))
+        {
+            return;
+        }
+
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Assets", "Library"));
+        var relativeBase = assetId.Replace('/', Path.DirectorySeparatorChar);
+        foreach (var extension in new[] { ".webp", ".png", ".jpg", ".jpeg" })
+        {
+            var path = Path.GetFullPath(Path.Combine(root, relativeBase + extension));
+            var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!path.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
+            {
+                continue;
+            }
+
+            try
+            {
+                var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bitmap.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreColorProfile;
+                bitmap.DecodePixelWidth = _preferences.Current.AssetLibrary.QualityProfile switch
+                {
+                    "low" => 960,
+                    "high" => 2400,
+                    _ => 1600
+                };
+                bitmap.UriSource = new Uri(path);
+                bitmap.EndInit();
+                bitmap.Freeze();
+                AmbientBackgroundImage.Source = bitmap;
+                AmbientBackgroundImage.Opacity = _preferences.Current.AssetLibrary.QualityProfile switch
+                {
+                    "low" => 0.14,
+                    "high" => 0.28,
+                    _ => 0.21
+                };
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or NotSupportedException or InvalidDataException or UriFormatException)
+            {
+                Trace.TraceWarning("SkyLyrics background asset could not be decoded: {0}", exception.Message);
+                return;
+            }
+        }
+
+        Trace.TraceWarning("Selected SkyLyrics background asset was not found: {0}", assetId);
+    }
+
     private void OpenVisualStudio_Click(object sender, RoutedEventArgs e)
     {
         if (_visualStudioWindow is { IsVisible: true })
@@ -416,6 +495,7 @@ public partial class MainWindow : Window
                 ApplyCinematicEffects();
                 AnimateArtwork();
                 UpdateLetterboxBars();
+                ApplyLibraryBackground(preferences.AssetLibrary.SelectedBackgroundId);
                 if (preferences.ReduceMotion || !SystemParameters.ClientAreaAnimation)
                 {
                     ResetAnimationElement(ActiveLyricTextBlock);

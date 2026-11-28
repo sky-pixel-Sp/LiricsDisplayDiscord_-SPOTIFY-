@@ -9,10 +9,10 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
-    <Version>2.2.0-preview.1</Version>
-    <AssemblyVersion>2.2.0.0</AssemblyVersion>
-    <FileVersion>2.2.0.0</FileVersion>
-    <InformationalVersion>2.2.0-preview.1</InformationalVersion>
+    <Version>2.3.0-preview.1</Version>
+    <AssemblyVersion>2.3.0.0</AssemblyVersion>
+    <FileVersion>2.3.0.0</FileVersion>
+    <InformationalVersion>2.3.0-preview.1</InformationalVersion>
     <RootNamespace>SkyLyrics.Desktop</RootNamespace>
     <AssemblyName>SkyLyrics.Desktop</AssemblyName>
     <ApplicationIcon>Assets/SkyLyrics.ico</ApplicationIcon>
@@ -28,6 +28,9 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Assets/Library/**/*"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
     <Resource Include="Assets/Icons/*.svg" />
     <Resource Include="Assets/Backgrounds/*.svg" />
     <Resource Include="Assets/Branding/*.svg" />

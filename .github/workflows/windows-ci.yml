@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 env:
-  APP_VERSION: 2.2.0.${{ github.run_number }}
+  APP_VERSION: 2.3.0.${{ github.run_number }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
