@@ -9,59 +9,57 @@ public static class LyricsCandidateRanker
         ArgumentNullException.ThrowIfNull(signature);
         ArgumentNullException.ThrowIfNull(candidates);
 
+        var normalizedTitle = LyricsMatchValidator.NormalizeTitle(signature.Title);
+        var normalizedArtist = LyricsMatchValidator.NormalizeArtist(signature.Artist);
+        var normalizedAlbum = LyricsMatchValidator.NormalizeMetadata(signature.Album);
+
         return candidates
             .Select(candidate =>
             {
-                var title = LyricsCacheKey.Normalize(candidate.Document.Title);
-                var artist = LyricsCacheKey.Normalize(candidate.Document.Artist);
-                var album = LyricsCacheKey.Normalize(candidate.Document.Album);
+                ArgumentNullException.ThrowIfNull(candidate);
+                var validation = LyricsMatchValidator.Validate(signature, candidate.Document);
+                var title = LyricsMatchValidator.NormalizeTitle(candidate.Document.Title);
+                var artist = LyricsMatchValidator.NormalizeArtist(candidate.Document.Artist);
+                var album = LyricsMatchValidator.NormalizeMetadata(candidate.Document.Album);
 
-                var titleExact = title.Length > 0 && title == signature.NormalizedTitle;
-                var artistExact = artist.Length > 0 && artist == signature.NormalizedArtist;
-                var albumExact = signature.NormalizedAlbum.Length > 0 &&
+                var titleExact = title.Length > 0 &&
+                                 StringComparer.Ordinal.Equals(normalizedTitle, title);
+                var artistExact = artist.Length > 0 &&
+                                  StringComparer.Ordinal.Equals(normalizedArtist, artist);
+                var albumExact = normalizedAlbum.Length > 0 &&
                                  album.Length > 0 &&
-                                 album == signature.NormalizedAlbum;
+                                 StringComparer.Ordinal.Equals(normalizedAlbum, album);
 
-                var score = 0;
-                if (titleExact)
-                {
-                    score += 50;
-                }
-                else
-                {
-                    score += SimilarityScore(signature.NormalizedTitle, title) / 2;
-                }
+                var score = titleExact
+                    ? 50
+                    : SimilarityScore(normalizedTitle, title) / 2;
 
-                if (artistExact)
-                {
-                    score += 30;
-                }
-                else
-                {
-                    score += SimilarityScore(signature.NormalizedArtist, artist) / 3;
-                }
+                score += artistExact
+                    ? 30
+                    : validation.ArtistMatches
+                        ? 24
+                        : SimilarityScore(normalizedArtist, artist) / 3;
 
                 if (albumExact)
                 {
                     score += 10;
                 }
 
-                var durationMatches = signature.Duration is { } expected &&
-                                      candidate.Document.Duration is { } actual &&
-                                      Math.Abs((expected - actual).TotalSeconds) <= 2d;
-
-                if (durationMatches)
+                if (validation.DurationMatches)
                 {
                     score += 10;
                 }
 
                 return new LyricsSearchCandidate(
                     candidate,
-                    score,
-                    titleExact && artistExact && durationMatches);
+                    Math.Clamp(score, 0, 100),
+                    validation.IsMatch)
+                {
+                    MatchReason = validation.Reason
+                };
             })
-            .OrderByDescending(static item => item.MatchScore)
-            .ThenByDescending(static item => item.IsExactSignatureMatch)
+            .OrderByDescending(static item => item.IsExactSignatureMatch)
+            .ThenByDescending(static item => item.MatchScore)
             .ThenBy(static item => item.Result.ProviderId ?? int.MaxValue)
             .ToArray();
     }
