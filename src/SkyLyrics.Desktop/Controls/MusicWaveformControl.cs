@@ -33,6 +33,10 @@ public sealed class MusicWaveformControl : FrameworkElement
     private AdaptiveQualityController _adaptiveQuality = new();
     private CinematicQualityLevel _effectiveQualityLevel = CinematicQualityLevel.Balanced;
     private bool _renderSubscribed;
+    private TimeSpan _lastPosition;
+    private bool _hasLastPosition;
+
+    public event Action<CinematicQualityLevel>? EffectiveQualityChanged;
 
     public MusicWaveformControl()
     {
@@ -78,6 +82,10 @@ public sealed class MusicWaveformControl : FrameworkElement
         {
             control.ResetAdaptiveQuality();
         }
+        else if (e.Property == PositionProperty)
+        {
+            control.ResetPlaybackPhaseIfSeek((TimeSpan)e.NewValue);
+        }
 
         control.UpdateRenderingSubscription();
         control.InvalidateVisual();
@@ -106,7 +114,8 @@ public sealed class MusicWaveformControl : FrameworkElement
     private void UpdateRenderingSubscription()
     {
         var shouldAnimate = IsLoaded && IsVisible && MotionEnabled && IsPlaying &&
-                            !StringComparer.OrdinalIgnoreCase.Equals(QualityTier, "reduced");
+                            !StringComparer.OrdinalIgnoreCase.Equals(QualityTier, "reduced") &&
+                            _effectiveQualityLevel != CinematicQualityLevel.Reduced;
 
         if (shouldAnimate && !_renderSubscribed)
         {
@@ -133,6 +142,8 @@ public sealed class MusicWaveformControl : FrameworkElement
         if (_adaptiveQuality.ObserveFrame(frameTime))
         {
             _effectiveQualityLevel = _adaptiveQuality.Level;
+            EffectiveQualityChanged?.Invoke(_effectiveQualityLevel);
+            UpdateRenderingSubscription();
         }
 
         InvalidateVisual();
@@ -148,6 +159,18 @@ public sealed class MusicWaveformControl : FrameworkElement
             _ => CinematicQualityLevel.Balanced
         };
         _adaptiveQuality = new AdaptiveQualityController(_effectiveQualityLevel);
+        EffectiveQualityChanged?.Invoke(_effectiveQualityLevel);
+    }
+
+    private void ResetPlaybackPhaseIfSeek(TimeSpan newPosition)
+    {
+        if (_hasLastPosition && (newPosition - _lastPosition).Duration() > TimeSpan.FromSeconds(1.5d))
+        {
+            _playbackElapsed.Restart();
+        }
+
+        _lastPosition = newPosition;
+        _hasLastPosition = true;
     }
 
     protected override void OnRender(DrawingContext drawingContext)
