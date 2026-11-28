@@ -68,6 +68,7 @@ public partial class SettingsWindow : Window
         ThemeProfileCombo.ItemsSource = current.Customization.Profiles;
         ThemeProfileCombo.SelectedValue = current.Customization.ActiveProfileId;
         ReduceMotionCheck.IsChecked = current.ReduceMotion;
+        LetterboxEnabledCheck.IsChecked = current.LetterboxEnabled;
         SplashEnabledCheck.IsChecked = current.SplashEnabled;
         LeadTimeBox.Text = current.LyricAnimationLeadMilliseconds.ToString(CultureInfo.InvariantCulture);
         QualityTierCombo.SelectedValue = current.CinematicQualityTier;
@@ -157,6 +158,7 @@ public partial class SettingsWindow : Window
             Theme = theme,
             Customization = customization,
             ReduceMotion = ReduceMotionCheck.IsChecked == true,
+            LetterboxEnabled = LetterboxEnabledCheck.IsChecked == true,
             SplashEnabled = SplashEnabledCheck.IsChecked == true,
             LyricAnimationLeadMilliseconds = leadTime,
             CinematicQualityTier = QualityTierCombo.SelectedValue as string ?? "balanced",
