@@ -409,13 +409,12 @@ public partial class MainWindow : Window
         AmbientBackgroundImage.Source = null;
         AmbientBackgroundImage.Opacity = 0;
 
-        if (string.IsNullOrWhiteSpace(assetId))
-        {
-            return;
-        }
+        var selectedAssetId = string.IsNullOrWhiteSpace(assetId)
+            ? "backgrounds/aurora-fjord"
+            : assetId;
 
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "Assets", "Library"));
-        var relativeBase = assetId.Replace('/', Path.DirectorySeparatorChar);
+        var relativeBase = selectedAssetId.Replace('/', Path.DirectorySeparatorChar);
         foreach (var extension in new[] { ".webp", ".png", ".jpg", ".jpeg" })
         {
             var path = Path.GetFullPath(Path.Combine(root, relativeBase + extension));
@@ -456,7 +455,7 @@ public partial class MainWindow : Window
             }
         }
 
-        Trace.TraceWarning("Selected SkyLyrics background asset was not found: {0}", assetId);
+        Trace.TraceWarning("Selected SkyLyrics background asset was not found: {0}", selectedAssetId);
     }
 
     private void OpenVisualStudio_Click(object sender, RoutedEventArgs e)

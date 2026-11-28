@@ -731,12 +731,24 @@ public sealed class AssetLibraryWindow : Window
 
     private string GetThumbnailPath(AssetCatalogEntry asset)
     {
-        var thumbnailName = asset.Id.Replace('/', '_') + ".webp";
-        var thumbnailPath = Path.GetFullPath(Path.Combine(_catalog.RootPath, "Thumbnails", thumbnailName));
+        var thumbnailStem = asset.Id.Replace('/', '_');
         var rootPrefix = _catalog.RootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return thumbnailPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase) && File.Exists(thumbnailPath)
-            ? thumbnailPath
-            : GetSafeAssetPath(asset.RelativePath);
+
+        foreach (var extension in new[] { ".webp", ".jpg", ".jpeg", ".png" })
+        {
+            var thumbnailPath = Path.GetFullPath(Path.Combine(
+                _catalog.RootPath,
+                "Thumbnails",
+                thumbnailStem + extension));
+
+            if (thumbnailPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(thumbnailPath))
+            {
+                return thumbnailPath;
+            }
+        }
+
+        return GetSafeAssetPath(asset.RelativePath);
     }
 
     private string GetSafeAssetPath(string relativePath)
