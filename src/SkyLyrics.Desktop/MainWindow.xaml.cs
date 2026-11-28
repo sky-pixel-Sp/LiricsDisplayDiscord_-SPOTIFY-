@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Microsoft.Win32;
 using SkyLyrics.Desktop.ViewModels;
+using SkyLyrics.Desktop.Effects;
 using SkyLyrics.Desktop.Services;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Application.Playback;
@@ -32,6 +33,8 @@ public partial class MainWindow : Window
     private WindowStyle _restoreWindowStyle;
     private ResizeMode _restoreResizeMode;
     private readonly DispatcherTimer _geometrySaveTimer;
+    private DispatcherTimer? _grainJitterTimer;
+    private double _grainPhase;
     private readonly SemaphoreSlim _geometrySaveGate = new(1, 1);
     private bool _closeSavePending;
     private bool _allowCloseAfterSave;
@@ -77,6 +80,7 @@ public partial class MainWindow : Window
             _geometrySaveTimer.Stop();
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _preferences.PreferencesChanged -= OnPreferencesChanged;
+            StopGrainJitter();
             _windowModes.CloseAuxiliaryWindows();
             if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
                 Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current?.Shutdown()));
@@ -170,6 +174,7 @@ public partial class MainWindow : Window
         UpdateResponsiveLayout();
         PlayEntranceAnimation();
         ApplyAmbientMotionPreferences();
+        ApplyCinematicEffects();
         AnimateArtwork();
     }
 
@@ -374,8 +379,82 @@ public partial class MainWindow : Window
     {
         if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
         {
-            Dispatcher.BeginInvoke(new Action(ApplyAmbientMotionPreferences));
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ApplyAmbientMotionPreferences();
+                ApplyCinematicEffects();
+            }));
         }
+    }
+
+    private void ApplyCinematicEffects()
+    {
+        var preferences = _preferences.Current;
+        var active = preferences.CinematicQualityTier is "cinematic" or "balanced" &&
+                     !preferences.ReduceMotion &&
+                     SystemParameters.ClientAreaAnimation;
+
+        if (active)
+        {
+            try
+            {
+                ArtworkBackdrop.Effect = new ChromaticAberrationShaderEffect { Amount = 0.18d };
+                GrainTextureLayer.Effect = new GrainShaderEffect { Intensity = 0.018d, Phase = _grainPhase };
+                StartGrainJitter();
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"SkyLyrics shader effects are unavailable; vector textures remain active. {exception}");
+                ArtworkBackdrop.Effect = null;
+                GrainTextureLayer.Effect = null;
+                StopGrainJitter();
+            }
+        }
+        else
+        {
+            ArtworkBackdrop.Effect = null;
+            GrainTextureLayer.Effect = null;
+            StopGrainJitter();
+        }
+    }
+
+    private void StartGrainJitter()
+    {
+        if (_grainJitterTimer is not null)
+        {
+            return;
+        }
+
+        _grainJitterTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(83.333d)
+        };
+        _grainJitterTimer.Tick += (_, _) =>
+        {
+            _grainPhase += 0.61803398875d;
+            if (_grainPhase >= 4096d)
+            {
+                _grainPhase = 0d;
+            }
+
+            if (GrainTextureLayer.Effect is GrainShaderEffect effect)
+            {
+                effect.Phase = _grainPhase;
+            }
+        };
+        _grainJitterTimer.Start();
+    }
+
+    private void StopGrainJitter()
+    {
+        if (_grainJitterTimer is null)
+        {
+            return;
+        }
+
+        _grainJitterTimer.Stop();
+        _grainJitterTimer = null;
+        _grainPhase = 0d;
     }
 
     private void ApplyAmbientMotionPreferences()
