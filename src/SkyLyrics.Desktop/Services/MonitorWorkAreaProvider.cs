@@ -7,7 +7,6 @@ namespace SkyLyrics.Desktop.Services;
 public static class MonitorWorkAreaProvider
 {
     private const uint MonitorDefaultToNearest = 2;
-    private const double DipsPerInch = 96d;
 
     public static IReadOnlyList<WindowBounds> GetWorkAreas()
     {
@@ -64,61 +63,45 @@ public static class MonitorWorkAreaProvider
             screen.Bounds.Top + (screen.Bounds.Height / 2));
 
         var monitor = MonitorFromPoint(midpoint, MonitorDefaultToNearest);
-        var (scaleX, scaleY) = GetMonitorScale(monitor);
+        var scaleFactor = GetMonitorScaleFactor(monitor);
 
-        return new WindowBounds(
-            workArea.Left / scaleX,
-            workArea.Top / scaleY,
-            workArea.Width / scaleX,
-            workArea.Height / scaleY);
+        return WindowPlacementCalculator.ConvertPhysicalWorkAreaToLogical(
+            new WindowBounds(workArea.Left, workArea.Top, workArea.Width, workArea.Height),
+            scaleFactor);
     }
 
-    private static (double ScaleX, double ScaleY) GetMonitorScale(IntPtr monitor)
+    private static double GetMonitorScaleFactor(IntPtr monitor)
     {
         if (monitor == IntPtr.Zero)
         {
-            return (1d, 1d);
+            return 1d;
         }
 
         try
         {
-            var result = GetDpiForMonitor(
-                monitor,
-                MonitorDpiType.Effective,
-                out var dpiX,
-                out var dpiY);
-
-            if (result == 0 && dpiX > 0 && dpiY > 0)
+            var result = GetScaleFactorForMonitor(monitor, out var scalePercent);
+            if (result == 0 && scalePercent > 0)
             {
-                return (dpiX / DipsPerInch, dpiY / DipsPerInch);
+                return scalePercent / 100d;
             }
         }
         catch (DllNotFoundException)
         {
-            // Older Windows images can lack Shcore; pixel coordinates remain a safe fallback.
+            // The system API is optional on older Windows builds; retain pixel coordinates as a safe fallback.
         }
         catch (EntryPointNotFoundException)
         {
-            // Older Windows images can lack GetDpiForMonitor.
+            // The system API is optional on older Windows builds; retain pixel coordinates as a safe fallback.
         }
 
-        return (1d, 1d);
+        return 1d;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr MonitorFromPoint(NativePoint point, uint flags);
 
     [DllImport("shcore.dll")]
-    private static extern int GetDpiForMonitor(
-        IntPtr monitor,
-        MonitorDpiType dpiType,
-        out uint dpiX,
-        out uint dpiY);
-
-    private enum MonitorDpiType
-    {
-        Effective = 0
-    }
+    private static extern int GetScaleFactorForMonitor(IntPtr monitor, out int scalePercent);
 
     [StructLayout(LayoutKind.Sequential)]
     private readonly struct NativePoint(int x, int y)
