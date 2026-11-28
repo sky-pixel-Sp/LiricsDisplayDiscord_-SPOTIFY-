@@ -452,7 +452,7 @@ public partial class MainWindow : Window
     private void ApplyCinematicEffects()
     {
         var preferences = _preferences.Current;
-        var active = _effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced &&
+        var active = (_effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced) &&
                      !preferences.ReduceMotion &&
                      SystemParameters.ClientAreaAnimation;
 
