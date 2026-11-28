@@ -27,7 +27,7 @@ This is baseline CI evidence only. It is not a claim that the application has be
 - Settings exposes an Automatic or selected detected media-session source and persists the choice. Browser sessions are still not proof that YouTube Music is the website.
 - Discord Rich Presence uses local Discord IPC.
 - OBS output is loopback-only.
-- Lyric scene lines now preserve source LineIndex; active-line identity changes independently of line text, including repeated lyric text. The scheduler supports a configurable 60–120 ms lead transition and suppresses early transitions while paused.
+- Lyric scene lines now preserve source LineIndex and track identity; active-line identity changes independently of line text, including repeated lyric text and same-index lines on different tracks. The scheduler supports a configurable 60–120 ms lead transition and suppresses early transitions while paused.
 - MainWindow lyric transitions are driven by ActiveLyricLineIndex only. Active, previous, upcoming and lower lyrics panel transitions use QuinticEase and honor the Windows animation preference and Reduce Motion.
 - The no-lyrics/instrumental stage has a timeline-driven waveform and original SVG music-note sprites; no audio capture or synthetic lyrics/timestamps are used.
 - A skippable splash screen reports actual host, preferences/SQLite cache, GSMTC and theme startup stages, with a 2.2 second auto-close followed by a short dissolve.
