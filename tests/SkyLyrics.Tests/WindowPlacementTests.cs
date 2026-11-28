@@ -33,6 +33,16 @@ public sealed class WindowPlacementTests
     }
 
     [Fact]
+    public void SecondaryMonitorWorkAreaIsConvertedUsingItsOwnScaleFactor()
+    {
+        var logical = WindowPlacementCalculator.ConvertPhysicalWorkAreaToLogical(
+            new WindowBounds(-2880d, 0d, 2880d, 1620d),
+            scaleFactor: 1.5d);
+
+        Assert.Equal(new WindowBounds(-1920d, 0d, 1920d, 1080d), logical);
+    }
+
+    [Fact]
     public void SavedGeometryIsAcceptedWhenFullyVisibleOnASecondaryMonitor()
     {
         var saved = new WindowBounds(-1840d, 120d, 900d, 600d);
