@@ -676,7 +676,7 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ShellViewModel.ActiveLyricLineIndex))
+        if (e.PropertyName == nameof(ShellViewModel.ActiveLyricLineIdentity))
         {
             Dispatcher.BeginInvoke(new Action(AnimateLyricsTransition));
         }
