@@ -94,6 +94,27 @@ public partial class SplashWindow : Window
                 EasingFunction = easing
             });
 
+        if (BrandLogo.RenderTransform is ScaleTransform logoScale)
+        {
+            logoScale.BeginAnimation(
+                ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(0.86d, 1d, TimeSpan.FromMilliseconds(620)) { EasingFunction = easing });
+            logoScale.BeginAnimation(
+                ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(0.86d, 1d, TimeSpan.FromMilliseconds(620)) { EasingFunction = easing });
+        }
+
+        if (BrandTitle.RenderTransform is ScaleTransform titleScale)
+        {
+            titleScale.BeginAnimation(
+                ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(0.94d, 1d, TimeSpan.FromMilliseconds(720))
+                {
+                    BeginTime = TimeSpan.FromMilliseconds(110),
+                    EasingFunction = easing
+                });
+        }
+
         if (SplashBackground.RenderTransform is ScaleTransform backgroundScale)
         {
             backgroundScale.BeginAnimation(
