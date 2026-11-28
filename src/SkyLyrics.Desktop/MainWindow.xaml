@@ -201,7 +201,7 @@
                     </svgc:SvgViewbox>
                     <svgc:SvgViewbox x:Name="VignetteTexture" Source="/SkyLyrics.Desktop;component/Assets/Textures/vignette.svg"
                                       Stretch="Fill" Opacity=".55" IsHitTestVisible="False" />
-                    <controls:MusicWaveformControl
+                    <controls:MusicWaveformControl x:Name="MusicWaveform"
                         HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="180"
                         Position="{Binding MusicVisualPosition}"
                         IsPlaying="{Binding MusicVisualIsPlaying}"
