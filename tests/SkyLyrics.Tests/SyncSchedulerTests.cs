@@ -41,6 +41,7 @@ public sealed class SyncSchedulerTests
     {
         var time = new ManualTimeProvider();
         using var scheduler = new SyncScheduler(time);
+        scheduler.SetLineAnimationLeadTime(TimeSpan.Zero);
         var revisions = new List<long>();
         scheduler.SceneChanged += (_, args) => revisions.Add(args.State.Revision);
         scheduler.UpdatePlayback(Snapshot(time, TimeSpan.Zero), PlaybackSessionChangeKind.Connected);
