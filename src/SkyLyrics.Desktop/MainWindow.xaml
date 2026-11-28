@@ -101,16 +101,6 @@
                             <TextBlock Text="Import LRC / Lyricsfile" FontSize="12" />
                         </StackPanel>
                     </Button>
-                    <Button Style="{StaticResource SidebarNavButtonStyle}"
-                            Click="SearchLyricsCandidates_Click"
-                            IsEnabled="{Binding CanSearchLyricsCandidates}"
-                            Visibility="{Binding ShowCandidateSearchButton, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Margin="0,0,0,6">
-                        <StackPanel Orientation="Horizontal">
-                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/list-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
-                            <TextBlock Text="Search lyrics manually" FontSize="12" />
-                        </StackPanel>
-                    </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="ImportTranslation_Click" Margin="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/file-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
@@ -260,7 +250,7 @@
                             </TextBlock>
                             <TextBlock Text="{Binding StageEmptyStateText}"
                                        Visibility="{Binding ShowStageEmptyState, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                       FontSize="16" FontWeight="Medium" Foreground="{DynamicResource SecondaryText}"
+                                       FontSize="13" FontWeight="Medium" Foreground="{DynamicResource SecondaryText}"
                                        TextAlignment="Center" TextWrapping="Wrap" MaxWidth="560" Margin="0,12,0,0" />
                             <TextBlock Text="{Binding ActiveWordText}"
                                        Visibility="{Binding HasActiveWord, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -306,9 +296,6 @@
                                     Background="{DynamicResource AccentSoftBrush}"
                                     Foreground="{DynamicResource PrimaryText}"
                                     BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" />
-                            <TextBlock Text="{Binding LyricsStatusText}" FontSize="9"
-                                       Foreground="{DynamicResource MutedText}" TextTrimming="CharacterEllipsis" MaxWidth="300"
-                                       VerticalAlignment="Center" />
                         </StackPanel>
                     </DockPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
