@@ -95,7 +95,7 @@ public sealed class LyricsMatchValidatorTests
 
         Assert.True(validation.IsMatch);
         Assert.True(validation.ArtistMatchedPartially);
-        Assert.Contains("cocok sebagian", validation.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cocok sebagian", validation.Reason.ToLowerInvariant());
     }
 
     [Fact]
