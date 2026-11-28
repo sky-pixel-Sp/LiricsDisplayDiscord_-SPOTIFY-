@@ -68,6 +68,20 @@ public partial class SplashWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        var autoClose = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(2500d)
+        };
+        autoClose.Tick += (_, _) =>
+        {
+            autoClose.Stop();
+            if (IsVisible)
+            {
+                Finish();
+            }
+        };
+        autoClose.Start();
+
         var easing = new QuinticEase { EasingMode = EasingMode.EaseOut };
         BrandLogo.BeginAnimation(
             OpacityProperty,
