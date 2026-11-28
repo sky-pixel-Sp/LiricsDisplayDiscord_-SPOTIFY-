@@ -25,10 +25,12 @@ public partial class App : System.Windows.Application
     private IHost? _host;
     private SystemTrayService? _tray;
     private GlobalHotkeyService? _hotkeys;
+    private SplashWindow? _splash;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _splash = new SplashWindow();
         try
         {
             var builder = Host.CreateApplicationBuilder(e.Args);
@@ -39,10 +41,23 @@ public partial class App : System.Windows.Application
             builder.Services.AddSingleton<AppPreferencesStore>();
             builder.Services.AddSingleton<IAppPreferencesStore>(services => services.GetRequiredService<AppPreferencesStore>());
             builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<AppPreferencesStore>());
+            builder.Services.AddSingleton<IHostedService>(services => new SplashProgressReporter(
+                _splash!,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.SplashEnabled,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.ReduceMotion,
+                18d,
+                "Local settings ready"));
 
             builder.Services.AddSingleton<SqliteLyricsCache>();
             builder.Services.AddSingleton<ILyricsCache>(services => services.GetRequiredService<SqliteLyricsCache>());
+            builder.Services.AddSingleton<ILyricsLibrary>(services => services.GetRequiredService<SqliteLyricsCache>());
             builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SqliteLyricsCache>());
+            builder.Services.AddSingleton<IHostedService>(services => new SplashProgressReporter(
+                _splash!,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.SplashEnabled,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.ReduceMotion,
+                40d,
+                "SQLite lyrics cache ready"));
             builder.Services.AddSingleton<LrcParser>();
             builder.Services.AddSingleton<LyricsFileParser>();
             builder.Services.AddSingleton<LocalLyricsLoader>();
@@ -55,17 +70,23 @@ public partial class App : System.Windows.Application
                     Timeout = TimeSpan.FromSeconds(15)
                 };
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                    "SkyLyricsDesktop/2.0.0 (https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-)");
+                    "SkyLyricsDesktop/2.1.0-preview.1 (https://github.com/sky-pixel-Sp/LiricsDisplayDiscord_-SPOTIFY-)");
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 return client;
             });
 
             builder.Services.AddSingleton<ILyricsProvider, LrclibClient>();
             builder.Services.AddSingleton<ILyricsService, LyricsService>();
-            builder.Services.AddSingleton<SpotifyAppIdentityMatcher>();
-            builder.Services.AddSingleton<SpotifyGsmTcSessionMonitor>();
-            builder.Services.AddSingleton<IPlaybackSessionSource>(services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
-            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<SpotifyGsmTcSessionMonitor>());
+            builder.Services.AddSingleton<WindowsMediaSessionMonitor>();
+            builder.Services.AddSingleton<IPlaybackSessionSource>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
+            builder.Services.AddSingleton<ISelectablePlaybackSessionSource>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
+            builder.Services.AddSingleton<IHostedService>(services => services.GetRequiredService<WindowsMediaSessionMonitor>());
+            builder.Services.AddSingleton<IHostedService>(services => new SplashProgressReporter(
+                _splash!,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.SplashEnabled,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.ReduceMotion,
+                66d,
+                "Windows media session monitor ready"));
 
             builder.Services.AddSingleton<SyncScheduler>();
             builder.Services.AddSingleton<ShellViewModel>();
@@ -86,6 +107,12 @@ public partial class App : System.Windows.Application
             await _host.StartAsync();
 
             var preferences = _host.Services.GetRequiredService<IAppPreferencesStore>();
+            _splash?.SetProgress(82d, "Application services ready");
+            var syncScheduler = _host.Services.GetRequiredService<SyncScheduler>();
+            syncScheduler.SetLineAnimationLeadTime(
+                preferences.Current.ReduceMotion
+                    ? TimeSpan.Zero
+                    : TimeSpan.FromMilliseconds(preferences.Current.LyricAnimationLeadMilliseconds));
             ThemeManager.Apply(preferences.Current.Theme);
             var activeProfile = preferences.Current.Customization.Profiles
                 .First(profile => string.Equals(
@@ -93,11 +120,15 @@ public partial class App : System.Windows.Application
                     preferences.Current.Customization.ActiveProfileId,
                     StringComparison.OrdinalIgnoreCase));
             ThemeManager.ApplyProfile(activeProfile);
+            _splash?.SetProgress(94d, "Theme and visual profile ready");
             var mainWindow = _host.Services.GetRequiredService<MainWindow>();
             var windowModes = _host.Services.GetRequiredService<WindowModeService>();
             MainWindow = mainWindow;
             _hotkeys = new GlobalHotkeyService(mainWindow, windowModes);
             mainWindow.Show();
+            _splash?.SetProgress(100d, "Ready");
+            _splash?.Finish();
+            _splash = null;
             _tray = new SystemTrayService(
                 mainWindow.ShowFromTray,
                 windowModes.ShowFocusView,
@@ -105,14 +136,12 @@ public partial class App : System.Windows.Application
                 windowModes.ToggleGameMode,
                 mainWindow.ShowSettings,
                 mainWindow.ShowDiagnostics,
-                () => Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    mainWindow.RequestApplicationExit();
-                    Shutdown();
-                })));
+                () => Dispatcher.BeginInvoke(new Action(mainWindow.RequestApplicationExit)));
         }
         catch (Exception exception)
         {
+            _splash?.Close();
+            _splash = null;
             Debug.WriteLine(exception);
             System.Windows.MessageBox.Show(
                 $"SkyLyrics Desktop could not start.{Environment.NewLine}{Environment.NewLine}{exception.Message}",
@@ -125,6 +154,11 @@ public partial class App : System.Windows.Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        if (_splash is { IsVisible: true })
+        {
+            _splash.Close();
+        }
+        _splash = null;
         _hotkeys?.Dispose();
         _hotkeys = null;
         _tray?.Dispose();

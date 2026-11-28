@@ -4,7 +4,7 @@
         Title="SkyLyrics · Settings" Width="760" Height="740"
         MinWidth="650" MinHeight="600" WindowStartupLocation="CenterOwner"
         Background="{DynamicResource WindowBackground}" Foreground="{DynamicResource PrimaryText}"
-        FontFamily="Segoe UI Variable Display">
+        FontFamily="{StaticResource PoppinsFontFamily}">
     <Grid Margin="25">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <StackPanel>
@@ -16,7 +16,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,20,0,18">
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <Border Style="{StaticResource PanelCardStyle}" Margin="0,0,8,12">
                     <StackPanel>
                         <TextBlock Text="01  ·  APPEARANCE" Style="{StaticResource EyebrowTextStyle}" />
@@ -30,7 +30,22 @@
                                   DisplayMemberPath="Name" SelectedValuePath="Id" />
                         <TextBlock Text="Sage, Midnight and Paper are included. Custom profiles are stored locally."
                                    FontSize="10" Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" Margin="0,7,0,0" />
+                        <Button Content="OPEN CUSTOMIZATION STUDIO" Style="{StaticResource QuietActionButtonStyle}"
+                                HorizontalAlignment="Left" Margin="0,11,0,0" Click="OpenCustomizationStudio_Click" />
                         <CheckBox x:Name="ReduceMotionCheck" Content="Reduce application motion" Margin="0,15,0,0" />
+                        <CheckBox x:Name="LetterboxEnabledCheck" Content="Enable 2.39:1 cinematic letterbox" Margin="0,10,0,0" />
+                        <CheckBox x:Name="SplashEnabledCheck" Content="Show cinematic startup screen" Margin="0,10,0,0" />
+                        <TextBlock Text="Lyric transition lead · 60–120 ms" FontSize="11"
+                                   Foreground="{DynamicResource SecondaryText}" Margin="0,13,0,6" />
+                        <TextBox x:Name="LeadTimeBox" Width="110" HorizontalAlignment="Left" />
+                        <TextBlock Text="Visual quality" FontSize="11" Foreground="{DynamicResource SecondaryText}"
+                                   Margin="0,13,0,6" />
+                        <ComboBox x:Name="QualityTierCombo" MinHeight="34" SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Cinematic" Tag="cinematic" />
+                            <ComboBoxItem Content="Balanced" Tag="balanced" />
+                            <ComboBoxItem Content="Lite" Tag="lite" />
+                            <ComboBoxItem Content="Reduced" Tag="reduced" />
+                        </ComboBox>
                         <CheckBox x:Name="MiniPlayerTopmostCheck" Content="Keep Mini Player above other windows" Margin="0,10,0,0" />
                         <Button Content="CONFIGURE GAME MODE" Style="{StaticResource QuietActionButtonStyle}"
                                 HorizontalAlignment="Left" Margin="0,17,0,0" Click="ConfigureGameMode_Click" />
@@ -52,7 +67,7 @@
                     <StackPanel>
                         <TextBlock Text="03  ·  DISCORD RICH PRESENCE" Style="{StaticResource EyebrowTextStyle}" />
                         <TextBlock Text="Share what is playing" FontSize="16" FontWeight="SemiBold" Margin="0,7,0,13" />
-                        <CheckBox x:Name="DiscordEnabledCheck" Content="Publish current Spotify track to Discord" />
+                        <CheckBox x:Name="DiscordEnabledCheck" Content="Publish current music track to Discord" />
                         <TextBlock Text="Discord Application ID" FontSize="11" Foreground="{DynamicResource SecondaryText}" Margin="0,13,0,6" />
                         <TextBox x:Name="DiscordApplicationIdBox" MaxLength="22" />
                         <TextBlock Text="Use the public Application ID from your Discord Developer Portal. Discord Desktop must be running."
@@ -68,6 +83,18 @@
                         <TextBox x:Name="ObsPortBox" Width="140" HorizontalAlignment="Left" />
                         <TextBlock Text="The local endpoint remains bound to 127.0.0.1 and is not exposed to your LAN."
                                    FontSize="10" Foreground="{DynamicResource MutedText}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Row="2" Grid.ColumnSpan="2" Style="{StaticResource PanelCardStyle}" Margin="0,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="05  ·  MEDIA SOURCE" Style="{StaticResource EyebrowTextStyle}" />
+                        <TextBlock Text="Choose which Windows media session SkyLyrics follows"
+                                   FontSize="16" FontWeight="SemiBold" Margin="0,7,0,13" />
+                        <ComboBox x:Name="MediaSourceCombo" MinHeight="36"
+                                  DisplayMemberPath="DisplayName" SelectedValuePath="SourceAppUserModelId" />
+                        <TextBlock Text="Automatic follows the active playing session. Browser sessions are identified by browser application, not by website; selecting Chrome or Edge does not verify YouTube Music."
+                                   FontSize="10" Foreground="{DynamicResource MutedText}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0" />
                     </StackPanel>
                 </Border>
             </Grid>

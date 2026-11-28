@@ -26,6 +26,7 @@ public sealed class GameModeSettingsWindow : Window
     private readonly TextBox _heightBox = new();
     private readonly Slider _opacitySlider = new();
     private readonly CheckBox _topmostCheck = new();
+    private readonly CheckBox _clickThroughCheck = new();
     private readonly ComboBox _backgroundBox = new();
     private readonly ComboBox _effectBox = new();
     private readonly ComboBox _animationBox = new();
@@ -47,7 +48,7 @@ public sealed class GameModeSettingsWindow : Window
         ResizeMode = ResizeMode.CanResize;
         Background = Brush("#12161B");
         Foreground = Brush("#F4F5F2");
-        FontFamily = new FontFamily("Segoe UI Variable Display");
+        FontFamily = (System.Windows.Application.Current!.Resources["PoppinsFontFamily"] as System.Windows.Media.FontFamily ?? new System.Windows.Media.FontFamily("Segoe UI Variable Display"));
 
         _widthBox.Text = _initial.Width.ToString("0", CultureInfo.InvariantCulture);
         _heightBox.Text = _initial.Height.ToString("0", CultureInfo.InvariantCulture);
@@ -70,6 +71,11 @@ public sealed class GameModeSettingsWindow : Window
         _topmostCheck.IsChecked = _initial.AlwaysOnTop;
         _topmostCheck.Foreground = Brush("#A8B1B6");
         _topmostCheck.Margin = new Thickness(0, 5, 0, 0);
+
+        _clickThroughCheck.Content = "Enable click-through (Ctrl+Alt+Shift+G restores interaction)";
+        _clickThroughCheck.IsChecked = _initial.ClickThrough;
+        _clickThroughCheck.Foreground = Brush("#A8B1B6");
+        _clickThroughCheck.Margin = new Thickness(0, 12, 0, 0);
 
         _backgroundBox = CreateChoiceBox(
             new[]
@@ -144,7 +150,7 @@ public sealed class GameModeSettingsWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        _status.Text = "Drag the overlay header to move it; drag an edge or corner to resize.";
+        _status.Text = "Drag an edge to resize. Right-click the overlay for settings when its compact header is hidden.";
         _status.FontSize = 9;
         _status.Foreground = Brush("#A8B1B6");
         _status.VerticalAlignment = VerticalAlignment.Center;
@@ -177,9 +183,25 @@ public sealed class GameModeSettingsWindow : Window
     private UIElement CreateGeometryGrid()
     {
         var grid = CreateTwoColumnGrid();
-        AddField(grid, "WIDTH  ·  420–1920 PX", _widthBox, 0, 0);
-        AddField(grid, "HEIGHT  ·  112–600 PX", _heightBox, 1, 0);
-        return grid;
+        AddField(grid, "WIDTH  ·  160–1920 PX", _widthBox, 0, 0);
+        AddField(grid, "HEIGHT  ·  30–600 PX", _heightBox, 1, 0);
+
+        var panel = new StackPanel();
+        panel.Children.Add(grid);
+        var presets = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 0) };
+        var micro = CreateButton("MICRO · 30 PX", false);
+        micro.Margin = new Thickness(0, 0, 7, 0);
+        micro.Click += (_, _) => ApplySizePreset(520, 30);
+        var compact = CreateButton("COMPACT · 64 PX", false);
+        compact.Margin = new Thickness(0, 0, 7, 0);
+        compact.Click += (_, _) => ApplySizePreset(720, 64);
+        var standard = CreateButton("STANDARD · 176 PX", false);
+        standard.Click += (_, _) => ApplySizePreset(1000, 176);
+        presets.Children.Add(micro);
+        presets.Children.Add(compact);
+        presets.Children.Add(standard);
+        panel.Children.Add(presets);
+        return panel;
     }
 
     private UIElement CreateVisualGrid()
@@ -217,6 +239,7 @@ public sealed class GameModeSettingsWindow : Window
     {
         var panel = new StackPanel();
         panel.Children.Add(_topmostCheck);
+        panel.Children.Add(_clickThroughCheck);
         panel.Children.Add(new TextBlock
         {
             Text = "Position is saved when you move or resize the overlay. The overlay can be placed on any connected monitor.",
@@ -312,19 +335,26 @@ public sealed class GameModeSettingsWindow : Window
         input.BorderThickness = new Thickness(1);
     }
 
+    private void ApplySizePreset(int width, int height)
+    {
+        _widthBox.Text = width.ToString(CultureInfo.InvariantCulture);
+        _heightBox.Text = height.ToString(CultureInfo.InvariantCulture);
+        _status.Text = $"Selected {width} × {height} px. Save settings to apply.";
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(_widthBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var width) ||
-            width is < 420 or > 1920)
+            width is < 160 or > 1920)
         {
-            _status.Text = "Width must be a whole number between 420 and 1920 pixels.";
+            _status.Text = "Width must be a whole number between 160 and 1920 pixels.";
             return;
         }
 
         if (!int.TryParse(_heightBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var height) ||
-            height is < 112 or > 600)
+            height is < 30 or > 600)
         {
-            _status.Text = "Height must be a whole number between 112 and 600 pixels.";
+            _status.Text = "Height must be a whole number between 30 and 600 pixels.";
             return;
         }
 
@@ -334,6 +364,7 @@ public sealed class GameModeSettingsWindow : Window
             Height = height,
             Opacity = _opacitySlider.Value,
             AlwaysOnTop = _topmostCheck.IsChecked == true,
+            ClickThrough = _clickThroughCheck.IsChecked == true,
             BackgroundId = _backgroundBox.SelectedValue as string ?? _initial.BackgroundId,
             TextEffectId = _effectBox.SelectedValue as string ?? _initial.TextEffectId,
             AnimationId = _animationBox.SelectedValue as string ?? _initial.AnimationId
@@ -348,6 +379,7 @@ public sealed class GameModeSettingsWindow : Window
         _heightBox.Text = "176";
         _opacitySlider.Value = 0.96;
         _topmostCheck.IsChecked = true;
+        _clickThroughCheck.IsChecked = false;
         _backgroundBox.SelectedValue = "aurora";
         _effectBox.SelectedValue = "mint-glow";
         _animationBox.SelectedValue = "cinematic";

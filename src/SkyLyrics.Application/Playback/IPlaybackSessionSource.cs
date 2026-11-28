@@ -26,3 +26,18 @@ public interface IPlaybackSessionSource
 
     event EventHandler<PlaybackSessionChangedEventArgs>? SnapshotChanged;
 }
+
+public sealed record PlaybackSessionDescriptor(
+    string SourceAppUserModelId,
+    string DisplayName,
+    bool IsPlaying);
+
+/// <summary>
+/// Optional extension for playback sources that can expose and select live Windows media sessions.
+/// </summary>
+public interface ISelectablePlaybackSessionSource : IPlaybackSessionSource
+{
+    IReadOnlyList<PlaybackSessionDescriptor> AvailableSessions { get; }
+
+    event EventHandler? AvailableSessionsChanged;
+}

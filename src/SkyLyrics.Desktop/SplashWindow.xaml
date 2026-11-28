@@ -1,0 +1,59 @@
+<Window x:Class="SkyLyrics.Desktop.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        Title="SkyLyrics" Width="760" Height="440"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen" Background="#07100F"
+        AllowsTransparency="False" Topmost="True"
+        PreviewKeyDown="Window_PreviewKeyDown" PreviewMouseDown="Window_PreviewMouseDown"
+        Loaded="Window_Loaded">
+    <Grid ClipToBounds="True">
+        <svgc:SvgViewbox x:Name="SplashBackground"
+                         Source="/SkyLyrics.Desktop;component/Assets/Backgrounds/splash-bg.svg"
+                         Stretch="UniformToFill" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                         RenderTransformOrigin="0.5,0.5">
+            <svgc:SvgViewbox.RenderTransform><ScaleTransform ScaleX="1.02" ScaleY="1.02" /></svgc:SvgViewbox.RenderTransform>
+        </svgc:SvgViewbox>
+        <Rectangle Fill="#97070F0E"/>
+        <svgc:SvgViewbox x:Name="GrainTexture"
+                         Source="/SkyLyrics.Desktop;component/Assets/Textures/grain.svg"
+                         Stretch="UniformToFill" Opacity=".28" IsHitTestVisible="False"/>
+        <Border Margin="1" CornerRadius="18" BorderThickness="1" BorderBrush="#456B5F">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#A4142420" Offset="0"/>
+                    <GradientStop Color="#76101918" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="430">
+            <svgc:SvgViewbox x:Name="BrandLogo"
+                             Source="/SkyLyrics.Desktop;component/Assets/Branding/logo.svg"
+                             Width="92" Height="92" HorizontalAlignment="Center"
+                             Opacity="0" RenderTransformOrigin="0.5,0.5">
+                <svgc:SvgViewbox.RenderTransform><ScaleTransform ScaleX=".86" ScaleY=".86"/></svgc:SvgViewbox.RenderTransform>
+            </svgc:SvgViewbox>
+            <TextBlock x:Name="BrandTitle" Text="SKYLYRICS" FontFamily="{StaticResource BebasNeueFontFamily}"
+                       FontSize="43" FontWeight="Bold" Foreground="#E8FFF5"
+                       HorizontalAlignment="Center" Margin="0,16,0,0" Opacity="0"/>
+            <TextBlock Text="YOUR MUSIC, IN SYNC" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#9BB8AC"
+                       HorizontalAlignment="Center" Margin="0,6,0,0"/>
+            <Border Height="1" Background="#456B5F" Margin="0,27,0,17"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock x:Name="StageText" Text="INITIALIZING APPLICATION HOST"
+                           FontSize="9" FontWeight="SemiBold" Foreground="#C8E8DA"/>
+                <TextBlock x:Name="ProgressText" Grid.Column="1" Text="0%"
+                           FontSize="9" Foreground="#A9C9BA"/>
+            </Grid>
+            <ProgressBar x:Name="StartupProgress" Minimum="0" Maximum="100" Value="0"
+                         Height="3" Margin="0,9,0,0" Background="#1A302A"
+                         Foreground="#87D9BC" BorderThickness="0"/>
+            <TextBlock Text="Press any key or click to skip"
+                       HorizontalAlignment="Center" FontSize="9"
+                       Foreground="#7D968B" Margin="0,17,0,0"/>
+        </StackPanel>
+    </Grid>
+</Window>

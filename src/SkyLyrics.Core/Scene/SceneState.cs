@@ -47,7 +47,11 @@ public sealed record LyricWordScene
 
 public sealed record LyricLineScene
 {
-    public LyricLineScene(TimeSpan start, string text, IEnumerable<LyricWordScene>? words = null)
+    public LyricLineScene(
+        TimeSpan start,
+        string text,
+        IEnumerable<LyricWordScene>? words = null,
+        int lineIndex = -1)
     {
         if (start < TimeSpan.Zero)
         {
@@ -55,8 +59,14 @@ public sealed record LyricLineScene
         }
 
         ArgumentNullException.ThrowIfNull(text);
+        if (lineIndex < -1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lineIndex));
+        }
+
         Start = start;
         Text = text;
+        LineIndex = lineIndex;
         Words = words?.ToImmutableArray() ?? ImmutableArray<LyricWordScene>.Empty;
 
         if (Words.Any(static word => word is null))
@@ -67,6 +77,7 @@ public sealed record LyricLineScene
 
     public TimeSpan Start { get; }
     public string Text { get; }
+    public int LineIndex { get; }
     public ImmutableArray<LyricWordScene> Words { get; }
 }
 
@@ -136,6 +147,7 @@ public sealed record SceneState
     public TrackScene? Track { get; }
     public LyricLineScene? PreviousLine { get; }
     public LyricLineScene? ActiveLine { get; }
+    public int ActiveLineIndex => ActiveLine?.LineIndex ?? -1;
     public LyricLineScene? NextLine { get; }
     public WordFillState? WordFill { get; }
     public TimeSpan Position { get; }

@@ -9,11 +9,13 @@ public sealed class GlobalHotkeyService : IDisposable
     private const int WmHotkey = 0x0312;
     private const uint ModAlt = 0x0001;
     private const uint ModControl = 0x0002;
+    private const uint ModShift = 0x0004;
     private const uint ModNoRepeat = 0x4000;
     private const int FocusHotkeyId = 0x534B01;
     private const int MiniHotkeyId = 0x534B02;
     private const int ShowHotkeyId = 0x534B03;
     private const int GameModeHotkeyId = 0x534B04;
+    private const int GameModeClickThroughHotkeyId = 0x534B05;
 
     private readonly Window _window;
     private readonly WindowModeService _windowModes;
@@ -41,6 +43,8 @@ public sealed class GlobalHotkeyService : IDisposable
         Register(MiniHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x4D, "Ctrl+Alt+M · Mini player");
         Register(ShowHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x53, "Ctrl+Alt+S · Show main window");
         Register(GameModeHotkeyId, ModControl | ModAlt | ModNoRepeat, 0x47, "Ctrl+Alt+G · Game Mode");
+        Register(GameModeClickThroughHotkeyId, ModControl | ModAlt | ModShift | ModNoRepeat, 0x47,
+            "Ctrl+Alt+Shift+G · Game Mode click-through");
     }
 
     private void Register(int id, uint modifiers, uint key, string label)
@@ -74,6 +78,10 @@ public sealed class GlobalHotkeyService : IDisposable
                 break;
             case GameModeHotkeyId:
                 _windowModes.ToggleGameMode();
+                handled = true;
+                break;
+            case GameModeClickThroughHotkeyId:
+                _windowModes.ToggleGameModeClickThrough();
                 handled = true;
                 break;
         }
@@ -124,6 +132,7 @@ public sealed class GlobalHotkeyService : IDisposable
             UnregisterHotKey(_handle, MiniHotkeyId);
             UnregisterHotKey(_handle, ShowHotkeyId);
             UnregisterHotKey(_handle, GameModeHotkeyId);
+            UnregisterHotKey(_handle, GameModeClickThroughHotkeyId);
             _handle = IntPtr.Zero;
         }
     }

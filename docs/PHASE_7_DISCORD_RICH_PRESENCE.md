@@ -4,7 +4,7 @@
 - Discord output is an independent IOutputSink fed from immutable SceneState.
 - Uses the local Discord desktop IPC named-pipe protocol. It never requests Discord passwords, user tokens, browser cookies or account credentials.
 - User supplies their own numeric Discord Application ID in Settings. Rich Presence remains disabled until explicitly enabled with a valid ID.
-- Presence contains the actual Spotify track title and artist. Paused state is disclosed. Stopped or disconnected playback clears activity.
+- Presence contains the actual selected media track title and artist. Paused state is disclosed. Stopped or disconnected playback clears activity.
 - IPC frames use little-endian opcode/length headers, a 1 MiB payload limit, bounded connection attempts and reconnect backoff.
 - A bounded one-item scene queue keeps slow external output from accumulating unbounded memory or blocking lyric synchronization.
 

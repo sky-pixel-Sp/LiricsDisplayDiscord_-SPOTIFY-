@@ -92,6 +92,16 @@ public sealed class WindowModeService : IDisposable
         ShowGameMode();
     }
 
+    public void ToggleGameModeClickThrough()
+    {
+        if (_gameModeWindow is not { IsVisible: true })
+        {
+            ShowGameMode();
+        }
+
+        _gameModeWindow?.ToggleClickThrough();
+    }
+
     public void ShowGameMode()
     {
         if (_disposed) return;

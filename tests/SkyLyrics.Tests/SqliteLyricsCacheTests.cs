@@ -73,6 +73,40 @@ public sealed class SqliteLyricsCacheTests
     }
 
     [Fact]
+    public async Task GetRecentReturnsMostRecentlyUsedEntriesAndHonorsLimit()
+    {
+        var database = CreateTemporaryDatabase();
+        using var cache = new SqliteLyricsCache(NullLogger<SqliteLyricsCache>.Instance, database);
+        await cache.StartAsync(CancellationToken.None);
+
+        await cache.PutAsync(CreateEntry("older-key", "Older record"), CancellationToken.None);
+        await Task.Delay(5);
+        await cache.PutAsync(CreateEntry("newer-key", "Newer record"), CancellationToken.None);
+
+        var recent = await cache.GetRecentAsync(1, CancellationToken.None);
+
+        var entry = Assert.Single(recent);
+        Assert.Equal("newer-key", entry.CacheKey);
+        Assert.Equal("Newer record", entry.Document.Lines[0].Text);
+    }
+
+    [Fact]
+    public async Task DeleteRemovesOnlyTheRequestedCacheEntry()
+    {
+        var database = CreateTemporaryDatabase();
+        using var cache = new SqliteLyricsCache(NullLogger<SqliteLyricsCache>.Instance, database);
+        await cache.StartAsync(CancellationToken.None);
+
+        await cache.PutAsync(CreateEntry("delete-me", "Delete"), CancellationToken.None);
+        await cache.PutAsync(CreateEntry("keep-me", "Keep"), CancellationToken.None);
+
+        Assert.True(await cache.DeleteAsync("delete-me", CancellationToken.None));
+        Assert.False(await cache.DeleteAsync("delete-me", CancellationToken.None));
+        Assert.Null(await cache.GetAsync("delete-me", CancellationToken.None));
+        Assert.NotNull(await cache.GetAsync("keep-me", CancellationToken.None));
+    }
+
+    [Fact]
     public async Task MissingCacheKeyReturnsNull()
     {
         var database = CreateTemporaryDatabase();
@@ -103,8 +137,11 @@ public sealed class SqliteLyricsCacheTests
     }
 
     private static LyricsCacheEntry CreateEntry(string text) =>
+        CreateEntry("upsert-key", text);
+
+    private static LyricsCacheEntry CreateEntry(string cacheKey, string text) =>
         new(
-            "upsert-key",
+            cacheKey,
             "Test Provider",
             1,
             new LyricsDocument(

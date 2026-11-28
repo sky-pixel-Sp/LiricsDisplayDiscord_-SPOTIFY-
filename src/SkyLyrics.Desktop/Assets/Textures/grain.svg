@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs><pattern id="grain" width="16" height="16" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="2" r=".7" fill="#fff" opacity=".26"/>
+    <circle cx="8" cy="4" r=".55" fill="#fff" opacity=".2"/>
+    <circle cx="13" cy="11" r=".65" fill="#fff" opacity=".24"/>
+    <circle cx="4" cy="13" r=".45" fill="#fff" opacity=".16"/>
+    <circle cx="10" cy="15" r=".5" fill="#000" opacity=".28"/>
+  </pattern></defs>
+  <rect width="128" height="128" fill="url(#grain)"/>
+</svg>

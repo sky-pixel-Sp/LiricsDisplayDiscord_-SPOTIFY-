@@ -41,6 +41,7 @@ public sealed class SyncSchedulerTests
     {
         var time = new ManualTimeProvider();
         using var scheduler = new SyncScheduler(time);
+        scheduler.SetLineAnimationLeadTime(TimeSpan.Zero);
         var revisions = new List<long>();
         scheduler.SceneChanged += (_, args) => revisions.Add(args.State.Revision);
         scheduler.UpdatePlayback(Snapshot(time, TimeSpan.Zero), PlaybackSessionChangeKind.Connected);
@@ -57,6 +58,137 @@ public sealed class SyncSchedulerTests
         Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
         Assert.True(scheduler.Current.Revision > before);
         Assert.Contains(scheduler.Current.Revision, revisions);
+    }
+
+    [Fact]
+    public void RepeatedLyricTextRetainsDistinctSourceLineIndexes()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1)), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("Again", TimeSpan.FromSeconds(1)),
+            new LyricLine("Again", TimeSpan.FromSeconds(2))));
+
+        Assert.Equal("Again", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(0, scheduler.Current.ActiveLineIndex);
+
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(2)), PlaybackSessionChangeKind.TimelineChanged);
+
+        Assert.Equal("Again", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
+    public void ActiveLineIdentityChangesForDifferentTracksEvenWhenLineIndexIsEqual()
+    {
+        var first = new SceneState(
+            1,
+            new TrackScene("First track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(1), "Repeat", lineIndex: 0),
+            null,
+            null,
+            TimeSpan.FromSeconds(1),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        var second = new SceneState(
+            2,
+            new TrackScene("Second track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(1), "Repeat", lineIndex: 0),
+            null,
+            null,
+            TimeSpan.FromSeconds(1),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal(first.ActiveLineIndex, second.ActiveLineIndex);
+        Assert.NotEqual(LyricLineIdentity.From(first), LyricLineIdentity.From(second));
+    }
+
+    [Fact]
+    public void ActiveLineIdentityChangesForRepeatedTextAtDifferentSourceIndexes()
+    {
+        var first = new SceneState(
+            1,
+            new TrackScene("Track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(1), "Repeat", lineIndex: 0),
+            null,
+            null,
+            TimeSpan.FromSeconds(1),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        var second = new SceneState(
+            2,
+            new TrackScene("Track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(2), "Repeat", lineIndex: 1),
+            null,
+            null,
+            TimeSpan.FromSeconds(2),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal(first.ActiveLine?.Text, second.ActiveLine?.Text);
+        Assert.NotEqual(LyricLineIdentity.From(first), LyricLineIdentity.From(second));
+    }
+
+    [Fact]
+    public void IncomingLineEntersNinetyMillisecondsBeforeItsSourceTimestamp()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.Zero), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("First", TimeSpan.FromSeconds(1)),
+            new LyricLine("Second", TimeSpan.FromSeconds(2))));
+
+        time.Advance(TimeSpan.FromMilliseconds(1909));
+        Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(0, scheduler.Current.ActiveLineIndex);
+
+        time.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.Equal("Second", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+
+        time.Advance(TimeSpan.FromMilliseconds(89));
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+
+        time.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
+    public void PauseSuppressesEarlyLineTransitionAndResumeReevaluatesIt()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1.95), PlaybackStatus.Paused), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("First", TimeSpan.FromSeconds(1)),
+            new LyricLine("Second", TimeSpan.FromSeconds(2))));
+
+        Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
+
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1.95), PlaybackStatus.Playing), PlaybackSessionChangeKind.PlaybackChanged);
+
+        Assert.Equal("Second", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
+    public void ZeroLeadTimeKeepsLyricsOnTheirExactSourceBoundary()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.SetLineAnimationLeadTime(TimeSpan.Zero);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1.95)), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("First", TimeSpan.FromSeconds(1)),
+            new LyricLine("Second", TimeSpan.FromSeconds(2))));
+
+        Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(0, scheduler.Current.ActiveLineIndex);
     }
 
     [Fact]

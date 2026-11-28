@@ -2,12 +2,14 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using SkyLyrics.Application.Lyrics;
 using SkyLyrics.Application.Playback;
+using SkyLyrics.Application.Settings;
 using SkyLyrics.Application.Synchronization;
 using SkyLyrics.Core.Lyrics;
 using SkyLyrics.Core.Playback;
@@ -17,10 +19,14 @@ namespace SkyLyrics.Desktop.ViewModels;
 
 public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 {
-    private static readonly Version AppVersion =
-        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 2, 0);
+    private static readonly string AppVersion =
+        Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)
+        ?? "2.1.0-preview.1";
 
     private readonly IPlaybackSessionSource _playbackSource;
+    private readonly IAppPreferencesStore _preferences;
     private readonly ILyricsService _lyricsService;
     private readonly SyncScheduler _syncScheduler;
     private readonly ILogger<ShellViewModel> _logger;
@@ -28,14 +34,25 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private PlaybackSnapshot? _snapshot;
     private SceneState _sceneState = SceneState.Empty;
     private LyricsDocument? _activeLyricsDocument;
+    private LyricsDocument? _activeTranslationDocument;
+    private CancellationTokenSource? _translationCancellation;
+    private long _translationGeneration;
+    private string _translationStatusText = "No translation attached to this track.";
     private ImmutableArray<byte> _artworkBytes;
     private ImageSource? _albumArtwork;
+    private ImageSource? _albumArtworkBackdrop;
+    private System.Windows.Media.Color _artworkAccentColor = System.Windows.Media.Color.FromRgb(118, 202, 176);
     private LyricsTrackSignature? _requestedSignature;
     private CancellationTokenSource? _lyricsCancellation;
+    private CancellationTokenSource? _candidateSearchCancellation;
+    private ImmutableArray<LyricsSearchCandidate> _lyricsCandidates = ImmutableArray<LyricsSearchCandidate>.Empty;
     private long _lyricsGeneration;
+    private bool _canSearchLyricsCandidates;
+    private bool _isSearchingLyricsCandidates;
+    private string _candidateSearchStatus = string.Empty;
     private bool _disposed;
 
-    private string _lyricsStatusText = "Waiting for Spotify playback.";
+    private string _lyricsStatusText = "Waiting for media playback.";
     private string _lyricsModeLabel = "NO LYRICS";
     private string _lyricsText = string.Empty;
 
@@ -43,15 +60,19 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         IPlaybackSessionSource playbackSource,
         ILyricsService lyricsService,
         SyncScheduler syncScheduler,
+        IAppPreferencesStore preferences,
         ILogger<ShellViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(playbackSource);
         ArgumentNullException.ThrowIfNull(lyricsService);
         ArgumentNullException.ThrowIfNull(syncScheduler);
+        ArgumentNullException.ThrowIfNull(preferences);
         ArgumentNullException.ThrowIfNull(logger);
 
         _playbackSource = playbackSource;
         _lyricsService = lyricsService;
+        _preferences = preferences;
+        _preferences.PreferencesChanged += OnPreferencesChanged;
         _syncScheduler = syncScheduler;
         _sceneState = syncScheduler.Current;
         _syncScheduler.SceneChanged += OnSceneChanged;
@@ -69,7 +90,9 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string SessionBadgeText =>
-        _snapshot is null ? "SPOTIFY NOT DETECTED" : "SPOTIFY CONNECTED";
+        _snapshot is null
+            ? "NO MEDIA SESSION"
+            : $"{MediaSessionIdentityMatcher.Resolve(_snapshot.SourceAppUserModelId).DisplayName.ToUpperInvariant()} CONNECTED";
 
     public string StatusTitle
     {
@@ -81,7 +104,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
                 return title;
             }
 
-            return _snapshot is null ? "Waiting for Spotify Desktop" : "Spotify session connected";
+            return _snapshot is null ? "Waiting for music playback" : "Media session connected";
         }
     }
 
@@ -111,12 +134,12 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         {
             if (_snapshot is null)
             {
-                return "Start Spotify Desktop and begin playback. SkyLyrics is listening for its Windows media session; browser player sessions are not selected.";
+                return "Start Spotify Desktop, a browser music player, or Windows Media. SkyLyrics will use a supported Windows media session.";
             }
 
             if (string.IsNullOrWhiteSpace(_snapshot.Track?.Title))
             {
-                return "Spotify Desktop is connected, but Windows has not supplied a track title yet.";
+                return "The media session is connected, but Windows has not supplied a track title yet.";
             }
 
             return "Playback metadata and timeline are received through Windows GSMTC.";
@@ -128,7 +151,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         PlaybackStatus.Playing => "PLAYING",
         PlaybackStatus.Paused => "PAUSED",
         PlaybackStatus.Stopped => "STOPPED",
-        _ => _snapshot is null ? "WAITING FOR SESSION" : "SESSION AVAILABLE"
+        _ => _snapshot is null ? "WAITING FOR MEDIA SESSION" : "SESSION AVAILABLE"
     };
 
     public string PositionLabel
@@ -150,7 +173,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public string SourceIdentityLabel =>
         _snapshot is null
             ? "SOURCE  —"
-            : $"SOURCE  {_snapshot.SourceAppUserModelId}";
+            : $"SOURCE  {MediaSessionIdentityMatcher.Resolve(_snapshot.SourceAppUserModelId).DisplayName}";
 
     public string LyricsStatusText
     {
@@ -197,11 +220,30 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public ImmutableArray<LyricsSearchCandidate> LyricsCandidates => _lyricsCandidates;
+
+    public bool HasLyricsCandidates => !_lyricsCandidates.IsDefaultOrEmpty;
+
+    public bool CanSearchLyricsCandidates => _canSearchLyricsCandidates && !_isSearchingLyricsCandidates;
+
+    public bool ShowCandidateSearchButton => _canSearchLyricsCandidates;
+
+    public bool IsSearchingLyricsCandidates => _isSearchingLyricsCandidates;
+
+    public string CandidateSearchStatus => _candidateSearchStatus;
+
+    public string CandidateSearchButtonText =>
+        _isSearchingLyricsCandidates ? "Mencari kandidat…" : "Pilih kandidat";
+
     public SceneState CurrentScene => _sceneState;
 
     public string PreviousLyricText => _sceneState.PreviousLine?.Text ?? string.Empty;
 
     public string ActiveLyricText => _sceneState.ActiveLine?.Text ?? string.Empty;
+
+    public int ActiveLyricLineIndex => _sceneState.ActiveLineIndex;
+
+    public LyricLineIdentity? ActiveLyricLineIdentity => LyricLineIdentity.From(_sceneState);
 
     public string UpcomingLyricText => _sceneState.NextLine?.Text ?? string.Empty;
 
@@ -210,6 +252,21 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     public bool HasActiveLine => _sceneState.ActiveLine is not null;
 
     public bool ShowStageEmptyState => !HasActiveLine;
+
+    public bool ShowPlaybackVisual => _snapshot is not null &&
+        (_activeLyricsDocument is null ||
+         _activeLyricsDocument.SyncMode is LyricsSyncMode.Unsynced or LyricsSyncMode.Instrumental ||
+         !HasActiveLine);
+
+    public TimeSpan MusicVisualPosition => _sceneState.Position;
+
+    public bool MusicVisualIsPlaying => _sceneState.PlaybackStatus == PlaybackStatus.Playing;
+
+    public bool MusicVisualMotionEnabled => !_preferences.Current.ReduceMotion;
+
+    public string CinematicQualityTier => _preferences.Current.CinematicQualityTier;
+
+    public System.Windows.Media.Color ArtworkAccentColor => _artworkAccentColor;
 
     public bool HasUpcomingLyric => !string.IsNullOrWhiteSpace(UpcomingLyricText);
 
@@ -226,17 +283,34 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             }
 
             _albumArtwork = value;
+            _artworkAccentColor = ExtractArtworkAccentColor(value);
             OnPropertyChanged(nameof(AlbumArtwork));
             OnPropertyChanged(nameof(HasAlbumArtwork));
             OnPropertyChanged(nameof(ArtworkAvailabilityLabel));
+            OnPropertyChanged(nameof(ArtworkAccentColor));
+        }
+    }
+
+    public ImageSource? AlbumArtworkBackdrop
+    {
+        get => _albumArtworkBackdrop;
+        private set
+        {
+            if (ReferenceEquals(_albumArtworkBackdrop, value))
+            {
+                return;
+            }
+
+            _albumArtworkBackdrop = value;
+            OnPropertyChanged(nameof(AlbumArtworkBackdrop));
         }
     }
 
     public bool HasAlbumArtwork => _albumArtwork is not null;
 
     public string ArtworkAvailabilityLabel => HasAlbumArtwork
-        ? "ARTWORK · SPOTIFY MEDIA SESSION"
-        : "ARTWORK NOT PROVIDED BY SPOTIFY SESSION";
+        ? "ARTWORK · WINDOWS MEDIA SESSION"
+        : "ARTWORK NOT PROVIDED BY MEDIA SESSION";
 
     public string StageEmptyStateText
     {
@@ -244,28 +318,418 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         {
             if (_snapshot is null)
             {
-                return "Connect Spotify Desktop to begin.";
+                return "Connect a supported music session to begin.";
             }
 
             if (_activeLyricsDocument is null)
             {
-                return _lyricsStatusText;
+                return "Lirik tidak tersedia";
             }
 
             return _activeLyricsDocument.SyncMode switch
             {
-                LyricsSyncMode.Unsynced =>
-                    "These lyrics have no source timestamps. Playback highlighting is unavailable.",
-                LyricsSyncMode.Instrumental =>
-                    "Instrumental recording · no vocal lyrics supplied.",
-                _ when _sceneState.NextLine is not null =>
-                    "Waiting for the next source lyric timestamp.",
-                _ => "No lyric line is active at this playback position."
+                LyricsSyncMode.Unsynced => "Lirik tersedia · tanpa timestamp sumber",
+                LyricsSyncMode.Instrumental => "Instrumental",
+                _ when _sceneState.NextLine is not null => "Menunggu baris lirik berikutnya",
+                _ => string.Empty
             };
         }
     }
 
+    public LyricsDocument? ActiveLyricsDocument => _activeLyricsDocument;
+
+    public bool HasTranslation => _activeTranslationDocument is not null;
+
+    public bool HasTranslationDisplay => !string.IsNullOrWhiteSpace(TranslationDisplayText);
+
+    public string TranslationModeLabel => _activeTranslationDocument is null
+        ? string.Empty
+        : $"TRANSLATION · {_activeTranslationDocument.Language ?? "Unspecified language"} · " +
+          (_activeTranslationDocument.SyncMode switch
+          {
+              LyricsSyncMode.LineSynced => "LINE-SYNCED",
+              LyricsSyncMode.WordSynced => "TIMED SOURCE",
+              LyricsSyncMode.Unsynced => "UNSYNCED",
+              LyricsSyncMode.Instrumental => "INSTRUMENTAL",
+              _ => "LOCAL"
+          });
+
+    public string TranslationStatusText => _translationStatusText;
+
+    public string TranslationFullText => _activeTranslationDocument is not { } document || document.Instrumental
+        ? string.Empty
+        : document.PlainText ?? string.Join(
+            Environment.NewLine,
+            document.Lines.Select(static line => line.Text));
+
+    public string TranslationDisplayText
+    {
+        get
+        {
+            var document = _activeTranslationDocument;
+            if (document is null || document.Instrumental)
+            {
+                return string.Empty;
+            }
+
+            if (document.SyncMode is LyricsSyncMode.LineSynced or LyricsSyncMode.WordSynced)
+            {
+                return document.Lines
+                    .Where(line => line.Start is { } start && start <= _sceneState.Position)
+                    .OrderBy(static line => line.Start)
+                    .LastOrDefault()?.Text ?? string.Empty;
+            }
+
+            return document.PlainText ?? string.Join(
+                Environment.NewLine,
+                document.Lines.Select(static line => line.Text));
+        }
+    }
+
+    public async Task<bool> LoadTranslationFileAsync(string filePath, string language)
+    {
+        if (_disposed || string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(language))
+        {
+            return false;
+        }
+
+        var signature = _requestedSignature ?? (_snapshot is null ? null : CreateSignature(_snapshot));
+        if (signature is null)
+        {
+            SetTranslationStatus("Start a supported media session before attaching a translation.");
+            return false;
+        }
+
+        CancelTranslationLookup();
+        var generation = Interlocked.Increment(ref _translationGeneration);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _translationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+        var token = _translationCancellation.Token;
+        SetTranslationStatus("Loading local translation…");
+
+        return await LoadTranslationCoreAsync(
+            filePath,
+            language,
+            signature,
+            generation,
+            token,
+            persistPreference: true).ConfigureAwait(false);
+    }
+
+    public async Task RemoveTranslationAsync()
+    {
+        var signature = _requestedSignature ?? (_snapshot is null ? null : CreateSignature(_snapshot));
+        if (signature is null)
+        {
+            ClearTranslationState("No active track translation to remove.");
+            return;
+        }
+
+        var trackKey = CreateTranslationTrackKey(signature);
+        var remaining = _preferences.Current.LocalTranslations
+            .Where(profile => !StringComparer.Ordinal.Equals(profile.TrackKey, trackKey))
+            .ToImmutableArray();
+
+        try
+        {
+            await _preferences.SaveAsync(_preferences.Current with { LocalTranslations = remaining })
+                .ConfigureAwait(false);
+            ClearTranslationState("Local translation removed for this track.");
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Could not remove local translation preference.");
+            SetTranslationStatus("Could not remove the saved translation reference.");
+        }
+    }
+
+    private async Task<bool> LoadTranslationCoreAsync(
+        string filePath,
+        string language,
+        LyricsTrackSignature signature,
+        long generation,
+        CancellationToken cancellationToken,
+        bool persistPreference)
+    {
+        try
+        {
+            var result = await _lyricsService.LoadLocalFileAsync(filePath, cancellationToken)
+                .ConfigureAwait(false);
+            var source = result.Document;
+
+            if (!string.IsNullOrWhiteSpace(source.Title) &&
+                !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(source.Title), signature.NormalizedTitle))
+            {
+                throw new InvalidDataException("The selected translation title does not match the active track.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(source.Artist) &&
+                !StringComparer.Ordinal.Equals(LyricsCacheKey.Normalize(source.Artist), signature.NormalizedArtist))
+            {
+                throw new InvalidDataException("The selected translation artist does not match the active track.");
+            }
+
+            var translated = new LyricsDocument(
+                source.Title ?? signature.Title,
+                source.Artist ?? signature.Artist,
+                source.Album ?? signature.Album,
+                source.Duration ?? signature.Duration,
+                source.Instrumental,
+                source.Lines,
+                source.PlainText,
+                source.Diagnostics,
+                language.Trim());
+
+            if (persistPreference)
+            {
+                var profile = new LocalTranslationPreference(
+                    CreateTranslationTrackKey(signature),
+                    Path.GetFullPath(filePath),
+                    language.Trim());
+                var profiles = _preferences.Current.LocalTranslations
+                    .Where(existing => !StringComparer.Ordinal.Equals(existing.TrackKey, profile.TrackKey))
+                    .Append(profile)
+                    .ToImmutableArray();
+
+                await _preferences.SaveAsync(
+                    _preferences.Current with { LocalTranslations = profiles },
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (_disposed ||
+                generation != Interlocked.Read(ref _translationGeneration) ||
+                !Equals(signature, _requestedSignature ?? (_snapshot is null ? null : CreateSignature(_snapshot))))
+            {
+                return false;
+            }
+
+            DispatchTranslation(generation, translated, null);
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Local translation load failed for {FilePath}.", filePath);
+            DispatchTranslation(generation, null, "The selected translation could not be loaded or did not match this track.");
+            return false;
+        }
+    }
+
+    private void LoadSavedTranslationForTrack(LyricsTrackSignature signature)
+    {
+        CancelTranslationLookup();
+        var generation = Interlocked.Increment(ref _translationGeneration);
+        _activeTranslationDocument = null;
+        OnPropertyChanged(nameof(HasTranslation));
+        OnPropertyChanged(nameof(HasTranslationDisplay));
+        OnPropertyChanged(nameof(TranslationDisplayText));
+        OnPropertyChanged(nameof(TranslationFullText));
+        OnPropertyChanged(nameof(TranslationModeLabel));
+
+        var key = CreateTranslationTrackKey(signature);
+        var saved = _preferences.Current.LocalTranslations
+            .FirstOrDefault(profile => StringComparer.Ordinal.Equals(profile.TrackKey, key));
+        if (saved is null)
+        {
+            SetTranslationStatus("No translation attached to this track.");
+            return;
+        }
+
+        if (!File.Exists(saved.FilePath))
+        {
+            SetTranslationStatus("The saved local translation file is unavailable. Re-import it to restore this lane.");
+            return;
+        }
+
+        _translationCancellation = new CancellationTokenSource();
+        SetTranslationStatus($"Loading saved {saved.Language} translation…");
+        _ = LoadTranslationCoreAsync(
+            saved.FilePath,
+            saved.Language,
+            signature,
+            generation,
+            _translationCancellation.Token,
+            persistPreference: false);
+    }
+
+    private void DispatchTranslation(long generation, LyricsDocument? document, string? status)
+    {
+        if (_disposed || _dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        void Apply()
+        {
+            if (_disposed || generation != Interlocked.Read(ref _translationGeneration))
+            {
+                return;
+            }
+
+            _activeTranslationDocument = document;
+            SetTranslationStatus(status ?? (document is null
+                ? "No translation attached to this track."
+                : $"Loaded local {document.Language ?? "unlabelled"} translation."));
+            OnPropertyChanged(nameof(HasTranslation));
+            OnPropertyChanged(nameof(HasTranslationDisplay));
+            OnPropertyChanged(nameof(TranslationDisplayText));
+            OnPropertyChanged(nameof(TranslationFullText));
+            OnPropertyChanged(nameof(TranslationModeLabel));
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            Apply();
+        }
+        else
+        {
+            _dispatcher.BeginInvoke(new Action(Apply));
+        }
+    }
+
+    private void SetTranslationStatus(string status)
+    {
+        if (_dispatcher.CheckAccess())
+        {
+            _translationStatusText = status;
+            OnPropertyChanged(nameof(TranslationStatusText));
+            return;
+        }
+
+        if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+        {
+            _dispatcher.BeginInvoke(new Action(() =>
+            {
+                _translationStatusText = status;
+                OnPropertyChanged(nameof(TranslationStatusText));
+            }));
+        }
+    }
+
+    private void ClearTranslationState(string status)
+    {
+        CancelTranslationLookup();
+
+        void Apply()
+        {
+            _activeTranslationDocument = null;
+            _translationStatusText = status;
+            OnPropertyChanged(nameof(TranslationStatusText));
+            OnPropertyChanged(nameof(HasTranslation));
+            OnPropertyChanged(nameof(HasTranslationDisplay));
+            OnPropertyChanged(nameof(TranslationDisplayText));
+            OnPropertyChanged(nameof(TranslationFullText));
+            OnPropertyChanged(nameof(TranslationModeLabel));
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            Apply();
+        }
+        else if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+        {
+            _dispatcher.BeginInvoke(new Action(Apply));
+        }
+    }
+
+    private void CancelTranslationLookup()
+    {
+        Interlocked.Increment(ref _translationGeneration);
+        var previous = _translationCancellation;
+        _translationCancellation = null;
+        if (previous is null) return;
+        previous.Cancel();
+        previous.Dispose();
+    }
+
+    private static string CreateTranslationTrackKey(LyricsTrackSignature signature)
+    {
+        var identity = string.Join(
+            "\u001f",
+            signature.NormalizedTitle,
+            signature.NormalizedArtist,
+            signature.NormalizedAlbum);
+        var hash = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    public string CreateLrcExportText()
+    {
+        var document = _activeLyricsDocument
+            ?? throw new InvalidOperationException("There is no active lyrics document to export.");
+
+        if (document.SyncMode == LyricsSyncMode.WordSynced)
+        {
+            throw new InvalidOperationException(
+                "This document contains word-level timestamps. Exporting it as standard LRC would discard those timings.");
+        }
+
+        var hasTimedLines = document.Lines.Any(static line => line.Start is not null);
+        if (hasTimedLines && document.Lines.Any(static line => line.Start is null))
+        {
+            throw new InvalidOperationException(
+                "This document mixes timed and untimed lines. Standard LRC cannot preserve that structure safely.");
+        }
+
+        var builder = new StringBuilder();
+        AppendMetadata(builder, "ti", document.Title);
+        AppendMetadata(builder, "ar", document.Artist);
+        AppendMetadata(builder, "al", document.Album);
+
+        if (document.Duration is { } duration)
+        {
+            builder.Append("[length:")
+                .Append(FormatLrcTimestamp(duration))
+                .AppendLine("]");
+        }
+
+        if (builder.Length > 0)
+        {
+            builder.AppendLine();
+        }
+
+        foreach (var line in document.Lines)
+        {
+            if (line.Start is { } timestamp)
+            {
+                builder.Append('[')
+                    .Append(FormatLrcTimestamp(timestamp))
+                    .Append(']');
+            }
+
+            builder.AppendLine(line.Text);
+        }
+
+        if (document.Lines.IsEmpty && !string.IsNullOrWhiteSpace(document.PlainText))
+        {
+            builder.AppendLine(document.PlainText);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendMetadata(StringBuilder builder, string tag, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            builder.Append('[').Append(tag).Append(':').Append(value.Trim()).AppendLine("]");
+        }
+    }
+
+    private static string FormatLrcTimestamp(TimeSpan value)
+    {
+        var totalMinutes = (long)value.TotalMinutes;
+        return $"{totalMinutes:00}:{value.Seconds:00}.{value.Milliseconds:000}";
+    }
+
     public string ActiveWordText => _sceneState.WordFill?.Word.Text ?? string.Empty;
+
+    public bool HasTimedActiveWord => _sceneState.WordFill is { Word.End: not null };
+
+    public double ActiveWordProgress => _sceneState.WordFill?.Progress ?? 0d;
 
     public string ActiveWordProgressLabel =>
         _sceneState.WordFill is { Word.End: not null } fill
@@ -282,9 +746,70 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _ => "SYNC CLOCK · WAITING"
     };
 
-    public string NextMilestone => "Phase 4 — cinematic renderer and artwork presentation";
+    public string NextMilestone => "SkyLyrics 2.1 — multi-source music companion";
 
-    public string VersionLabel => $"VERSION {AppVersion.Major}.{AppVersion.Minor}.{AppVersion.Build}";
+    public string VersionLabel
+    {
+        get
+        {
+            var version = AppVersion.Split('+', 2)[0];
+            return $"v{version}";
+        }
+    }
+
+    public bool LoadCachedLyrics(LyricsCacheEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (_disposed)
+        {
+            return false;
+        }
+
+        var signature = _snapshot is null ? null : CreateSignature(_snapshot);
+        if (signature is null)
+        {
+            LyricsStatusText = "Start a supported media session before restoring cached lyrics.";
+            return false;
+        }
+
+        var document = entry.Document;
+        var validation = LyricsMatchValidator.Validate(signature, document);
+        if (!validation.IsMatch)
+        {
+            _requestedSignature = signature;
+            SetCandidateSearchEnabled(true);
+            CandidateSearchStatusBackingField = validation.Reason;
+            LyricsModeLabel = "NO MATCH";
+            LyricsStatusText = "Tidak ada lirik yang cocok";
+            return false;
+        }
+
+        ResetCandidateSearchState();
+
+        CancelLyricsLookup();
+        _requestedSignature = signature;
+        _activeLyricsDocument = document;
+        _syncScheduler.UpdateLyrics(document);
+        OnPropertyChanged(nameof(ActiveLyricsDocument));
+        OnPropertyChanged(nameof(StageEmptyStateText));
+
+        LyricsModeLabel = document.SyncMode switch
+        {
+            LyricsSyncMode.WordSynced => "WORD-SYNCED LYRICS",
+            LyricsSyncMode.LineSynced => "LINE-SYNCED LYRICS",
+            LyricsSyncMode.Unsynced => "UNSYNCED — NO TIMESTAMPS",
+            LyricsSyncMode.Instrumental => "INSTRUMENTAL",
+            _ => "LYRICS"
+        };
+        LyricsText = document.Instrumental
+            ? string.Empty
+            : document.SyncMode == LyricsSyncMode.Unsynced && document.PlainText is not null
+                ? document.PlainText
+                : string.Join(Environment.NewLine, document.Lines.Select(static line => line.Text));
+        LyricsStatusText = $"Restored verified cache entry from {entry.Provider} · cached {entry.CachedAtUtc.ToLocalTime():g}.";
+        return true;
+    }
 
     public async Task LoadLocalLyricsFileAsync(string filePath)
     {
@@ -294,6 +819,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         CancelLyricsLookup();
+        ResetCandidateSearchState();
+        ClearTranslationState("Translation lane cleared after importing a different source document.");
         _requestedSignature = null;
         var generation = Interlocked.Increment(ref _lyricsGeneration);
         var cancellation = new CancellationTokenSource();
@@ -321,7 +848,56 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static BitmapImage? DecodeArtwork(ImmutableArray<byte> artworkBytes)
+    private static System.Windows.Media.Color ExtractArtworkAccentColor(ImageSource? source)
+    {
+        if (source is not BitmapSource bitmap || bitmap.PixelWidth <= 0 || bitmap.PixelHeight <= 0)
+        {
+            return System.Windows.Media.Color.FromRgb(118, 202, 176);
+        }
+
+        try
+        {
+            var converted = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0d);
+            var stride = checked(converted.PixelWidth * 4);
+            var pixels = new byte[checked(stride * converted.PixelHeight)];
+            converted.CopyPixels(pixels, stride, 0);
+
+            var bestScore = double.MinValue;
+            var best = System.Windows.Media.Color.FromRgb(118, 202, 176);
+            var stepX = Math.Max(1, converted.PixelWidth / 32);
+            var stepY = Math.Max(1, converted.PixelHeight / 32);
+
+            for (var y = stepY; y < converted.PixelHeight - stepY; y += stepY)
+            {
+                for (var x = stepX; x < converted.PixelWidth - stepX; x += stepX)
+                {
+                    var offset = (y * stride) + (x * 4);
+                    var blue = pixels[offset];
+                    var green = pixels[offset + 1];
+                    var red = pixels[offset + 2];
+                    var max = Math.Max(red, Math.Max(green, blue));
+                    var min = Math.Min(red, Math.Min(green, blue));
+                    var saturation = max == 0 ? 0d : (max - min) / (double)max;
+                    var brightness = max / 255d;
+                    var score = (saturation * 0.8d) + (brightness * 0.2d);
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        best = System.Windows.Media.Color.FromRgb(red, green, blue);
+                    }
+                }
+            }
+
+            return best;
+        }
+        catch
+        {
+            return System.Windows.Media.Color.FromRgb(118, 202, 176);
+        }
+    }
+
+    private static BitmapImage? DecodeArtwork(ImmutableArray<byte> artworkBytes, int decodePixelWidth)
     {
         if (artworkBytes.IsDefaultOrEmpty)
         {
@@ -335,7 +911,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
-            image.DecodePixelWidth = 512;
+            image.DecodePixelWidth = Math.Clamp(decodePixelWidth, 32, 1024);
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
@@ -374,14 +950,26 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        var previousLineIndex = _sceneState.ActiveLineIndex;
+        var previousLineIdentity = LyricLineIdentity.From(_sceneState);
         _sceneState = state;
         OnPropertyChanged(nameof(CurrentScene));
+        if (previousLineIndex != state.ActiveLineIndex)
+        {
+            OnPropertyChanged(nameof(ActiveLyricLineIndex));
+        }
+
+        if (previousLineIdentity != LyricLineIdentity.From(state))
+        {
+            OnPropertyChanged(nameof(ActiveLyricLineIdentity));
+        }
 
         var artwork = state.Track?.ArtworkBytes ?? ImmutableArray<byte>.Empty;
         if (!_artworkBytes.Equals(artwork))
         {
             _artworkBytes = artwork;
-            AlbumArtwork = DecodeArtwork(artwork);
+            AlbumArtwork = DecodeArtwork(artwork, 512);
+            AlbumArtworkBackdrop = DecodeArtwork(artwork, 96);
         }
 
         OnPropertyChanged(nameof(PreviousLyricText));
@@ -390,13 +978,33 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasPreviousLyric));
         OnPropertyChanged(nameof(HasActiveLine));
         OnPropertyChanged(nameof(ShowStageEmptyState));
+        OnPropertyChanged(nameof(ShowPlaybackVisual));
+        OnPropertyChanged(nameof(MusicVisualPosition));
+        OnPropertyChanged(nameof(MusicVisualIsPlaying));
+        OnPropertyChanged(nameof(MusicVisualMotionEnabled));
+        OnPropertyChanged(nameof(CinematicQualityTier));
         OnPropertyChanged(nameof(HasUpcomingLyric));
         OnPropertyChanged(nameof(HasActiveWord));
         OnPropertyChanged(nameof(StageEmptyStateText));
         OnPropertyChanged(nameof(ActiveWordText));
+        OnPropertyChanged(nameof(HasTimedActiveWord));
+        OnPropertyChanged(nameof(ActiveWordProgress));
         OnPropertyChanged(nameof(ActiveWordProgressLabel));
         OnPropertyChanged(nameof(SyncPositionLabel));
         OnPropertyChanged(nameof(SyncStatusLabel));
+        OnPropertyChanged(nameof(TranslationDisplayText));
+        OnPropertyChanged(nameof(HasTranslationDisplay));
+    }
+
+    private void OnPreferencesChanged(AppPreferences preferences)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(MusicVisualMotionEnabled));
+        OnPropertyChanged(nameof(CinematicQualityTier));
     }
 
     private void OnSnapshotChanged(object? sender, PlaybackSessionChangedEventArgs e)
@@ -437,14 +1045,23 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         if (snapshot is null)
         {
+            CancelTranslationLookup();
+            _activeTranslationDocument = null;
+            SetTranslationStatus("Waiting for a supported media session.");
+            OnPropertyChanged(nameof(HasTranslation));
+            OnPropertyChanged(nameof(HasTranslationDisplay));
+            OnPropertyChanged(nameof(TranslationModeLabel));
+            OnPropertyChanged(nameof(TranslationDisplayText));
+            OnPropertyChanged(nameof(TranslationFullText));
             CancelLyricsLookup();
+            ResetCandidateSearchState();
             _requestedSignature = null;
             _activeLyricsDocument = null;
             _syncScheduler.UpdateLyrics(null);
             OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "NO LYRICS";
             LyricsText = string.Empty;
-            LyricsStatusText = "Waiting for Spotify playback.";
+            LyricsStatusText = "Waiting for media playback.";
             return;
         }
 
@@ -452,10 +1069,12 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         if (signature is null)
         {
             CancelLyricsLookup();
+            ResetCandidateSearchState();
             _requestedSignature = null;
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
             LyricsStatusText = "Track title or artist metadata is missing; lookup was skipped.";
+            ClearTranslationState("Translation is unavailable without a stable track identity.");
             return;
         }
 
@@ -472,6 +1091,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private void StartLyricsLookup(LyricsTrackSignature signature)
     {
         CancelLyricsLookup();
+        ResetCandidateSearchState();
         _requestedSignature = signature;
 
         var cancellation = new CancellationTokenSource();
@@ -485,7 +1105,196 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         LyricsModeLabel = "LOOKING UP";
         LyricsText = string.Empty;
 
+        LoadSavedTranslationForTrack(signature);
         _ = LoadLyricsAsync(signature, generation, cancellation.Token);
+    }
+
+    public async Task SearchLyricsCandidatesAsync()
+    {
+        if (_disposed || !CanSearchLyricsCandidates || _requestedSignature is not { } signature)
+        {
+            return;
+        }
+
+        CancelCandidateSearch();
+        var generation = Interlocked.Read(ref _lyricsGeneration);
+        var cancellation = new CancellationTokenSource();
+        _candidateSearchCancellation = cancellation;
+        SetCandidateSearchInProgress(true);
+        SetLyricsCandidates(ImmutableArray<LyricsSearchCandidate>.Empty);
+        CandidateSearchStatusBackingField = "Mencari kandidat di LRCLIB…";
+
+        try
+        {
+            var candidates = await _lyricsService.SearchAsync(signature, cancellation.Token)
+                .ConfigureAwait(false);
+            DispatchCandidateSearchResult(generation, candidates, null);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Manual lyrics candidate search failed for {TrackTitle} by {TrackArtist}.",
+                signature.Title,
+                signature.Artist);
+            DispatchCandidateSearchResult(generation, [], "Pencarian kandidat gagal. Periksa koneksi lalu coba lagi.");
+        }
+    }
+
+    public async Task<bool> SelectLyricsCandidateAsync(LyricsSearchCandidate candidate)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        if (_disposed || _requestedSignature is not { } signature)
+        {
+            return false;
+        }
+
+        var generation = Interlocked.Read(ref _lyricsGeneration);
+        var validation = LyricsMatchValidator.Validate(signature, candidate.Result.Document);
+        if (!validation.IsMatch)
+        {
+            CandidateSearchStatusBackingField = $"Kandidat ditolak: {validation.Reason}";
+            return false;
+        }
+
+        try
+        {
+            var result = await _lyricsService.SelectCandidateAsync(
+                signature,
+                candidate,
+                CancellationToken.None).ConfigureAwait(false);
+
+            if (result is null)
+            {
+                DispatchCandidateSearchResult(
+                    generation,
+                    _lyricsCandidates,
+                    $"Kandidat ditolak: {validation.Reason}");
+                return false;
+            }
+
+            DispatchLyricsResult(generation, result, null);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Selected lyrics candidate could not be applied.");
+            DispatchCandidateSearchResult(
+                generation,
+                _lyricsCandidates,
+                "Kandidat tidak dapat digunakan. Silakan pilih kandidat lain.");
+            return false;
+        }
+    }
+
+    private void DispatchCandidateSearchResult(
+        long generation,
+        IReadOnlyList<LyricsSearchCandidate> candidates,
+        string? error)
+    {
+        if (_disposed || _dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        void Apply()
+        {
+            if (_disposed || generation != Interlocked.Read(ref _lyricsGeneration))
+            {
+                return;
+            }
+
+            SetCandidateSearchInProgress(false);
+            SetLyricsCandidates(candidates.ToImmutableArray());
+            CandidateSearchStatusBackingField = error ??
+                (candidates.Count == 0
+                    ? "LRCLIB tidak menemukan kandidat."
+                    : $"{candidates.Count} kandidat ditemukan. Hanya kandidat dengan judul, artis, dan durasi cocok yang dapat digunakan.");
+            var previous = _candidateSearchCancellation;
+            _candidateSearchCancellation = null;
+            previous?.Dispose();
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            Apply();
+        }
+        else
+        {
+            _dispatcher.BeginInvoke(new Action(Apply));
+        }
+    }
+
+    private void SetLyricsCandidates(ImmutableArray<LyricsSearchCandidate> candidates)
+    {
+        _lyricsCandidates = candidates;
+        OnPropertyChanged(nameof(LyricsCandidates));
+        OnPropertyChanged(nameof(HasLyricsCandidates));
+    }
+
+    private void SetCandidateSearchEnabled(bool enabled)
+    {
+        if (_canSearchLyricsCandidates == enabled)
+        {
+            return;
+        }
+
+        _canSearchLyricsCandidates = enabled;
+        OnPropertyChanged(nameof(CanSearchLyricsCandidates));
+        OnPropertyChanged(nameof(ShowCandidateSearchButton));
+    }
+
+    private void SetCandidateSearchInProgress(bool searching)
+    {
+        if (_isSearchingLyricsCandidates == searching)
+        {
+            return;
+        }
+
+        _isSearchingLyricsCandidates = searching;
+        OnPropertyChanged(nameof(IsSearchingLyricsCandidates));
+        OnPropertyChanged(nameof(CanSearchLyricsCandidates));
+        OnPropertyChanged(nameof(CandidateSearchButtonText));
+    }
+
+    private void ResetCandidateSearchState()
+    {
+        CancelCandidateSearch();
+        SetCandidateSearchEnabled(false);
+        SetCandidateSearchInProgress(false);
+        SetLyricsCandidates(ImmutableArray<LyricsSearchCandidate>.Empty);
+        CandidateSearchStatusBackingField = string.Empty;
+    }
+
+    private void CancelCandidateSearch()
+    {
+        var previous = _candidateSearchCancellation;
+        _candidateSearchCancellation = null;
+        if (previous is null)
+        {
+            return;
+        }
+
+        previous.Cancel();
+        previous.Dispose();
+    }
+
+    private string CandidateSearchStatusBackingField
+    {
+        get => _candidateSearchStatus;
+        set
+        {
+            if (_candidateSearchStatus == value)
+            {
+                return;
+            }
+
+            _candidateSearchStatus = value;
+            OnPropertyChanged(nameof(CandidateSearchStatus));
+        }
     }
 
     private async Task LoadLyricsAsync(
@@ -559,10 +1368,13 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(StageEmptyStateText));
             LyricsModeLabel = "NO MATCH";
             LyricsText = string.Empty;
-            LyricsStatusText = "LRCLIB did not return a matching lyrics record.";
+            SetCandidateSearchEnabled(true);
+            LyricsStatusText = "Tidak ada lirik yang cocok";
+            CandidateSearchStatusBackingField = string.Empty;
             return;
         }
 
+        ResetCandidateSearchState();
         var document = result.Document;
         _activeLyricsDocument = document;
         _syncScheduler.UpdateLyrics(document);
@@ -628,6 +1440,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private void CancelLyricsLookup()
     {
         Interlocked.Increment(ref _lyricsGeneration);
+        CancelCandidateSearch();
         var previous = _lyricsCancellation;
         _lyricsCancellation = null;
 
@@ -659,6 +1472,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         _playbackSource.SnapshotChanged -= OnSnapshotChanged;
         _syncScheduler.SceneChanged -= OnSceneChanged;
+        _preferences.PreferencesChanged -= OnPreferencesChanged;
         CancelLyricsLookup();
+        CancelTranslationLookup();
     }
 }

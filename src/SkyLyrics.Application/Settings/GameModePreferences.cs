@@ -8,6 +8,7 @@ public sealed record GameModePreferences
     public double Height { get; init; } = 176d;
     public double Opacity { get; init; } = 0.96d;
     public bool AlwaysOnTop { get; init; } = true;
+    public bool ClickThrough { get; init; }
     public string BackgroundId { get; init; } = "aurora";
     public string TextEffectId { get; init; } = "mint-glow";
     public string AnimationId { get; init; } = "cinematic";
@@ -34,8 +35,8 @@ public sealed record GameModePreferences
         {
             Left = Position(Left),
             Top = Position(Top),
-            Width = Math.Clamp(double.IsFinite(Width) ? Width : 1000d, 420d, 1920d),
-            Height = Math.Clamp(double.IsFinite(Height) ? Height : 176d, 112d, 600d),
+            Width = Math.Clamp(double.IsFinite(Width) ? Width : 1000d, 160d, 1920d),
+            Height = Math.Clamp(double.IsFinite(Height) ? Height : 176d, 30d, 600d),
             Opacity = Math.Clamp(double.IsFinite(Opacity) ? Opacity : 0.96d, 0.55d, 1d),
             BackgroundId = Preset(BackgroundId, "aurora", "aurora", "ocean", "violet", "sunset", "graphite"),
             TextEffectId = Preset(TextEffectId, "mint-glow", "none", "mint-glow", "ice-glow", "soft-shadow"),

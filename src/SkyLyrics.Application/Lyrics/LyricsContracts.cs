@@ -8,9 +8,9 @@ public sealed record LyricsTrackSignature(
     string? Album,
     TimeSpan? Duration)
 {
-    public string NormalizedTitle => LyricsCacheKey.Normalize(Title);
-    public string NormalizedArtist => LyricsCacheKey.Normalize(Artist);
-    public string NormalizedAlbum => LyricsCacheKey.Normalize(Album);
+    public string NormalizedTitle => LyricsMatchValidator.NormalizeTitle(Title);
+    public string NormalizedArtist => LyricsMatchValidator.NormalizeArtist(Artist);
+    public string NormalizedAlbum => LyricsMatchValidator.NormalizeMetadata(Album);
 
     public static string CreateCacheKey(LyricsTrackSignature signature)
     {
@@ -44,11 +44,7 @@ public static class LyricsCacheKey
             return string.Empty;
         }
 
-        return string.Join(
-            ' ',
-            value.Trim().ToLowerInvariant().Split(
-                (char[]?)null,
-                StringSplitOptions.RemoveEmptyEntries));
+        return LyricsMatchValidator.NormalizeMetadata(value);
     }
 }
 
@@ -80,7 +76,18 @@ public sealed record LyricsLookupResult(
 public sealed record LyricsSearchCandidate(
     LyricsProviderResult Result,
     int MatchScore,
-    bool IsExactSignatureMatch);
+    bool IsExactSignatureMatch)
+{
+    public string MatchReason { get; init; } = string.Empty;
+
+    public string ScoreLabel => $"Skor {MatchScore}/100";
+
+    public string MatchStatusLabel => IsExactSignatureMatch ? "LAYAK DIPILIH" : "DITOLAK VALIDATOR";
+
+    public string DurationLabel => Result.Document.Duration is { } duration
+        ? $"{(long)duration.TotalMinutes:00}:{duration.Seconds:00}"
+        : "Durasi tidak tersedia";
+}
 
 public interface ILyricsProvider
 {
@@ -106,6 +113,15 @@ public interface ILyricsCache
     Task PutAsync(LyricsCacheEntry entry, CancellationToken cancellationToken);
 }
 
+public interface ILyricsLibrary
+{
+    Task<IReadOnlyList<LyricsCacheEntry>> GetRecentAsync(
+        int limit,
+        CancellationToken cancellationToken);
+
+    Task<bool> DeleteAsync(string cacheKey, CancellationToken cancellationToken);
+}
+
 public interface ILyricsService
 {
     Task<LyricsLookupResult?> GetExactAsync(
@@ -114,6 +130,11 @@ public interface ILyricsService
 
     Task<IReadOnlyList<LyricsSearchCandidate>> SearchAsync(
         LyricsTrackSignature signature,
+        CancellationToken cancellationToken);
+
+    Task<LyricsLookupResult?> SelectCandidateAsync(
+        LyricsTrackSignature signature,
+        LyricsSearchCandidate candidate,
         CancellationToken cancellationToken);
 
     Task<LyricsLookupResult> LoadLocalFileAsync(
