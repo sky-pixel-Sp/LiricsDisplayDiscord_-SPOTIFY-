@@ -388,6 +388,7 @@ public partial class MainWindow : Window
                 _effectiveQualityLevel = ResolveQualityLevel(preferences.CinematicQualityTier);
                 ApplyAmbientMotionPreferences();
                 ApplyCinematicEffects();
+                AnimateArtwork();
             }));
         }
     }
@@ -676,6 +677,13 @@ public partial class MainWindow : Window
         {
             ArtworkBackdrop.BeginAnimation(OpacityProperty, null);
             ArtworkBackdrop.Opacity = _viewModel.HasAlbumArtwork ? 0.15d : 0d;
+            if (ArtworkBackdrop.RenderTransform is ScaleTransform reducedScale)
+            {
+                reducedScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+                reducedScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+                reducedScale.ScaleX = 1d;
+                reducedScale.ScaleY = 1d;
+            }
             return;
         }
 
