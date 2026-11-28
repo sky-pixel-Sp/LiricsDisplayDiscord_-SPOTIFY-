@@ -11,6 +11,11 @@ using ComboBox = System.Windows.Controls.ComboBox;
 using Image = System.Windows.Controls.Image;
 using ListBox = System.Windows.Controls.ListBox;
 using TextBox = System.Windows.Controls.TextBox;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
+using FontFamily = System.Windows.Media.FontFamily;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
 
 namespace SkyLyrics.Desktop;
 
