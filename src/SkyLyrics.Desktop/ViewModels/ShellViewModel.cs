@@ -243,6 +243,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public int ActiveLyricLineIndex => _sceneState.ActiveLineIndex;
 
+    public LyricLineIdentity? ActiveLyricLineIdentity => LyricLineIdentity.From(_sceneState);
+
     public string UpcomingLyricText => _sceneState.NextLine?.Text ?? string.Empty;
 
     public bool HasPreviousLyric => !string.IsNullOrWhiteSpace(PreviousLyricText);
@@ -949,11 +951,17 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var previousLineIndex = _sceneState.ActiveLineIndex;
+        var previousLineIdentity = LyricLineIdentity.From(_sceneState);
         _sceneState = state;
         OnPropertyChanged(nameof(CurrentScene));
         if (previousLineIndex != state.ActiveLineIndex)
         {
             OnPropertyChanged(nameof(ActiveLyricLineIndex));
+        }
+
+        if (previousLineIdentity != LyricLineIdentity.From(state))
+        {
+            OnPropertyChanged(nameof(ActiveLyricLineIdentity));
         }
 
         var artwork = state.Track?.ArtworkBytes ?? ImmutableArray<byte>.Empty;
