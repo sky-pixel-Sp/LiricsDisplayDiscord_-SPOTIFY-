@@ -34,6 +34,7 @@ public sealed class AssetLibraryWindow : Window
     private readonly Button _favoriteButton;
     private readonly Button _previewButton;
     private readonly Button _applyButton;
+    private readonly Button _resetButton;
     private readonly DispatcherTimer _gifTimer;
     private IReadOnlyList<BitmapFrame> _gifFrames = [];
     private AssetCatalogEntry? _selectedAsset;
@@ -64,6 +65,8 @@ public sealed class AssetLibraryWindow : Window
         _previewButton.Click += Preview_Click;
         _applyButton = CreateButton("APPLY");
         _applyButton.Click += Apply_Click;
+        _resetButton = CreateButton("RESET");
+        _resetButton.Click += Reset_Click;
 
         _gifTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -246,6 +249,7 @@ public sealed class AssetLibraryWindow : Window
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        actionRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         _quality.Items.Add("Low quality");
         _quality.Items.Add("Balanced quality");
@@ -264,11 +268,14 @@ public sealed class AssetLibraryWindow : Window
 
         _favoriteButton.Margin = new Thickness(0, 0, 8, 0);
         _previewButton.Margin = new Thickness(0, 0, 8, 0);
+        _resetButton.Margin = new Thickness(0, 0, 8, 0);
         Grid.SetColumn(_favoriteButton, 1);
         Grid.SetColumn(_previewButton, 2);
-        Grid.SetColumn(_applyButton, 3);
+        Grid.SetColumn(_resetButton, 3);
+        Grid.SetColumn(_applyButton, 4);
         actionRow.Children.Add(_favoriteButton);
         actionRow.Children.Add(_previewButton);
+        actionRow.Children.Add(_resetButton);
         actionRow.Children.Add(_applyButton);
         Grid.SetRow(actionRow, 2);
         content.Children.Add(actionRow);
@@ -348,7 +355,7 @@ public sealed class AssetLibraryWindow : Window
         layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         layout.Children.Add(new Image
         {
-            Source = TryLoadBitmap(GetSafeAssetPath(asset.RelativePath), 180),
+            Source = TryLoadBitmap(GetThumbnailPath(asset), 180),
             Width = 72,
             Height = 52,
             Stretch = Stretch.UniformToFill,
@@ -605,11 +612,40 @@ public sealed class AssetLibraryWindow : Window
         try
         {
             await _preferences.SaveAsync(_preferences.Current with { AssetLibrary = updated });
-            _status.Text = $"Applied {_selectedAsset.Name}. The main workspace will refresh from the selected file.";
+            _status.Text = _selectedAsset.Category.ToLowerInvariant() switch
+            {
+                "backgrounds" => $"Applied {_selectedAsset.Name} as the workspace background.",
+                "animations" => $"Saved {_selectedAsset.Name} as the preferred animation. Cross-window animation integration remains in progress.",
+                "visualizers" => $"Saved {_selectedAsset.Name} as the visualizer style. This does not claim audio-reactive samples from GSMTC.",
+                _ => $"Saved the selection for {_selectedAsset.Name}."
+            };
         }
         catch (Exception exception)
         {
             _status.Text = $"Preference save failed: {exception.Message}";
+        }
+    }
+
+    private async void Reset_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var current = _preferences.Current;
+            await _preferences.SaveAsync(current with
+            {
+                AssetLibrary = current.AssetLibrary with
+                {
+                    SelectedBackgroundId = string.Empty,
+                    SelectedAnimationId = string.Empty,
+                    SelectedVisualizerStyleId = "spectrum"
+                }
+            });
+            StopPreview();
+            _status.Text = "Asset selections reset to the default background, animation, and visualizer style.";
+        }
+        catch (Exception exception)
+        {
+            _status.Text = $"Asset selections could not be reset: {exception.Message}";
         }
     }
 
@@ -693,6 +729,16 @@ public sealed class AssetLibraryWindow : Window
         _previewButton.IsEnabled = true;
     }
 
+    private string GetThumbnailPath(AssetCatalogEntry asset)
+    {
+        var thumbnailName = asset.Id.Replace('/', '_') + ".webp";
+        var thumbnailPath = Path.GetFullPath(Path.Combine(_catalog.RootPath, "Thumbnails", thumbnailName));
+        var rootPrefix = _catalog.RootPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return thumbnailPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase) && File.Exists(thumbnailPath)
+            ? thumbnailPath
+            : GetSafeAssetPath(asset.RelativePath);
+    }
+
     private string GetSafeAssetPath(string relativePath)
     {
         var fullPath = Path.GetFullPath(Path.Combine(_catalog.RootPath, relativePath));
@@ -760,9 +806,4 @@ public sealed class AssetLibraryWindow : Window
     private static SolidColorBrush Brush(string value) =>
         new((Color)ColorConverter.ConvertFromString(value)!);
 
-    private sealed record AssetListItem(AssetCatalogEntry Asset, BitmapSource? Thumbnail)
-    {
-        public string Title => Asset.Name;
-        public string Subtitle => $"{Asset.Category} · {Asset.Width} × {Asset.Height}";
-    }
 }

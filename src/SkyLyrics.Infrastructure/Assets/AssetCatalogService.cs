@@ -28,7 +28,11 @@ public sealed record AssetCatalogEntry(
     string License,
     string Sha256,
     IReadOnlyList<string> Tags,
-    string? ValidationWarning);
+    string? ValidationWarning)
+{
+    public double? FramesPerSecond =>
+        FrameCount > 0 && DurationSeconds is > 0 ? FrameCount / DurationSeconds.Value : null;
+}
 
 public sealed record AssetCatalogDocument(
     int SchemaVersion,
