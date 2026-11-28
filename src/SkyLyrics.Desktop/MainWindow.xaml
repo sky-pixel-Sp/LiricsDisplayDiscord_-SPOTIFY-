@@ -160,7 +160,7 @@
             <Border Grid.Row="1" CornerRadius="24" Padding="25,20" Background="{DynamicResource PanelBackground}"
                     BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" ClipToBounds="True">
                 <Grid>
-                    <Image x:Name="ArtworkBackdrop" Source="{Binding AlbumArtwork}" Stretch="UniformToFill" Opacity="0.15"
+                    <Image x:Name="ArtworkBackdrop" Source="{Binding AlbumArtworkBackdrop}" Stretch="UniformToFill" Opacity="0.15"
                            RenderOptions.BitmapScalingMode="LowQuality"
                            Visibility="{Binding HasAlbumArtwork, Converter={StaticResource BooleanToVisibilityConverter}}"
                            RenderTransformOrigin="0.5,0.5">
