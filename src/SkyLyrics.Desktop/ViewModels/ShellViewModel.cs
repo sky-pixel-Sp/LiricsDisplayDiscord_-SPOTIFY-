@@ -729,7 +729,14 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public string NextMilestone => "SkyLyrics 2.1 — multi-source music companion";
 
-    public string VersionLabel => $"VERSION {AppVersion}";
+    public string VersionLabel
+    {
+        get
+        {
+            var version = AppVersion.Split('+', 2)[0];
+            return $"v{version}";
+        }
+    }
 
     public bool LoadCachedLyrics(LyricsCacheEntry entry)
     {
