@@ -71,6 +71,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _playbackSource = playbackSource;
         _lyricsService = lyricsService;
         _preferences = preferences;
+        _preferences.PreferencesChanged += OnPreferencesChanged;
         _syncScheduler = syncScheduler;
         _sceneState = syncScheduler.Current;
         _syncScheduler.SceneChanged += OnSceneChanged;
@@ -970,6 +971,17 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasTranslationDisplay));
     }
 
+    private void OnPreferencesChanged(AppPreferences preferences)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(MusicVisualMotionEnabled));
+        OnPropertyChanged(nameof(CinematicQualityTier));
+    }
+
     private void OnSnapshotChanged(object? sender, PlaybackSessionChangedEventArgs e)
     {
         if (_disposed)
@@ -1435,6 +1447,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         _playbackSource.SnapshotChanged -= OnSnapshotChanged;
         _syncScheduler.SceneChanged -= OnSceneChanged;
+        _preferences.PreferencesChanged -= OnPreferencesChanged;
         CancelLyricsLookup();
         CancelTranslationLookup();
     }
