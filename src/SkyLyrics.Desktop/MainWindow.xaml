@@ -97,7 +97,17 @@
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="ImportLyrics_Click" Margin="0,0,0,6">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/file-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
-                            <TextBlock Text="Import lyrics" FontSize="12" />
+                            <TextBlock Text="Import LRC / Lyricsfile" FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource SidebarNavButtonStyle}"
+                            Click="SearchLyricsCandidates_Click"
+                            IsEnabled="{Binding CanSearchLyricsCandidates}"
+                            Visibility="{Binding ShowCandidateSearchButton, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/list-music.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Search lyrics manually" FontSize="12" />
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="ImportTranslation_Click" Margin="0,0,0,6">
@@ -121,6 +131,12 @@
                 </StackPanel>
                 <StackPanel Grid.Row="2">
                     <Border Height="1" Margin="7,0,7,13" Background="{DynamicResource PanelBorder}" />
+                    <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenSettings_Click" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal">
+                            <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/activity.svg" Width="17" Height="17" Margin="0,0,12,0" />
+                            <TextBlock Text="Adjust sync offset" FontSize="12" />
+                        </StackPanel>
+                    </Button>
                     <Button Style="{StaticResource SidebarNavButtonStyle}" Click="OpenSettings_Click">
                         <StackPanel Orientation="Horizontal">
                             <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Icons/settings-2.svg" Width="17" Height="17" Margin="0,0,12,0" />
@@ -155,7 +171,10 @@
                 <Grid>
                     <Image x:Name="ArtworkBackdrop" Source="{Binding AlbumArtwork}" Stretch="UniformToFill" Opacity="0.15"
                            RenderOptions.BitmapScalingMode="LowQuality"
-                           Visibility="{Binding HasAlbumArtwork, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                           Visibility="{Binding HasAlbumArtwork, Converter={StaticResource BooleanToVisibilityConverter}}"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></Image.RenderTransform>
+                    </Image>
                     <Rectangle>
                         <Rectangle.Fill>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -165,6 +184,14 @@
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
+                    <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/bokeh.svg"
+                                      Stretch="Fill" Opacity=".15" IsHitTestVisible="False" />
+                    <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/light-leak.svg"
+                                      Stretch="Fill" Opacity=".13" IsHitTestVisible="False" />
+                    <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/grain.svg"
+                                      Stretch="Fill" Opacity=".12" IsHitTestVisible="False" />
+                    <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/vignette.svg"
+                                      Stretch="Fill" Opacity=".55" IsHitTestVisible="False" />
                     <controls:MusicWaveformControl
                         HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="180"
                         Position="{Binding MusicVisualPosition}"
@@ -409,8 +436,6 @@
                         <TextBlock Text="{Binding LyricsModeLabel}" FontSize="9" FontWeight="Bold"
                                    Foreground="{DynamicResource AccentBrush}" DockPanel.Dock="Right" />
                     </DockPanel>
-                    <TextBlock Text="{Binding LyricsStatusText}" FontSize="10" Foreground="{DynamicResource SecondaryText}"
-                               TextWrapping="Wrap" MaxHeight="40" Margin="0,6,0,0" />
                 </StackPanel>
             </Border>
             </StackPanel>
