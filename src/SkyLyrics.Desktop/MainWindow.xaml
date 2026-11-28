@@ -175,10 +175,14 @@
                                        FontWeight="SemiBold" Foreground="{DynamicResource SecondaryText}" />
                         </DockPanel>
                         <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Margin="8,12">
-                            <TextBlock Text="{Binding PreviousLyricText}"
+                            <TextBlock x:Name="PreviousLyricTextBlock" Text="{Binding PreviousLyricText}"
                                        Visibility="{Binding HasPreviousLyric, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        FontSize="16" FontWeight="Medium" Foreground="{DynamicResource SecondaryText}"
-                                       Opacity="0.76" TextAlignment="Center" TextWrapping="Wrap" MaxHeight="50" Margin="0,0,0,23" />
+                                       Opacity="0.76" TextAlignment="Center" TextWrapping="Wrap" MaxHeight="50" Margin="0,0,0,23" RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <TransformGroup><ScaleTransform ScaleX="1" ScaleY="1" /><TranslateTransform Y="0" /></TransformGroup>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
                             <TextBlock x:Name="ActiveLyricTextBlock" Text="{Binding ActiveLyricText}"
                                        Visibility="{Binding HasActiveLine, Converter={StaticResource BooleanToVisibilityConverter}}"
                                        FontSize="36" FontWeight="SemiBold" LineHeight="46" Foreground="{DynamicResource PrimaryText}"
@@ -206,9 +210,13 @@
                             </StackPanel>
                         </StackPanel>
                         <DockPanel Grid.Row="2" LastChildFill="False">
-                            <TextBlock DockPanel.Dock="Left" Text="{Binding UpcomingLyricText}"
+                            <TextBlock x:Name="UpcomingLyricTextBlock" DockPanel.Dock="Left" Text="{Binding UpcomingLyricText}"
                                        Visibility="{Binding HasUpcomingLyric, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                       FontSize="13" Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" MaxWidth="430" />
+                                       FontSize="13" Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" MaxWidth="430" RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <TransformGroup><ScaleTransform ScaleX="1" ScaleY="1" /><TranslateTransform Y="0" /></TransformGroup>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
                             <TextBlock DockPanel.Dock="Right" Text="{Binding SyncPositionLabel}" FontSize="10"
                                        FontWeight="SemiBold" Foreground="{DynamicResource PrimaryText}" VerticalAlignment="Center" />
                         </DockPanel>
