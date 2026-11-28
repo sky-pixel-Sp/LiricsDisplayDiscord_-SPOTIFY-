@@ -14,7 +14,7 @@ public sealed class AdaptiveQualityControllerTests
         for (var index = 0; index < 20; index++)
         {
             Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(25)));
-            time.Advance(TimeSpan.FromMilliseconds(90));
+            time.Advance(TimeSpan.FromMilliseconds(100));
         }
 
         Assert.Equal(CinematicQualityLevel.Cinematic, monitor.Level);
@@ -32,8 +32,10 @@ public sealed class AdaptiveQualityControllerTests
         for (var index = 0; index < 22; index++)
         {
             monitor.ObserveFrame(TimeSpan.FromMilliseconds(16));
-            time.Advance(TimeSpan.FromMilliseconds(95));
+            time.Advance(TimeSpan.FromMilliseconds(100));
         }
+
+        monitor.ObserveFrame(TimeSpan.FromMilliseconds(16));
 
         Assert.Equal(CinematicQualityLevel.Balanced, monitor.Level);
         Assert.InRange(monitor.LastWindowAverageMilliseconds, 15d, 17d);
