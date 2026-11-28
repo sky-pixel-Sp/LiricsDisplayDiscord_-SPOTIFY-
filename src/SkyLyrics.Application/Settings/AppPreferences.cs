@@ -14,6 +14,9 @@ public sealed record AppPreferences
     public int SyncOffsetMilliseconds { get; init; }
     public string? SelectedMediaSessionSourceAppUserModelId { get; init; }
     public bool ReduceMotion { get; init; }
+    public bool SplashEnabled { get; init; } = true;
+    public int LyricAnimationLeadMilliseconds { get; init; } = 90;
+    public string CinematicQualityTier { get; init; } = "balanced";
     public bool MiniPlayerAlwaysOnTop { get; init; } = true;
     public bool DiscordPresenceEnabled { get; init; }
     public string DiscordApplicationId { get; init; } = string.Empty;
@@ -33,6 +36,10 @@ public sealed record AppPreferences
         {
             Theme = string.Equals(Theme, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark",
             SyncOffsetMilliseconds = Math.Clamp(SyncOffsetMilliseconds, -500, 500),
+            LyricAnimationLeadMilliseconds = Math.Clamp(LyricAnimationLeadMilliseconds, 60, 120),
+            CinematicQualityTier = CinematicQualityTier is "cinematic" or "balanced" or "lite" or "reduced"
+                ? CinematicQualityTier
+                : "balanced",
             SelectedMediaSessionSourceAppUserModelId = string.IsNullOrWhiteSpace(SelectedMediaSessionSourceAppUserModelId)
                 ? null
                 : SelectedMediaSessionSourceAppUserModelId.Trim(),
