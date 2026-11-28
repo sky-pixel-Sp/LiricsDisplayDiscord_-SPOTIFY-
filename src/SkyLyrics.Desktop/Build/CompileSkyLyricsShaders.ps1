@@ -85,7 +85,7 @@ function Get-TrueTypeFamilyNames([string]$Path) {
             continue
         }
 
-        $familyName = [System.Text.Encoding]::BigEndianUnicode.GetString($bytes, $start, $length).Trim([char]0, " ")
+        $familyName = [System.Text.Encoding]::BigEndianUnicode.GetString($bytes, $start, $length).Trim([char[]]@([char]0, [char]32))
         if ($familyName) {
             $families += $familyName
         }
