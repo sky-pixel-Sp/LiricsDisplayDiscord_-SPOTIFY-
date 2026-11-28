@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using SkyLyrics.Application.Settings;
 
 namespace SkyLyrics.Desktop.Controls;
 
@@ -29,6 +30,8 @@ public sealed class MusicWaveformControl : FrameworkElement
 
     private readonly Stopwatch _playbackElapsed = new();
     private readonly Stopwatch _frameClock = new();
+    private AdaptiveQualityController _adaptiveQuality = new();
+    private CinematicQualityLevel _effectiveQualityLevel = CinematicQualityLevel.Balanced;
     private bool _renderSubscribed;
 
     public MusicWaveformControl()
@@ -71,6 +74,11 @@ public sealed class MusicWaveformControl : FrameworkElement
     private static void OnVisualInputChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs e)
     {
         var control = (MusicWaveformControl)dependencyObject;
+        if (e.Property == QualityTierProperty)
+        {
+            control.ResetAdaptiveQuality();
+        }
+
         control.UpdateRenderingSubscription();
         control.InvalidateVisual();
     }
@@ -119,22 +127,27 @@ public sealed class MusicWaveformControl : FrameworkElement
 
     private void OnRendering(object? sender, EventArgs e)
     {
-        var frameCap = QualityTier.ToLowerInvariant() switch
-        {
-            "cinematic" => 60,
-            "lite" => 24,
-            "reduced" => 0,
-            _ => 40
-        };
+        var frameTime = _frameClock.Elapsed;
+        _frameClock.Restart();
 
-        var minimumTicks = Stopwatch.Frequency / Math.Max(1, frameCap);
-        if (_frameClock.ElapsedTicks < minimumTicks)
+        if (_adaptiveQuality.ObserveFrame(frameTime))
         {
-            return;
+            _effectiveQualityLevel = _adaptiveQuality.Level;
         }
 
-        _frameClock.Restart();
         InvalidateVisual();
+    }
+
+    private void ResetAdaptiveQuality()
+    {
+        _effectiveQualityLevel = QualityTier.ToLowerInvariant() switch
+        {
+            "cinematic" => CinematicQualityLevel.Cinematic,
+            "lite" => CinematicQualityLevel.Lite,
+            "reduced" => CinematicQualityLevel.Reduced,
+            _ => CinematicQualityLevel.Balanced
+        };
+        _adaptiveQuality = new AdaptiveQualityController(_effectiveQualityLevel);
     }
 
     protected override void OnRender(DrawingContext drawingContext)
@@ -148,19 +161,19 @@ public sealed class MusicWaveformControl : FrameworkElement
             return;
         }
 
-        var quality = QualityTier.ToLowerInvariant();
+        var quality = _effectiveQualityLevel;
         var waveCount = quality switch
         {
-            "cinematic" => 4,
-            "lite" => 2,
-            "reduced" => 1,
+            CinematicQualityLevel.Cinematic => 4,
+            CinematicQualityLevel.Lite => 2,
+            CinematicQualityLevel.Reduced => 1,
             _ => 3
         };
         var sampleCount = quality switch
         {
-            "cinematic" => 220,
-            "lite" => 72,
-            "reduced" => 40,
+            CinematicQualityLevel.Cinematic => 220,
+            CinematicQualityLevel.Lite => 72,
+            CinematicQualityLevel.Reduced => 40,
             _ => 140
         };
 
