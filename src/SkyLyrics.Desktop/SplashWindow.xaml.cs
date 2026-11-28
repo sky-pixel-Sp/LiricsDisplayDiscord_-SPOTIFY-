@@ -10,8 +10,14 @@ public partial class SplashWindow : Window
     public bool WasSkipped { get; private set; }
 
     private readonly SplashDismissalState _dismissal = new();
+    private bool _motionEnabled = true;
 
     public bool IsDismissed => _dismissal.IsDismissed;
+
+    public void SetMotionEnabled(bool enabled)
+    {
+        _motionEnabled = enabled;
+    }
 
     public SplashWindow()
     {
@@ -79,6 +85,24 @@ public partial class SplashWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        if (!_motionEnabled)
+        {
+            BrandLogo.Opacity = 1d;
+            BrandTitle.Opacity = 1d;
+            if (BrandLogo.RenderTransform is ScaleTransform staticLogoScale)
+            {
+                staticLogoScale.ScaleX = 1d;
+                staticLogoScale.ScaleY = 1d;
+            }
+
+            if (BrandTitle.RenderTransform is ScaleTransform staticTitleScale)
+            {
+                staticTitleScale.ScaleX = 1d;
+            }
+
+            return;
+        }
+
         var autoClose = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(2200d)
