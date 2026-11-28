@@ -36,9 +36,9 @@ public sealed class GrainShaderEffect : ShaderEffect
         UpdateShaderValue(PhaseProperty);
     }
 
-    public Brush? Input
+    public System.Windows.Media.Brush? Input
     {
-        get => (Brush?)GetValue(InputProperty);
+        get => (System.Windows.Media.Brush?)GetValue(InputProperty);
         set => SetValue(InputProperty, value);
     }
 
@@ -79,9 +79,9 @@ public sealed class ChromaticAberrationShaderEffect : ShaderEffect
         UpdateShaderValue(AmountProperty);
     }
 
-    public Brush? Input
+    public System.Windows.Media.Brush? Input
     {
-        get => (Brush?)GetValue(InputProperty);
+        get => (System.Windows.Media.Brush?)GetValue(InputProperty);
         set => SetValue(InputProperty, value);
     }
 
