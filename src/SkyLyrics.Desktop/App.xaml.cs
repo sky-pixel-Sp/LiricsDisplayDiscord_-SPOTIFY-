@@ -44,6 +44,7 @@ public partial class App : System.Windows.Application
             builder.Services.AddSingleton<IHostedService>(services => new SplashProgressReporter(
                 _splash!,
                 () => services.GetRequiredService<IAppPreferencesStore>().Current.SplashEnabled,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.ReduceMotion,
                 18d,
                 "Local settings ready"));
 
@@ -54,6 +55,7 @@ public partial class App : System.Windows.Application
             builder.Services.AddSingleton<IHostedService>(services => new SplashProgressReporter(
                 _splash!,
                 () => services.GetRequiredService<IAppPreferencesStore>().Current.SplashEnabled,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.ReduceMotion,
                 40d,
                 "SQLite lyrics cache ready"));
             builder.Services.AddSingleton<LrcParser>();
@@ -82,6 +84,7 @@ public partial class App : System.Windows.Application
             builder.Services.AddSingleton<IHostedService>(services => new SplashProgressReporter(
                 _splash!,
                 () => services.GetRequiredService<IAppPreferencesStore>().Current.SplashEnabled,
+                () => services.GetRequiredService<IAppPreferencesStore>().Current.ReduceMotion,
                 66d,
                 "Windows media session monitor ready"));
 
