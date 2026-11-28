@@ -38,7 +38,7 @@
                        FontSize="43" FontWeight="Bold" Foreground="#E8FFF5"
                        HorizontalAlignment="Center" Margin="0,16,0,0" Opacity="0"/>
             <TextBlock Text="YOUR MUSIC, IN SYNC" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#9BB8AC" CharacterSpacing="150"
+                       Foreground="#9BB8AC"
                        HorizontalAlignment="Center" Margin="0,6,0,0"/>
             <Border Height="1" Background="#456B5F" Margin="0,27,0,17"/>
             <Grid>
