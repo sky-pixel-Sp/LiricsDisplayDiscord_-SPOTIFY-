@@ -10,7 +10,13 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 - LRCLIB lyric lookup, exact-match validation and local SQLite caching.
 - User-selected LRC and Lyricsfile YAML import, validated local LRC editor/export, and per-track user-labelled translation sidecars.
 - Line synchronization and source-provided word synchronization.
-- Shared playback clock and immutable scene state.
+- Shared playback clock and immutable scene state with source line-index identity, seek handling and configurable 60–120 ms lyric transition lead.
+- Reduced-motion-aware lyric transitions with QuinticEase, active/previous/upcoming line treatments, and a lower lyrics-panel transition.
+- A timeline-driven ambient wave and original floating-note SVGs for instrumental, unsynced or unavailable lyrics. These visuals are deliberately not audio-reactive.
+- Optional cinematic startup splash with real host, SQLite, GSMTC and theme startup milestones.
+- Bundled Poppins and Bebas Neue font resources with OFL licenses and SHA-verified, pinned Windows build acquisition.
+- Artwork-palette radial ambience, low-resolution backdrop, bokeh, grain, vignette, light leak and optional 2.39:1 letterbox.
+- Optional ps_3_0 grain and chromatic-aberration shaders, plus adaptive rendering tiers.
 - Main workspace, Focus/Karaoke, Mini Player and Game Mode windows.
 - Discord Rich Presence through local desktop IPC.
 - OBS Browser Source served on loopback only.
@@ -20,7 +26,7 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 
 - **Multi-source music:** Spotify Desktop, YouTube Music where an identifiable Windows media session is exposed, and Windows Media / other selected GSMTC sessions.
 - **Advanced Lyrics Studio:** original + translation documents, explicit provenance, timestamp calibration, local editor, import/export and library.
-- **Extreme Visual Engine:** album-art ambience, fluid gradients, particle field and optional real audio-reactive visualizations.
+- **Cinematic Visual Engine:** artwork-palette ambience, playback-clock waveform motion, SVG note sprites and tiered visual effects. Real audio-reactive visualization remains a separate opt-in future capability.
 - **Advanced Game Mode:** click-through, lock/pin, hotkeys, multiple monitors, saved geometry and adaptive rendering.
 - **Customization Studio:** versioned themes, typography, layouts, motion presets and safe import/export.
 
@@ -57,7 +63,7 @@ The main workspace, Focus/Karaoke, Mini Player, Game Mode and external outputs c
 
 ## Build from source
 
-Requires the .NET 10 SDK and Windows desktop targeting.
+Requires the .NET 10 SDK and Windows desktop targeting. The Windows build script downloads the pinned Poppins and Bebas Neue TrueType files from Google Fonts at a fixed commit, verifies their Git blob hashes, file sizes and font-family names, and compiles the ps_3_0 shaders with the Windows SDK fxc.exe. The two SIL Open Font License files are included in the repository. The first build therefore requires network access to raw.githubusercontent.com and a Windows SDK installation that includes fxc.exe.
 
 PowerShell:
 
