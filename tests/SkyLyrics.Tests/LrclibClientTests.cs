@@ -95,6 +95,66 @@ public sealed class LrclibClientTests
     }
 
     [Fact]
+    public async Task ExactLookupRejectsARecordWithDifferentTitle()
+    {
+        var handler = new RecordingHandler(_ => JsonResponse("""
+            {
+              "id": 88,
+              "trackName": "Night Drives",
+              "artistName": "Example Artist",
+              "duration": 212,
+              "instrumental": false,
+              "plainLyrics": "Lyrics for another track"
+            }
+            """));
+
+        using var httpClient = CreateHttpClient(handler);
+        var client = new LrclibClient(
+            httpClient,
+            new LrcParser(),
+            new LyricsFileParser(),
+            TimeProvider.System,
+            static () => 0d);
+
+        var result = await client.GetExactAsync(
+            new LyricsTrackSignature("Night Drive", "Example Artist", null, TimeSpan.FromSeconds(212)),
+            CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Equal("/api/get", Assert.Single(handler.Paths));
+    }
+
+    [Fact]
+    public async Task ExactLookupAcceptsRemasteredRecordWhenMetadataAndDurationMatch()
+    {
+        var handler = new RecordingHandler(_ => JsonResponse("""
+            {
+              "id": 89,
+              "trackName": "Night Drive - Remastered 2011",
+              "artistName": "Example Artist",
+              "duration": 213,
+              "instrumental": false,
+              "plainLyrics": "Verified remaster lyrics"
+            }
+            """));
+
+        using var httpClient = CreateHttpClient(handler);
+        var client = new LrclibClient(
+            httpClient,
+            new LrcParser(),
+            new LyricsFileParser(),
+            TimeProvider.System,
+            static () => 0d);
+
+        var result = await client.GetExactAsync(
+            new LyricsTrackSignature("Night Drive", "Example Artist", null, TimeSpan.FromSeconds(212)),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(89, result.ProviderId);
+    }
+
+    [Fact]
     public async Task ExactLookupUsesLyricsfileForAuthenticWordTiming()
     {
         var handler = new RecordingHandler(_ => JsonResponse("""
