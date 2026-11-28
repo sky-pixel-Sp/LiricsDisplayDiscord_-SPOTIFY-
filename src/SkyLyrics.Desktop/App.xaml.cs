@@ -28,8 +28,6 @@ public partial class App : System.Windows.Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
-        System.Windows.Forms.Application.SetHighDpiMode(
-            System.Windows.Forms.HighDpiMode.PerMonitorV2);
         base.OnStartup(e);
         try
         {
