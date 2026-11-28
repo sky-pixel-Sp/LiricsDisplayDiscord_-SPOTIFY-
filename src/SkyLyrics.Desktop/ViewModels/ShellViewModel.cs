@@ -40,6 +40,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private string _translationStatusText = "No translation attached to this track.";
     private ImmutableArray<byte> _artworkBytes;
     private ImageSource? _albumArtwork;
+    private ImageSource? _albumArtworkBackdrop;
     private System.Windows.Media.Color _artworkAccentColor = System.Windows.Media.Color.FromRgb(118, 202, 176);
     private LyricsTrackSignature? _requestedSignature;
     private CancellationTokenSource? _lyricsCancellation;
@@ -285,6 +286,21 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(HasAlbumArtwork));
             OnPropertyChanged(nameof(ArtworkAvailabilityLabel));
             OnPropertyChanged(nameof(ArtworkAccentColor));
+        }
+    }
+
+    public ImageSource? AlbumArtworkBackdrop
+    {
+        get => _albumArtworkBackdrop;
+        private set
+        {
+            if (ReferenceEquals(_albumArtworkBackdrop, value))
+            {
+                return;
+            }
+
+            _albumArtworkBackdrop = value;
+            OnPropertyChanged(nameof(AlbumArtworkBackdrop));
         }
     }
 
@@ -879,7 +895,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static BitmapImage? DecodeArtwork(ImmutableArray<byte> artworkBytes)
+    private static BitmapImage? DecodeArtwork(ImmutableArray<byte> artworkBytes, int decodePixelWidth)
     {
         if (artworkBytes.IsDefaultOrEmpty)
         {
@@ -893,7 +909,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
-            image.DecodePixelWidth = 512;
+            image.DecodePixelWidth = Math.Clamp(decodePixelWidth, 32, 1024);
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
@@ -944,7 +960,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         if (!_artworkBytes.Equals(artwork))
         {
             _artworkBytes = artwork;
-            AlbumArtwork = DecodeArtwork(artwork);
+            AlbumArtwork = DecodeArtwork(artwork, 512);
+            AlbumArtworkBackdrop = DecodeArtwork(artwork, 96);
         }
 
         OnPropertyChanged(nameof(PreviousLyricText));
