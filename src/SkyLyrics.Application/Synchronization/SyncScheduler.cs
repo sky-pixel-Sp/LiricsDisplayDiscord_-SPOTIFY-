@@ -26,6 +26,7 @@ public sealed class SyncScheduler : IDisposable
     private PlaybackSnapshot? _playback;
     private LyricsDocument? _lyrics;
     private TimeSpan _offset;
+    private TimeSpan _lineAnimationLeadTime = TimeSpan.FromMilliseconds(90);
     private long _revision;
     private SceneState _current = SceneState.Empty;
     private bool _disposed;
@@ -117,6 +118,29 @@ public sealed class SyncScheduler : IDisposable
         Publish(changed);
     }
 
+    public void SetLineAnimationLeadTime(TimeSpan leadTime)
+    {
+        if (leadTime < TimeSpan.Zero || leadTime > TimeSpan.FromMilliseconds(120))
+        {
+            throw new ArgumentOutOfRangeException(nameof(leadTime), "Lyric animation lead time must be between zero and 120 milliseconds.");
+        }
+
+        SceneState? changed;
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            if (_lineAnimationLeadTime == leadTime)
+            {
+                return;
+            }
+
+            _lineAnimationLeadTime = leadTime;
+            changed = RebuildLocked(force: true);
+        }
+
+        Publish(changed);
+    }
+
     public void SetOffset(TimeSpan offset)
     {
         var bounded = offset < MinimumOffset
@@ -168,13 +192,27 @@ public sealed class SyncScheduler : IDisposable
         var groups = GetTimedGroupsLocked();
         var insertionIndex = UpperBound(groups, position);
         var activeGroup = insertionIndex > 0 ? groups[insertionIndex - 1] : null;
-        var nextGroup = insertionIndex < groups.Length ? groups[insertionIndex] : null;
-
+        var upcomingGroup = insertionIndex < groups.Length ? groups[insertionIndex] : null;
         var previousGroup = insertionIndex > 1 ? groups[insertionIndex - 2] : null;
-        var previousLine = previousGroup is null ? null : ToScene(previousGroup);
-        var activeLine = activeGroup is null ? null : ToScene(activeGroup);
-        var nextLine = nextGroup is null ? null : ToScene(nextGroup);
-        var wordFill = activeGroup is null
+
+        var isLeadTransition = _playback?.PlaybackStatus == PlaybackStatus.Playing &&
+                               _lineAnimationLeadTime > TimeSpan.Zero &&
+                               upcomingGroup is not null &&
+                               upcomingGroup.Start > position &&
+                               upcomingGroup.Start - position <= _lineAnimationLeadTime;
+
+        var displayActiveGroup = isLeadTransition ? upcomingGroup : activeGroup;
+        var displayPreviousGroup = isLeadTransition ? activeGroup : previousGroup;
+        var displayNextGroup = isLeadTransition && insertionIndex + 1 < groups.Length
+            ? groups[insertionIndex + 1]
+            : isLeadTransition
+                ? null
+                : upcomingGroup;
+
+        var previousLine = displayPreviousGroup is null ? null : ToScene(displayPreviousGroup);
+        var activeLine = displayActiveGroup is null ? null : ToScene(displayActiveGroup);
+        var nextLine = displayNextGroup is null ? null : ToScene(displayNextGroup);
+        var wordFill = activeGroup is null || isLeadTransition
             ? null
             : GetActiveWordFill(activeGroup, position);
 
@@ -258,7 +296,11 @@ public sealed class SyncScheduler : IDisposable
                     .OrderBy(static word => word.Start)
                     .ToImmutableArray();
 
-                return new TimedLineGroup(group.Key, text, words);
+                return new TimedLineGroup(
+                    group.Key,
+                    text,
+                    words,
+                    items.Min(static item => item.Index));
             })
             .ToImmutableArray();
     }
@@ -287,7 +329,7 @@ public sealed class SyncScheduler : IDisposable
     }
 
     private static LyricLineScene ToScene(TimedLineGroup group) =>
-        new(group.Start, group.Text, group.Words);
+        new(group.Start, group.Text, group.Words, group.LineIndex);
 
     private static WordFillState? GetActiveWordFill(
         TimedLineGroup group,
@@ -343,6 +385,13 @@ public sealed class SyncScheduler : IDisposable
         TimeSpan? nextBoundary = insertionIndex < groups.Length
             ? groups[insertionIndex].Start
             : null;
+
+        if (nextBoundary is { } upcomingStart &&
+            _lineAnimationLeadTime > TimeSpan.Zero &&
+            upcomingStart - position > _lineAnimationLeadTime)
+        {
+            nextBoundary = upcomingStart - _lineAnimationLeadTime;
+        }
 
         if (activeGroup is not null && !activeGroup.Words.IsEmpty)
         {
@@ -485,5 +534,6 @@ public sealed class SyncScheduler : IDisposable
     private sealed record TimedLineGroup(
         TimeSpan Start,
         string Text,
-        ImmutableArray<LyricWordScene> Words);
+        ImmutableArray<LyricWordScene> Words,
+        int LineIndex);
 }
