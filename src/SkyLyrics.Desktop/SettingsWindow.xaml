@@ -33,6 +33,7 @@
                         <Button Content="OPEN CUSTOMIZATION STUDIO" Style="{StaticResource QuietActionButtonStyle}"
                                 HorizontalAlignment="Left" Margin="0,11,0,0" Click="OpenCustomizationStudio_Click" />
                         <CheckBox x:Name="ReduceMotionCheck" Content="Reduce application motion" Margin="0,15,0,0" />
+                        <CheckBox x:Name="LetterboxEnabledCheck" Content="Enable 2.39:1 cinematic letterbox" Margin="0,10,0,0" />
                         <CheckBox x:Name="SplashEnabledCheck" Content="Show cinematic startup screen" Margin="0,10,0,0" />
                         <TextBlock Text="Lyric transition lead · 60–120 ms" FontSize="11"
                                    Foreground="{DynamicResource SecondaryText}" Margin="0,13,0,6" />
