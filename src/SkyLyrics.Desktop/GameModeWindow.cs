@@ -23,6 +23,9 @@ using Cursors = System.Windows.Input.Cursors;
 using Orientation = System.Windows.Controls.Orientation;
 using Panel = System.Windows.Controls.Panel;
 using ProgressBar = System.Windows.Controls.ProgressBar;
+using ContextMenu = System.Windows.Controls.ContextMenu;
+using MenuItem = System.Windows.Controls.MenuItem;
+using Separator = System.Windows.Controls.Separator;
 using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace SkyLyrics.Desktop;
