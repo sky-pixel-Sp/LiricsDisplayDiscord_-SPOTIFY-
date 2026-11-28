@@ -18,15 +18,23 @@ public sealed class LetterboxCalculatorTests
     {
         var result = LetterboxCalculator.Calculate(1920d, 1080d, enabled: true);
 
-        Assert.InRange(result.Height, 138.1d, 138.3d);
+        Assert.InRange(result.Height, 138.1d, 138.4d);
         var contentHeight = 1080d - (result.Height * 2d);
         Assert.Equal(2.39d, 1920d / contentHeight, precision: 2);
     }
 
     [Fact]
-    public void DoesNotAddBarsWhenStageIsAlreadyNarrowerThanCinematicRatio()
+    public void AddsBarsWhenTheStageIsNarrowerThanTheCinematicContentRatio()
     {
         var result = LetterboxCalculator.Calculate(900d, 500d, enabled: true);
+
+        Assert.InRange(result.Height, 61.5d, 61.8d);
+    }
+
+    [Fact]
+    public void DoesNotAddBarsToAnAlreadyUltraWideStage()
+    {
+        var result = LetterboxCalculator.Calculate(1600d, 500d, enabled: true);
 
         Assert.Equal(0d, result.Height);
     }
