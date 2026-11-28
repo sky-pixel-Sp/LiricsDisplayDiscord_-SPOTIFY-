@@ -35,6 +35,12 @@
     <Resource Include="Assets/Textures/*.svg" />
     <Resource Include="Assets/Fonts/Poppins/OFL.txt" />
     <Resource Include="Assets/Fonts/BebasNeue/OFL.txt" />
+    <Resource Include="$(IntermediateOutputPath)Assets/Fonts/Poppins/Poppins-Regular.ttf">
+      <Link>Assets/Fonts/Poppins/Poppins-Regular.ttf</Link>
+    </Resource>
+    <Resource Include="$(IntermediateOutputPath)Assets/Fonts/BebasNeue/BebasNeue-Regular.ttf">
+      <Link>Assets/Fonts/BebasNeue/BebasNeue-Regular.ttf</Link>
+    </Resource>
     <Resource Include="Assets/SkyLyrics.ico" />
     <EmbeddedResource Include="Assets/obs-overlay.html" />
   </ItemGroup>
