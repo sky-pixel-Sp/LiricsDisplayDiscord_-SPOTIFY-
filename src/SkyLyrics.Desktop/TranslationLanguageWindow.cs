@@ -29,7 +29,7 @@ public sealed class TranslationLanguageWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = Brush("#12161B");
         Foreground = Brush("#F4F5F2");
-        FontFamily = new FontFamily("Segoe UI Variable Display");
+        FontFamily = (System.Windows.Application.Current!.Resources["PoppinsFontFamily"] as System.Windows.Media.FontFamily ?? new System.Windows.Media.FontFamily("Segoe UI Variable Display"));
 
         var root = new Grid { Margin = new Thickness(22) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
