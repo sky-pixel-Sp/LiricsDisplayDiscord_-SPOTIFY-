@@ -14,6 +14,7 @@
     <RootNamespace>SkyLyrics.Desktop</RootNamespace>
     <AssemblyName>SkyLyrics.Desktop</AssemblyName>
     <ApplicationIcon>Assets/SkyLyrics.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SkyLyrics.Core/SkyLyrics.Core.csproj" />
