@@ -36,6 +36,10 @@ public partial class MainWindow : Window
     private DispatcherTimer? _grainJitterTimer;
     private double _grainPhase;
     private CinematicQualityLevel _effectiveQualityLevel = CinematicQualityLevel.Balanced;
+    private readonly Stopwatch _noteMotionClock = new();
+    private bool _noteMotionSubscribed;
+    private TimeSpan _previousNotePosition;
+    private bool _hasPreviousNotePosition;
     private readonly SemaphoreSlim _geometrySaveGate = new(1, 1);
     private bool _closeSavePending;
     private bool _allowCloseAfterSave;
@@ -86,6 +90,7 @@ public partial class MainWindow : Window
             _preferences.PreferencesChanged -= OnPreferencesChanged;
             MusicWaveform.EffectiveQualityChanged -= OnEffectiveQualityChanged;
             StopGrainJitter();
+            StopNoteMotion(resetTransforms: true);
             _windowModes.CloseAuxiliaryWindows();
             if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
                 Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current?.Shutdown()));
@@ -565,34 +570,24 @@ public partial class MainWindow : Window
     {
         var settings = _preferences.Current;
         var motionEnabled = SystemParameters.ClientAreaAnimation && !settings.ReduceMotion;
-        if (!motionEnabled || _effectiveQualityLevel == CinematicQualityLevel.Reduced)
+        var qualityEnabled = _effectiveQualityLevel != CinematicQualityLevel.Reduced;
+
+        FloatingNoteOne.Visibility = qualityEnabled ? Visibility.Visible : Visibility.Collapsed;
+        FloatingNoteTwo.Visibility = _effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        FloatingNoteThree.Visibility = _effectiveQualityLevel == CinematicQualityLevel.Cinematic
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (!motionEnabled)
         {
-            StopFloatingNote(FloatingNoteOne);
-            StopFloatingNote(FloatingNoteTwo);
-            StopFloatingNote(FloatingNoteThree);
+            StopNoteMotion(resetTransforms: true);
             StopBokehMotion();
             return;
         }
 
-        if (_effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced)
-        {
-            StartFloatingNote(FloatingNoteOne, -22d, TimeSpan.FromSeconds(3.8d));
-            StartFloatingNote(FloatingNoteTwo, 18d, TimeSpan.FromSeconds(4.7d));
-        }
-        else
-        {
-            StartFloatingNote(FloatingNoteOne, -14d, TimeSpan.FromSeconds(5.2d));
-            StopFloatingNote(FloatingNoteTwo);
-        }
-
-        if (_effectiveQualityLevel == CinematicQualityLevel.Cinematic)
-        {
-            StartFloatingNote(FloatingNoteThree, -15d, TimeSpan.FromSeconds(5.2d));
-        }
-        else
-        {
-            StopFloatingNote(FloatingNoteThree);
-        }
+        UpdateNoteMotionSubscription();
 
         if (_effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced)
         {
@@ -604,32 +599,79 @@ public partial class MainWindow : Window
         }
     }
 
-    private static void StartFloatingNote(System.Windows.FrameworkElement note, double distance, TimeSpan duration)
+    private void UpdateNoteMotionSubscription()
     {
-        if (note.RenderTransform is not TranslateTransform transform)
-        {
-            return;
-        }
+        var shouldAnimate =
+            IsLoaded &&
+            _viewModel.ShowPlaybackVisual &&
+            _viewModel.MusicVisualIsPlaying &&
+            _viewModel.MusicVisualMotionEnabled &&
+            SystemParameters.ClientAreaAnimation &&
+            !_preferences.Current.ReduceMotion &&
+            _effectiveQualityLevel != CinematicQualityLevel.Reduced;
 
-        transform.BeginAnimation(
-            TranslateTransform.YProperty,
-            new DoubleAnimation(0d, distance, duration)
-            {
-                AutoReverse = true,
-                RepeatBehavior = RepeatBehavior.Forever,
-                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-            });
+        if (shouldAnimate && !_noteMotionSubscribed)
+        {
+            _noteMotionClock.Restart();
+            _previousNotePosition = _viewModel.MusicVisualPosition;
+            _hasPreviousNotePosition = true;
+            CompositionTarget.Rendering += OnAmbientRendering;
+            _noteMotionSubscribed = true;
+        }
+        else if (!shouldAnimate && _noteMotionSubscribed)
+        {
+            StopNoteMotion(resetTransforms: false);
+        }
     }
 
-    private static void StopFloatingNote(System.Windows.FrameworkElement note)
+    private void OnAmbientRendering(object? sender, EventArgs e)
     {
-        if (note.RenderTransform is not TranslateTransform transform)
+        var position = _viewModel.MusicVisualPosition;
+        if (_hasPreviousNotePosition &&
+            (position - _previousNotePosition).Duration() > TimeSpan.FromSeconds(1.5d))
         {
-            return;
+            _noteMotionClock.Restart();
         }
 
-        transform.BeginAnimation(TranslateTransform.YProperty, null);
-        transform.Y = 0d;
+        _previousNotePosition = position;
+        _hasPreviousNotePosition = true;
+        var mediaSeconds = Math.Max(0d, position.TotalSeconds) + _noteMotionClock.Elapsed.TotalSeconds;
+
+        SetNoteOffset(FloatingNoteOne, Math.Sin(mediaSeconds * 0.72d) * 15d);
+        if (_effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced)
+        {
+            SetNoteOffset(FloatingNoteTwo, Math.Sin((mediaSeconds * 0.53d) + 1.7d) * 12d);
+        }
+
+        if (_effectiveQualityLevel == CinematicQualityLevel.Cinematic)
+        {
+            SetNoteOffset(FloatingNoteThree, Math.Sin((mediaSeconds * 0.41d) + 3.1d) * 10d);
+        }
+    }
+
+    private static void SetNoteOffset(System.Windows.FrameworkElement note, double offset)
+    {
+        if (note.RenderTransform is TranslateTransform transform)
+        {
+            transform.Y = offset;
+        }
+    }
+
+    private void StopNoteMotion(bool resetTransforms)
+    {
+        if (_noteMotionSubscribed)
+        {
+            CompositionTarget.Rendering -= OnAmbientRendering;
+            _noteMotionSubscribed = false;
+        }
+
+        _noteMotionClock.Stop();
+        if (resetTransforms)
+        {
+            SetNoteOffset(FloatingNoteOne, 0d);
+            SetNoteOffset(FloatingNoteTwo, 0d);
+            SetNoteOffset(FloatingNoteThree, 0d);
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -641,6 +683,13 @@ public partial class MainWindow : Window
         else if (e.PropertyName == nameof(ShellViewModel.AlbumArtwork))
         {
             Dispatcher.BeginInvoke(new Action(AnimateArtwork));
+        }
+        else if (e.PropertyName is nameof(ShellViewModel.MusicVisualPosition) or
+                 nameof(ShellViewModel.MusicVisualIsPlaying) or
+                 nameof(ShellViewModel.ShowPlaybackVisual) or
+                 nameof(ShellViewModel.MusicVisualMotionEnabled))
+        {
+            Dispatcher.BeginInvoke(new Action(UpdateNoteMotionSubscription));
         }
     }
 
