@@ -21,8 +21,8 @@ public sealed class MusicWaveformControl : FrameworkElement
         new FrameworkPropertyMetadata(true, OnVisualInputChanged));
 
     public static readonly DependencyProperty AccentColorProperty = DependencyProperty.Register(
-        nameof(AccentColor), typeof(Color), typeof(MusicWaveformControl),
-        new FrameworkPropertyMetadata(Color.FromRgb(118, 202, 176), FrameworkPropertyMetadataOptions.AffectsRender));
+        nameof(AccentColor), typeof(System.Windows.Media.Color), typeof(MusicWaveformControl),
+        new FrameworkPropertyMetadata(System.Windows.Media.Color.FromRgb(118, 202, 176), FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty QualityTierProperty = DependencyProperty.Register(
         nameof(QualityTier), typeof(string), typeof(MusicWaveformControl),
@@ -63,9 +63,9 @@ public sealed class MusicWaveformControl : FrameworkElement
         set => SetValue(MotionEnabledProperty, value);
     }
 
-    public Color AccentColor
+    public System.Windows.Media.Color AccentColor
     {
-        get => (Color)GetValue(AccentColorProperty);
+        get => (System.Windows.Media.Color)GetValue(AccentColorProperty);
         set => SetValue(AccentColorProperty, value);
     }
 
