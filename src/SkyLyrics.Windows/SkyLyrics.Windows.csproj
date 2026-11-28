@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>SkyLyrics.Windows</RootNamespace>
+    <AssemblyName>SkyLyrics.Windows</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SkyLyrics.Core/SkyLyrics.Core.csproj" />
+  </ItemGroup>
+</Project>

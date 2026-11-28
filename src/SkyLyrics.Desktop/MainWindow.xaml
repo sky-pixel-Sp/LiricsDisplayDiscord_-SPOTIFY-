@@ -1,0 +1,73 @@
+<Window x:Class="SkyLyrics.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SkyLyrics Desktop" Height="760" Width="1120"
+        MinHeight="620" MinWidth="900" WindowStartupLocation="CenterScreen"
+        Background="#101414" Foreground="#F2F5F4" FontFamily="Segoe UI Variable">
+    <Grid x:Name="RootGrid" Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="18"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left">
+                <TextBlock Text="SKYLyrics" FontSize="22" FontWeight="SemiBold"/>
+                <TextBlock Text="SPOTIFY DESKTOP COMPANION" FontSize="10" Foreground="#8B9995" Margin="1,3,0,0"/>
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock x:Name="ConnectionText" Text="Checking Spotify…" Foreground="#A9B8B3" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Button x:Name="ThemeButton" Content="Light theme" Click="ThemeButton_Click"
+                        Padding="14,8" Background="#24302D" Foreground="#EAF2EF"
+                        BorderBrush="#3A4A45" BorderThickness="1"/>
+            </StackPanel>
+        </DockPanel>
+
+        <Border Grid.Row="2" Background="#19211F" BorderBrush="#2C3935" BorderThickness="1" CornerRadius="18" Padding="24">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="NOW PLAYING" Foreground="#80A49A" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <TextBlock x:Name="TrackTitle" Text="Open Spotify Desktop to begin" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="TrackArtist" Text="Your current track will appear here" FontSize="14" Foreground="#A9B8B3" Margin="0,6,0,0"/>
+                    <TextBlock x:Name="PlaybackText" Text="Waiting for a Spotify session" FontSize="11" Foreground="#80A49A" Margin="0,16,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" MinWidth="150">
+                    <TextBlock x:Name="PositionText" Text="0:00 / 0:00" FontSize="12" Foreground="#A9B8B3" TextAlignment="Right"/>
+                    <ProgressBar x:Name="TrackProgress" Height="5" Width="150" Margin="0,10,0,0" Minimum="0" Maximum="100" Value="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <DockPanel Grid.Row="4" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,14">
+                <TextBlock Text="Lyrics" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="LyricsStateText" Text="NOT LOADED" Foreground="#80A49A" FontSize="10" VerticalAlignment="Center" Margin="12,3,0,0"/>
+                <Button Content="Import .LRC" Click="ImportLyrics_Click" Padding="12,6" Margin="20,0,0,0"
+                        Background="#263A35" Foreground="#DFF7F1" BorderBrush="#48665D"/>
+            </StackPanel>
+            <Border Background="#151D1B" CornerRadius="18" BorderBrush="#2C3935" BorderThickness="1" Padding="22">
+                <ScrollViewer x:Name="LyricsScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="LyricsPanel">
+                        <TextBlock x:Name="LyricsEmptyText"
+                                   Text="Lyrics will appear when a matching result is found. You can also import your own LRC file."
+                                   FontSize="14" Foreground="#8B9995" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
+
+        <DockPanel Grid.Row="5" Margin="0,14,0,0">
+            <TextBlock Text="Lyrics are never fabricated. Unsynchronized results are labeled clearly."
+                       Foreground="#71827C" FontSize="10" DockPanel.Dock="Left"/>
+            <TextBlock Text="v0.1.0 · WINDOWS 11" Foreground="#71827C" FontSize="10" DockPanel.Dock="Right"/>
+        </DockPanel>
+    </Grid>
+</Window>
