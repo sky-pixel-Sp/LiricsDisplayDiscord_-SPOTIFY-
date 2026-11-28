@@ -41,11 +41,36 @@ public sealed class LyricsService : ILyricsService
             var cached = await _cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
             if (cached is not null)
             {
-                return new LyricsLookupResult(
-                    cached.Document,
-                    LyricsLookupSource.Cache,
-                    cached.Provider,
-                    cached.ProviderId);
+                var validation = LyricsMatchValidator.Validate(signature, cached.Document);
+                if (validation.IsMatch)
+                {
+                    return new LyricsLookupResult(
+                        cached.Document,
+                        LyricsLookupSource.Cache,
+                        cached.Provider,
+                        cached.ProviderId);
+                }
+
+                _logger.LogWarning(
+                    "Ignoring cached lyrics for {TrackTitle}: {ValidationReason}.",
+                    signature.Title,
+                    validation.Reason);
+
+                if (_cache is ILyricsLibrary library)
+                {
+                    try
+                    {
+                        await library.DeleteAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogWarning(exception, "Invalid cached lyrics could not be deleted.");
+                    }
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -60,6 +85,16 @@ public sealed class LyricsService : ILyricsService
         var result = await _provider.GetExactAsync(signature, cancellationToken).ConfigureAwait(false);
         if (result is null)
         {
+            return null;
+        }
+
+        var providerValidation = LyricsMatchValidator.Validate(signature, result.Document);
+        if (!providerValidation.IsMatch)
+        {
+            _logger.LogWarning(
+                "Rejecting LRCLIB exact result for {TrackTitle}: {ValidationReason}.",
+                signature.Title,
+                providerValidation.Reason);
             return null;
         }
 
@@ -96,6 +131,52 @@ public sealed class LyricsService : ILyricsService
     {
         var candidates = await _provider.SearchAsync(signature, cancellationToken).ConfigureAwait(false);
         return LyricsCandidateRanker.Rank(signature, candidates);
+    }
+
+    public async Task<LyricsLookupResult?> SelectCandidateAsync(
+        LyricsTrackSignature signature,
+        LyricsSearchCandidate candidate,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(signature);
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        var validation = LyricsMatchValidator.Validate(signature, candidate.Result.Document);
+        if (!validation.IsMatch)
+        {
+            _logger.LogWarning(
+                "Rejecting manually selected lyrics candidate for {TrackTitle}: {ValidationReason}.",
+                signature.Title,
+                validation.Reason);
+            return null;
+        }
+
+        var cacheKey = LyricsTrackSignature.CreateCacheKey(signature);
+        var entry = new LyricsCacheEntry(
+            cacheKey,
+            candidate.Result.Provider,
+            candidate.Result.ProviderId,
+            candidate.Result.Document,
+            _timeProvider.GetUtcNow());
+
+        try
+        {
+            await _cache.PutAsync(entry, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "The selected lyrics candidate could not be cached.");
+        }
+
+        return new LyricsLookupResult(
+            candidate.Result.Document,
+            LyricsLookupSource.Provider,
+            candidate.Result.Provider,
+            candidate.Result.ProviderId);
     }
 
     public async Task<LyricsLookupResult> LoadLocalFileAsync(
