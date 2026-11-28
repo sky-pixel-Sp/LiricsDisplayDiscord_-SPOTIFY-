@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="SkyLyrics · Focus" WindowStyle="None" WindowState="Maximized"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource WindowBackground}"
-        Foreground="{DynamicResource PrimaryText}" FontFamily="Segoe UI Variable Display"
+        Foreground="{DynamicResource PrimaryText}" FontFamily="{StaticResource PoppinsFontFamily}"
         KeyDown="Window_KeyDown">
     <Grid Margin="58">
         <Image Source="{Binding AlbumArtwork}" Stretch="UniformToFill" Opacity="{DynamicResource LyricsArtworkOpacity}"
