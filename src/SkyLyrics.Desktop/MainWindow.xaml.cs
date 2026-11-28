@@ -368,9 +368,9 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ShellViewModel.ActiveLyricText))
+        if (e.PropertyName == nameof(ShellViewModel.ActiveLyricLineIndex))
         {
-            Dispatcher.BeginInvoke(new Action(AnimateActiveLyric));
+            Dispatcher.BeginInvoke(new Action(AnimateLyricsTransition));
         }
         else if (e.PropertyName == nameof(ShellViewModel.AlbumArtwork))
         {
@@ -378,59 +378,100 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AnimateActiveLyric()
+    private void AnimateLyricsTransition()
     {
         if (!SystemParameters.ClientAreaAnimation || _preferences.Current.ReduceMotion)
         {
-            ActiveLyricTextBlock.BeginAnimation(OpacityProperty, null);
-            ActiveLyricTextBlock.Opacity = 1d;
-            if (ActiveLyricTextBlock.RenderTransform is TransformGroup reducedGroup)
-            {
-                var reducedMotionTransform = reducedGroup.Children.OfType<TranslateTransform>().FirstOrDefault();
-                if (reducedMotionTransform is not null)
-                {
-                    reducedMotionTransform.BeginAnimation(TranslateTransform.YProperty, null);
-                    reducedMotionTransform.Y = 0d;
-                }
-                var reducedScale = reducedGroup.Children.OfType<ScaleTransform>().FirstOrDefault();
-                if (reducedScale is not null)
-                {
-                    reducedScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
-                    reducedScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
-                    reducedScale.ScaleX = 1d;
-                    reducedScale.ScaleY = 1d;
-                }
-            }
-
+            ResetAnimationElement(ActiveLyricTextBlock);
+            ResetAnimationElement(PreviousLyricTextBlock);
+            ResetAnimationElement(UpcomingLyricTextBlock);
+            ResetAnimationElement(LyricsPanel);
             return;
         }
 
-        ActiveLyricTextBlock.BeginAnimation(
+        // Horizontal scale settling supplies a restrained optical tracking-in.
+        AnimateLyricsElement(ActiveLyricTextBlock, 0.08d, 24d, 0.96d, 360d, 1d);
+        AnimateLyricsElement(PreviousLyricTextBlock, 0.28d, 14d, 0.985d, 320d, 0.76d);
+        AnimateLyricsElement(UpcomingLyricTextBlock, 0.34d, 12d, 0.985d, 300d, 1d);
+        AnimateLyricsElement(LyricsPanel, 0.35d, 10d, 0.99d, 380d, 1d);
+    }
+
+    private static void ResetAnimationElement(UIElement element)
+    {
+        element.BeginAnimation(OpacityProperty, null);
+        element.Opacity = 1d;
+
+        if (element is not FrameworkElement frameworkElement ||
+            frameworkElement.RenderTransform is not TransformGroup group)
+        {
+            return;
+        }
+
+        var translate = group.Children.OfType<TranslateTransform>().FirstOrDefault();
+        if (translate is not null)
+        {
+            translate.BeginAnimation(TranslateTransform.YProperty, null);
+            translate.Y = 0d;
+        }
+
+        var scale = group.Children.OfType<ScaleTransform>().FirstOrDefault();
+        if (scale is not null)
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            scale.ScaleX = 1d;
+            scale.ScaleY = 1d;
+        }
+    }
+
+    private static void AnimateLyricsElement(
+        UIElement element,
+        double fromOpacity,
+        double fromY,
+        double fromScale,
+        double durationMilliseconds,
+        double toOpacity)
+    {
+        var duration = TimeSpan.FromMilliseconds(durationMilliseconds);
+        element.BeginAnimation(
             OpacityProperty,
-            new DoubleAnimation(0.18d, 1d, TimeSpan.FromMilliseconds(360))
+            new DoubleAnimation(fromOpacity, toOpacity, duration)
             {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
             });
 
-        if (ActiveLyricTextBlock.RenderTransform is TransformGroup group)
+        if (element is not FrameworkElement frameworkElement ||
+            frameworkElement.RenderTransform is not TransformGroup group)
         {
-            var transform = group.Children.OfType<TranslateTransform>().FirstOrDefault();
-            if (transform is not null)
-                transform.BeginAnimation(TranslateTransform.YProperty,
-                    new DoubleAnimation(20d, 0d, TimeSpan.FromMilliseconds(430))
-                    {
-                        EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-                    });
+            return;
+        }
 
-            var scale = group.Children.OfType<ScaleTransform>().FirstOrDefault();
-            if (scale is not null)
-            {
-                var spring = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.16d };
-                scale.BeginAnimation(ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(0.965d, 1d, TimeSpan.FromMilliseconds(430)) { EasingFunction = spring });
-                scale.BeginAnimation(ScaleTransform.ScaleYProperty,
-                    new DoubleAnimation(0.965d, 1d, TimeSpan.FromMilliseconds(430)) { EasingFunction = spring });
-            }
+        var translate = group.Children.OfType<TranslateTransform>().FirstOrDefault();
+        if (translate is not null)
+        {
+            translate.BeginAnimation(
+                TranslateTransform.YProperty,
+                new DoubleAnimation(fromY, 0d, duration)
+                {
+                    EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
+                });
+        }
+
+        var scale = group.Children.OfType<ScaleTransform>().FirstOrDefault();
+        if (scale is not null)
+        {
+            scale.BeginAnimation(
+                ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(fromScale, 1d, duration)
+                {
+                    EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
+                });
+            scale.BeginAnimation(
+                ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(fromScale, 1d, duration)
+                {
+                    EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
+                });
         }
     }
 
