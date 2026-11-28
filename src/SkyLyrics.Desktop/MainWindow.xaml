@@ -11,9 +11,9 @@
         Foreground="{DynamicResource PrimaryText}" FontFamily="{StaticResource PoppinsFontFamily}"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid x:Name="RootGrid" Margin="20" Opacity="0">
+        <Grid.RenderTransform><TranslateTransform Y="10" /></Grid.RenderTransform>
         <Image x:Name="AmbientBackgroundImage" Grid.RowSpan="3" Grid.ColumnSpan="3"
                Stretch="UniformToFill" Opacity="0.22" IsHitTestVisible="False" />
-        <Grid.RenderTransform><TranslateTransform Y="10" /></Grid.RenderTransform>
         <Grid.RowDefinitions><RowDefinition Height="58" /><RowDefinition Height="12" /><RowDefinition Height="*" /></Grid.RowDefinitions>
         <Grid.ColumnDefinitions><ColumnDefinition Width="204" /><ColumnDefinition Width="*" /><ColumnDefinition Width="272" /></Grid.ColumnDefinitions>
         <Grid Grid.Row="0" Grid.ColumnSpan="3">
