@@ -498,6 +498,20 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void SearchLyricsCandidates_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.SearchLyricsCandidatesAsync();
+    }
+
+    private async void SelectLyricsCandidate_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button &&
+            button.Tag is LyricsSearchCandidate candidate)
+        {
+            await _viewModel.SelectLyricsCandidateAsync(candidate);
+        }
+    }
+
     private async void ImportTranslation_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
