@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+.artifacts/
+TestResults/
+artifacts/
+.vs/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+*.nupkg
+*.snupkg
+Thumbs.db
+Desktop.ini
