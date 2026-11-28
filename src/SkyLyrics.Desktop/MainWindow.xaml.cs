@@ -586,10 +586,10 @@ public partial class MainWindow : Window
         }
 
         // Horizontal scale settling supplies a restrained optical tracking-in.
-        AnimateLyricsElement(ActiveLyricTextBlock, 0.08d, 24d, 0.96d, 360d, 1d);
-        AnimateLyricsElement(PreviousLyricTextBlock, 0.28d, 14d, 0.985d, 320d, 0.76d);
-        AnimateLyricsElement(UpcomingLyricTextBlock, 0.34d, 12d, 0.985d, 300d, 1d);
-        AnimateLyricsElement(LyricsPanel, 0.35d, 10d, 0.99d, 380d, 1d);
+        AnimateLyricsElement(ActiveLyricTextBlock, 0.08d, 24d, 0.96d, 360d, 1d, 1d);
+        AnimateLyricsElement(PreviousLyricTextBlock, 0.76d, -14d, 1d, 280d, 0.25d, 0.92d);
+        AnimateLyricsElement(UpcomingLyricTextBlock, 0.34d, 12d, 0.985d, 300d, 1d, 1d);
+        AnimateLyricsElement(LyricsPanel, 0.35d, 10d, 0.99d, 380d, 1d, 1d);
     }
 
     private static void ResetAnimationElement(UIElement element)
@@ -626,7 +626,8 @@ public partial class MainWindow : Window
         double fromY,
         double fromScale,
         double durationMilliseconds,
-        double toOpacity)
+        double toOpacity,
+        double toScale)
     {
         var duration = TimeSpan.FromMilliseconds(durationMilliseconds);
         element.BeginAnimation(
@@ -658,7 +659,7 @@ public partial class MainWindow : Window
         {
             scale.BeginAnimation(
                 ScaleTransform.ScaleXProperty,
-                new DoubleAnimation(fromScale, 1d, duration)
+                new DoubleAnimation(fromScale, toScale, duration)
                 {
                     EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
                 });
