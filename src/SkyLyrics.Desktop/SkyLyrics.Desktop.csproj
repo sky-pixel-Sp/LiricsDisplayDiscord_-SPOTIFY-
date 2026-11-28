@@ -47,7 +47,7 @@
   <Target Name="CompileSkyLyricsPixelShaders"
           BeforeTargets="PrepareResources;MarkupCompilePass1"
           Condition="'$(OS)' == 'Windows_NT'">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Build\CompileSkyLyricsShaders.ps1&quot; -OutputDirectory &quot;$(IntermediateOutputPath)Assets\Effects&quot;" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Build\CompileSkyLyricsShaders.ps1&quot; -OutputDirectory &quot;$(IntermediateOutputPath)Assets\Effects&quot; -FontOutputDirectory &quot;$(IntermediateOutputPath)Assets\Fonts&quot;" />
     <ItemGroup>
       <Resource Include="$(IntermediateOutputPath)Assets\Effects\Grain.ps">
         <Link>Assets/Effects/Grain.ps</Link>
