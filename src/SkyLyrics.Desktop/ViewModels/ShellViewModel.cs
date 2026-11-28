@@ -223,6 +223,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public bool CanSearchLyricsCandidates => _canSearchLyricsCandidates && !_isSearchingLyricsCandidates;
 
+    public bool ShowCandidateSearchButton => _canSearchLyricsCandidates;
+
     public bool IsSearchingLyricsCandidates => _isSearchingLyricsCandidates;
 
     public string CandidateSearchStatus => _candidateSearchStatus;
@@ -732,6 +734,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         var validation = LyricsMatchValidator.Validate(signature, document);
         if (!validation.IsMatch)
         {
+            _requestedSignature = signature;
             SetCandidateSearchEnabled(true);
             CandidateSearchStatusBackingField = validation.Reason;
             LyricsModeLabel = "NO MATCH";
@@ -1121,6 +1124,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
         _canSearchLyricsCandidates = enabled;
         OnPropertyChanged(nameof(CanSearchLyricsCandidates));
+        OnPropertyChanged(nameof(ShowCandidateSearchButton));
     }
 
     private void SetCandidateSearchInProgress(bool searching)
