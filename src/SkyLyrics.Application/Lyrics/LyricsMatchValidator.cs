@@ -17,19 +17,19 @@ public static class LyricsMatchValidator
     private const double DurationToleranceSeconds = 3d;
 
     private static readonly Regex FeaturingTagRegex = new(
-        @"[\\(\\[]\\s*(?:feat(?:uring)?|ft)\\.?\\s+[^)\\]]*[)\\]]",
+        @"[\(\[]\s*(?:feat(?:uring)?|ft)\.?\s+[^)\]]*[)\]]",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex RemasterTagRegex = new(
-        @"(?:\\s*[-–—]\\s*|\\s+)?(?:\\(\\s*|\\[\\s*)?remaster(?:ed)?(?:\\s+(?:19|20)\\d{2})?\\s*(?:\\)|\\])?",
+        @"(?:\s*[-–—]\s*|\s+)?(?:\(\s*|\[\s*)?remaster(?:ed)?(?:\s+(?:19|20)\d{2})?\s*(?:\)|\])?",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex VersionTagRegex = new(
-        @"[\\(\\[]\\s*(?:versions?|live)\\s*[)\\]]",
+        @"[\(\[]\s*(?:versions?|live)\s*[)\]]",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ArtistCreditSeparatorRegex = new(
-        @"\\s*(?:,|&|;|\\+|/|\\bfeat(?:uring)?\\.?\\b|\\bft\\.?\\b|\\bwith\\b|\\band\\b|\\bx\\b)\\s*",
+        @"\s*(?:,|&|;|\+|/|\bfeat(?:uring)?\.?\b|\bft\.?\b|\bwith\b|\band\b|\bx\b)\s*",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static LyricsMatchValidationResult Validate(
