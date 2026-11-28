@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using SkyLyrics.Application.Startup;
 
 namespace SkyLyrics.Desktop;
 
@@ -8,7 +9,9 @@ public partial class SplashWindow : Window
 {
     public bool WasSkipped { get; private set; }
 
-    public bool IsDismissed { get; private set; }
+    private readonly SplashDismissalState _dismissal = new();
+
+    public bool IsDismissed => _dismissal.IsDismissed;
 
     public SplashWindow()
     {
@@ -42,13 +45,12 @@ public partial class SplashWindow : Window
             return;
         }
 
-        if (IsDismissed)
+        if (!_dismissal.TryDismiss())
         {
             Close();
             return;
         }
 
-        IsDismissed = true;
         if (!IsVisible)
         {
             Close();
@@ -160,7 +162,7 @@ public partial class SplashWindow : Window
     private void Skip()
     {
         WasSkipped = true;
-        IsDismissed = true;
+        _dismissal.TryDismiss();
         Close();
     }
 }
