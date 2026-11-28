@@ -39,7 +39,7 @@ public sealed class LyricsEditorWindow : Window
         ResizeMode = ResizeMode.CanResize;
         Background = Brush("#0B0D10");
         Foreground = Brush("#F4F5F2");
-        FontFamily = new FontFamily("Segoe UI Variable Display");
+        FontFamily = (System.Windows.Application.Current!.Resources["PoppinsFontFamily"] as System.Windows.Media.FontFamily ?? new System.Windows.Media.FontFamily("Segoe UI Variable Display"));
 
         var root = new Grid { Margin = new Thickness(24) };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
