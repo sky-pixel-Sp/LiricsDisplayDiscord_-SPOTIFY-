@@ -80,6 +80,60 @@ public sealed class SyncSchedulerTests
     }
 
     [Fact]
+    public void ActiveLineIdentityChangesForDifferentTracksEvenWhenLineIndexIsEqual()
+    {
+        var first = new SceneState(
+            1,
+            new TrackScene("First track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(1), "Repeat", lineIndex: 0),
+            null,
+            null,
+            TimeSpan.FromSeconds(1),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        var second = new SceneState(
+            2,
+            new TrackScene("Second track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(1), "Repeat", lineIndex: 0),
+            null,
+            null,
+            TimeSpan.FromSeconds(1),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal(first.ActiveLineIndex, second.ActiveLineIndex);
+        Assert.NotEqual(LyricLineIdentity.From(first), LyricLineIdentity.From(second));
+    }
+
+    [Fact]
+    public void ActiveLineIdentityChangesForRepeatedTextAtDifferentSourceIndexes()
+    {
+        var first = new SceneState(
+            1,
+            new TrackScene("Track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(1), "Repeat", lineIndex: 0),
+            null,
+            null,
+            TimeSpan.FromSeconds(1),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        var second = new SceneState(
+            2,
+            new TrackScene("Track", "Artist", null, null),
+            new LyricLineScene(TimeSpan.FromSeconds(2), "Repeat", lineIndex: 1),
+            null,
+            null,
+            TimeSpan.FromSeconds(2),
+            PlaybackStatus.Playing,
+            DateTimeOffset.UtcNow);
+
+        Assert.Equal(first.ActiveLine?.Text, second.ActiveLine?.Text);
+        Assert.NotEqual(LyricLineIdentity.From(first), LyricLineIdentity.From(second));
+    }
+
+    [Fact]
     public void IncomingLineEntersNinetyMillisecondsBeforeItsSourceTimestamp()
     {
         var time = new ManualTimeProvider();
