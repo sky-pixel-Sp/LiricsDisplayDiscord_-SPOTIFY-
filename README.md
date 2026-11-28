@@ -74,7 +74,7 @@ PowerShell:
 
 ## Windows installer and preview status
 
-Windows CI builds Release, runs unit tests, publishes a self-contained win-x64 application, compiles the Inno Setup installer and generates a SHA-256 checksum. Preview packages are not production releases and may change during the 2.1 upgrade. The installer is unsigned unless a valid code-signing certificate is configured.
+Windows CI builds Release, runs unit tests, publishes a self-contained win-x64 application, compiles the Inno Setup installer and generates a SHA-256 checksum. SkyLyrics 2.2 preview packages are not production releases and may change during the 2.2 refinement cycle. The installer is unsigned unless a valid code-signing certificate is configured.
 
 A successful CI run proves the tested build and packaging steps completed. It does not replace manual acceptance on a Windows 11 desktop with real Spotify/YouTube Music/Windows Media sessions, Discord IPC, multiple monitors and display scaling.
 
