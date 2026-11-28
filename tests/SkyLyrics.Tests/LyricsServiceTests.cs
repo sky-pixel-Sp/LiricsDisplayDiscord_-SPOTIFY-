@@ -9,14 +9,14 @@ namespace SkyLyrics.Tests;
 public sealed class LyricsServiceTests
 {
     [Fact]
-    public async Task FirstLookupQueriesProviderAndCachesReturnedLyrics()
+    public async Task FirstLookupQueriesProviderAndCachesVerifiedLyrics()
     {
         var provider = new FakeProvider(CreateProviderResult("line"));
         var cache = new FakeCache();
         var service = CreateService(provider, cache);
 
         var result = await service.GetExactAsync(
-            new LyricsTrackSignature("Track", "Artist", "Album", TimeSpan.FromSeconds(100)),
+            CreateSignature(),
             CancellationToken.None);
 
         Assert.NotNull(result);
@@ -26,12 +26,12 @@ public sealed class LyricsServiceTests
     }
 
     [Fact]
-    public async Task SecondLookupReturnsCachedResultWithoutCallingProvider()
+    public async Task SecondLookupReturnsValidatedCachedResultWithoutCallingProvider()
     {
         var provider = new FakeProvider(CreateProviderResult("line"));
         var cache = new FakeCache();
         var service = CreateService(provider, cache);
-        var signature = new LyricsTrackSignature("Track", "Artist", "Album", TimeSpan.FromSeconds(100));
+        var signature = CreateSignature();
 
         await service.GetExactAsync(signature, CancellationToken.None);
         var second = await service.GetExactAsync(signature, CancellationToken.None);
@@ -42,6 +42,58 @@ public sealed class LyricsServiceTests
     }
 
     [Fact]
+    public async Task InvalidLegacyCacheEntryIsDeletedAndProviderIsQueried()
+    {
+        var signature = CreateSignature();
+        var cacheKey = LyricsTrackSignature.CreateCacheKey(signature);
+        var cache = new FakeCache();
+        cache.Entries[cacheKey] = new LyricsCacheEntry(
+            cacheKey,
+            "LRCLIB",
+            4,
+            new LyricsDocument(
+                "Different Song",
+                "Example Artist",
+                null,
+                TimeSpan.FromSeconds(100),
+                false,
+                [new LyricLine("Wrong song lyrics", TimeSpan.FromSeconds(1))]),
+            DateTimeOffset.UtcNow);
+
+        var provider = new FakeProvider(CreateProviderResult("Verified line"));
+        var service = CreateService(provider, cache);
+
+        var result = await service.GetExactAsync(signature, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(LyricsLookupSource.Provider, result.Source);
+        Assert.Contains(cacheKey, cache.DeletedKeys);
+        Assert.Equal("Verified line", result.Document.Lines[0].Text);
+    }
+
+    [Fact]
+    public async Task ProviderRecordThatFailsValidationIsNeverReturnedOrCached()
+    {
+        var invalid = new LyricsProviderResult(
+            "LRCLIB",
+            91,
+            new LyricsDocument(
+                "Night Drives",
+                "Example Artist",
+                null,
+                TimeSpan.FromSeconds(100),
+                false,
+                [new LyricLine("Lyrics for another song", TimeSpan.FromSeconds(1))]));
+        var cache = new FakeCache();
+        var service = CreateService(new FakeProvider(invalid), cache);
+
+        var result = await service.GetExactAsync(CreateSignature(), CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Empty(cache.Entries);
+    }
+
+    [Fact]
     public async Task CacheFailureDoesNotBlockProviderLookup()
     {
         var provider = new FakeProvider(CreateProviderResult("line"));
@@ -49,11 +101,64 @@ public sealed class LyricsServiceTests
         var service = CreateService(provider, cache);
 
         var result = await service.GetExactAsync(
-            new LyricsTrackSignature("Track", "Artist", null, null),
+            new LyricsTrackSignature("Track", "Artist", null, TimeSpan.FromSeconds(100)),
+            CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Equal(1, provider.ExactCalls);
+    }
+
+    [Fact]
+    public async Task ManuallySelectedCandidateIsRevalidatedAndCached()
+    {
+        var cache = new FakeCache();
+        var service = CreateService(new FakeProvider(null), cache);
+        var signature = CreateSignature();
+        var candidate = new LyricsSearchCandidate(
+            CreateProviderResult("Selected line"),
+            100,
+            true)
+        {
+            MatchReason = "Judul cocok · Artis cocok · Durasi cocok"
+        };
+
+        var result = await service.SelectCandidateAsync(
+            signature,
+            candidate,
             CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(1, provider.ExactCalls);
+        Assert.Equal("Selected line", result.Document.Lines[0].Text);
+        Assert.Single(cache.Entries);
+    }
+
+    [Fact]
+    public async Task ManuallySelectedCandidateThatFailsValidationIsRejected()
+    {
+        var cache = new FakeCache();
+        var service = CreateService(new FakeProvider(null), cache);
+        var signature = CreateSignature();
+        var candidate = new LyricsSearchCandidate(
+            new LyricsProviderResult(
+                "LRCLIB",
+                92,
+                new LyricsDocument(
+                    "Night Drives",
+                    "Example Artist",
+                    null,
+                    TimeSpan.FromSeconds(212),
+                    false,
+                    [new LyricLine("Not matching lyrics", TimeSpan.FromSeconds(1))])),
+            75,
+            false);
+
+        var result = await service.SelectCandidateAsync(
+            signature,
+            candidate,
+            CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Empty(cache.Entries);
     }
 
     private static LyricsService CreateService(FakeProvider provider, FakeCache cache) =>
@@ -64,16 +169,24 @@ public sealed class LyricsServiceTests
             NullLogger<LyricsService>.Instance,
             TimeProvider.System);
 
+    private static LyricsTrackSignature CreateSignature() =>
+        new("Night Drive", "Example Artist", null, TimeSpan.FromSeconds(100));
+
     private static LyricsProviderResult CreateProviderResult(string text) =>
         new(
-            "Test provider",
+            "LRCLIB",
             7,
-            new LyricsDocument("Track", "Artist", "Album", TimeSpan.FromSeconds(100), false,
+            new LyricsDocument(
+                "Night Drive",
+                "Example Artist",
+                null,
+                TimeSpan.FromSeconds(100),
+                false,
                 [new LyricLine(text, TimeSpan.FromSeconds(1))]));
 
     private sealed class FakeProvider(LyricsProviderResult? result) : ILyricsProvider
     {
-        public string Name => "Test provider";
+        public string Name => "LRCLIB";
         public int ExactCalls { get; private set; }
 
         public Task<LyricsProviderResult?> GetExactAsync(
@@ -95,9 +208,10 @@ public sealed class LyricsServiceTests
             Task.FromResult(result);
     }
 
-    private sealed class FakeCache : ILyricsCache
+    private sealed class FakeCache : ILyricsCache, ILyricsLibrary
     {
         public Dictionary<string, LyricsCacheEntry> Entries { get; } = [];
+        public List<string> DeletedKeys { get; } = [];
         public bool ThrowOnGet { get; init; }
 
         public Task<LyricsCacheEntry?> GetAsync(string cacheKey, CancellationToken cancellationToken)
@@ -115,6 +229,18 @@ public sealed class LyricsServiceTests
         {
             Entries[entry.CacheKey] = entry;
             return Task.CompletedTask;
+        }
+
+        public Task<IReadOnlyList<LyricsCacheEntry>> GetRecentAsync(
+            int limit,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LyricsCacheEntry>>(
+                Entries.Values.OrderByDescending(static entry => entry.CachedAtUtc).Take(limit).ToArray());
+
+        public Task<bool> DeleteAsync(string cacheKey, CancellationToken cancellationToken)
+        {
+            DeletedKeys.Add(cacheKey);
+            return Task.FromResult(Entries.Remove(cacheKey));
         }
     }
 }
