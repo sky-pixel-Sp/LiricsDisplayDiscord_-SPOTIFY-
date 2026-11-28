@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        xmlns:controls="clr-namespace:SkyLyrics.Desktop.Controls"
         Title="SkyLyrics Desktop" Icon="/SkyLyrics.Desktop;component/Assets/SkyLyrics.ico"
         Width="1280" Height="800" MinWidth="980" MinHeight="610"
         ResizeMode="CanResize" WindowStyle="SingleBorderWindow"
@@ -164,6 +165,36 @@
                             </LinearGradientBrush>
                         </Rectangle.Fill>
                     </Rectangle>
+                    <controls:MusicWaveformControl
+                        HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="180"
+                        Position="{Binding MusicVisualPosition}"
+                        IsPlaying="{Binding MusicVisualIsPlaying}"
+                        MotionEnabled="{Binding MusicVisualMotionEnabled}"
+                        AccentColor="{Binding ArtworkAccentColor}"
+                        QualityTier="{Binding CinematicQualityTier}"
+                        Visibility="{Binding ShowPlaybackVisual, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        IsHitTestVisible="False" Opacity="0.9" />
+                    <Canvas IsHitTestVisible="False"
+                            Visibility="{Binding ShowPlaybackVisual, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <svgc:SvgViewbox x:Name="FloatingNoteOne"
+                            Source="/SkyLyrics.Desktop;component/Assets/Notes/note-mint.svg"
+                            Width="24" Height="32" Canvas.Left="44" Canvas.Top="70" Opacity="0.52"
+                            RenderTransformOrigin="0.5,0.5">
+                            <svgc:SvgViewbox.RenderTransform><TranslateTransform Y="0" /></svgc:SvgViewbox.RenderTransform>
+                        </svgc:SvgViewbox>
+                        <svgc:SvgViewbox x:Name="FloatingNoteTwo"
+                            Source="/SkyLyrics.Desktop;component/Assets/Notes/note-blue.svg"
+                            Width="22" Height="28" Canvas.Right="76" Canvas.Top="124" Opacity="0.46"
+                            RenderTransformOrigin="0.5,0.5">
+                            <svgc:SvgViewbox.RenderTransform><TranslateTransform Y="0" /></svgc:SvgViewbox.RenderTransform>
+                        </svgc:SvgViewbox>
+                        <svgc:SvgViewbox x:Name="FloatingNoteThree"
+                            Source="/SkyLyrics.Desktop;component/Assets/Notes/note-violet.svg"
+                            Width="18" Height="23" Canvas.Left="160" Canvas.Bottom="40" Opacity="0.38"
+                            RenderTransformOrigin="0.5,0.5">
+                            <svgc:SvgViewbox.RenderTransform><TranslateTransform Y="0" /></svgc:SvgViewbox.RenderTransform>
+                        </svgc:SvgViewbox>
+                    </Canvas>
                     <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                         <DockPanel Grid.Row="0" LastChildFill="False">
