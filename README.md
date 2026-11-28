@@ -10,7 +10,7 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 - LRCLIB lyric lookup, exact-match validation and local SQLite caching.
 - User-selected LRC and Lyricsfile YAML import, validated local LRC editor/export, and per-track user-labelled translation sidecars.
 - Line synchronization and source-provided word synchronization.
-- Shared playback clock and immutable scene state with source line-index identity, seek handling and configurable 60–120 ms lyric transition lead.
+- Shared playback clock and immutable scene state with track-scoped source line identity (track title, artist and LineIndex), seek handling and configurable 60–120 ms lyric transition lead.
 - Reduced-motion-aware lyric transitions with QuinticEase, active/previous/upcoming line treatments, and a lower lyrics-panel transition.
 - A timeline-driven ambient wave and original floating-note SVGs for instrumental, unsynced or unavailable lyrics. These visuals are deliberately not audio-reactive.
 - Optional cinematic startup splash with real host, SQLite, GSMTC and theme startup milestones.
