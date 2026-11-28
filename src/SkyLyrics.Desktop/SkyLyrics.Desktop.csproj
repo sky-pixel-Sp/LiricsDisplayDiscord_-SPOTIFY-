@@ -30,7 +30,9 @@
   <ItemGroup>
     <Resource Include="Assets/Icons/*.svg" />
     <Resource Include="Assets/Backgrounds/*.svg" />
+    <Resource Include="Assets/Branding/*.svg" />
     <Resource Include="Assets/Notes/*.svg" />
+    <Resource Include="Assets/Textures/*.svg" />
     <Resource Include="Assets/SkyLyrics.ico" />
     <EmbeddedResource Include="Assets/obs-overlay.html" />
   </ItemGroup>
