@@ -44,14 +44,21 @@ public sealed class WindowPlacementTests
         Assert.Equal(new WindowBounds(0d, 0d, 1000d, 700d), result);
     }
 
-    [Fact]
-    public void SecondaryMonitorWorkAreaIsConvertedUsingItsOwnScaleFactor()
+    [Theory]
+    [InlineData(-2400d, 1350d, 1.25d, -1920d, 1080d)]
+    [InlineData(-2880d, 1620d, 1.50d, -1920d, 1080d)]
+    public void SecondaryMonitorWorkAreaIsConvertedUsingItsOwnScaleFactor(
+        double physicalLeft,
+        double physicalWidth,
+        double scaleFactor,
+        double expectedLeft,
+        double expectedWidth)
     {
         var logical = WindowPlacementCalculator.ConvertPhysicalWorkAreaToLogical(
-            new WindowBounds(-2880d, 0d, 2880d, 1620d),
-            scaleFactor: 1.5d);
+            new WindowBounds(physicalLeft, 0d, physicalWidth, 1620d),
+            scaleFactor);
 
-        Assert.Equal(new WindowBounds(-1920d, 0d, 1920d, 1080d), logical);
+        Assert.Equal(new WindowBounds(expectedLeft, 0d, expectedWidth, 1080d), logical);
     }
 
     [Fact]
