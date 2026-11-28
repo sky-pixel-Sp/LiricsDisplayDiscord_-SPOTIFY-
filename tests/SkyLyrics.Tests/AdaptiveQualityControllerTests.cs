@@ -29,7 +29,7 @@ public sealed class AdaptiveQualityControllerTests
         var time = new ManualTimeProvider();
         var monitor = new AdaptiveQualityController(CinematicQualityLevel.Balanced, time);
 
-        for (var index = 0; index < 22; index++)
+        for (var index = 0; index < 20; index++)
         {
             monitor.ObserveFrame(TimeSpan.FromMilliseconds(16));
             time.Advance(TimeSpan.FromMilliseconds(100));
@@ -47,18 +47,118 @@ public sealed class AdaptiveQualityControllerTests
         var time = new ManualTimeProvider();
         var monitor = new AdaptiveQualityController(CinematicQualityLevel.Balanced, time);
 
-        Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
-        time.Advance(TimeSpan.FromSeconds(2));
-        Assert.True(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        Assert.True(ObserveWindow(monitor, time, 30d));
         Assert.Equal(CinematicQualityLevel.Lite, monitor.Level);
 
-        time.Advance(TimeSpan.FromSeconds(2));
-        Assert.True(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        Assert.True(ObserveWindow(monitor, time, 30d));
         Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
 
-        time.Advance(TimeSpan.FromSeconds(2));
-        Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        Assert.False(ObserveWindow(monitor, time, 30d));
         Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
+    }
+
+    [Fact]
+    public void GraduallyRecoversAfterThreeHealthyWindowsWithoutExceedingPreferredTier()
+    {
+        var time = new ManualTimeProvider();
+        var monitor = new AdaptiveQualityController(CinematicQualityLevel.Balanced, time);
+
+        Assert.True(ObserveWindow(monitor, time, 30d));
+        Assert.True(ObserveWindow(monitor, time, 30d));
+        Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
+
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.True(ObserveWindow(monitor, time, 14d));
+        Assert.Equal(CinematicQualityLevel.Lite, monitor.Level);
+
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.True(ObserveWindow(monitor, time, 14d));
+        Assert.Equal(CinematicQualityLevel.Balanced, monitor.Level);
+
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.Equal(CinematicQualityLevel.Balanced, monitor.Level);
+    }
+
+    [Fact]
+    public void NeverRecoversAboveAnExplicitlySelectedLiteTier()
+    {
+        var time = new ManualTimeProvider();
+        var monitor = new AdaptiveQualityController(CinematicQualityLevel.Lite, time);
+
+        Assert.True(ObserveWindow(monitor, time, 25d));
+        Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
+
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.True(ObserveWindow(monitor, time, 14d));
+        Assert.Equal(CinematicQualityLevel.Lite, monitor.Level);
+
+        for (var index = 0; index < 4; index++)
+        {
+            Assert.False(ObserveWindow(monitor, time, 14d));
+        }
+
+        Assert.Equal(CinematicQualityLevel.Lite, monitor.Level);
+    }
+
+    [Fact]
+    public void ExplicitReducedTierStaysLocked()
+    {
+        var time = new ManualTimeProvider();
+        var monitor = new AdaptiveQualityController(CinematicQualityLevel.Reduced, time);
+
+        for (var index = 0; index < 6; index++)
+        {
+            Assert.False(ObserveWindow(monitor, time, 10d));
+        }
+
+        Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
+    }
+
+    [Fact]
+    public void AModerateWindowResetsRecoveryHysteresis()
+    {
+        var time = new ManualTimeProvider();
+        var monitor = new AdaptiveQualityController(CinematicQualityLevel.Balanced, time);
+
+        Assert.True(ObserveWindow(monitor, time, 25d));
+        Assert.True(ObserveWindow(monitor, time, 25d));
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.False(ObserveWindow(monitor, time, 18d));
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.False(ObserveWindow(monitor, time, 14d));
+        Assert.True(ObserveWindow(monitor, time, 14d));
+        Assert.Equal(CinematicQualityLevel.Lite, monitor.Level);
+    }
+
+    [Fact]
+    public void SparseWindowDoesNotChangeQuality()
+    {
+        var time = new ManualTimeProvider();
+        var monitor = new AdaptiveQualityController(CinematicQualityLevel.Balanced, time);
+
+        Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(28)));
+        time.Advance(TimeSpan.FromSeconds(2));
+        Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(12)));
+
+        Assert.Equal(CinematicQualityLevel.Balanced, monitor.Level);
+    }
+
+    private static bool ObserveWindow(
+        AdaptiveQualityController monitor,
+        ManualTimeProvider time,
+        double frameTimeMilliseconds)
+    {
+        var changed = false;
+        for (var index = 0; index < 20; index++)
+        {
+            changed |= monitor.ObserveFrame(TimeSpan.FromMilliseconds(frameTimeMilliseconds));
+            time.Advance(TimeSpan.FromMilliseconds(100));
+        }
+
+        return monitor.ObserveFrame(TimeSpan.FromMilliseconds(frameTimeMilliseconds)) || changed;
     }
 
     private sealed class ManualTimeProvider : TimeProvider

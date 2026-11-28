@@ -33,6 +33,7 @@ public sealed class MusicWaveformControl : FrameworkElement
     private AdaptiveQualityController _adaptiveQuality = new();
     private CinematicQualityLevel _effectiveQualityLevel = CinematicQualityLevel.Balanced;
     private bool _renderSubscribed;
+    private int _reducedFrameCounter;
     private TimeSpan _lastPosition;
     private bool _hasLastPosition;
 
@@ -113,9 +114,11 @@ public sealed class MusicWaveformControl : FrameworkElement
 
     private void UpdateRenderingSubscription()
     {
-        var shouldAnimate = IsLoaded && IsVisible && MotionEnabled && SystemParameters.ClientAreaAnimation && IsPlaying &&
-                            !StringComparer.OrdinalIgnoreCase.Equals(QualityTier, "reduced") &&
-                            _effectiveQualityLevel != CinematicQualityLevel.Reduced;
+        // An explicitly selected Reduced tier is a user cap. An adaptive downgrade to
+        // Reduced stays subscribed at a very low redraw rate so it can measure recovery.
+        var explicitlyReduced = string.Equals(QualityTier, "reduced", StringComparison.OrdinalIgnoreCase);
+        var shouldAnimate = IsLoaded && IsVisible && MotionEnabled && SystemParameters.ClientAreaAnimation &&
+                            IsPlaying && !explicitlyReduced;
 
         if (shouldAnimate && !_renderSubscribed)
         {
@@ -146,18 +149,34 @@ public sealed class MusicWaveformControl : FrameworkElement
             UpdateRenderingSubscription();
         }
 
+        if (_effectiveQualityLevel == CinematicQualityLevel.Reduced)
+        {
+            // Continue collecting frame intervals, but repaint only every third display frame.
+            _reducedFrameCounter = (_reducedFrameCounter + 1) % 3;
+            if (_reducedFrameCounter != 0)
+            {
+                return;
+            }
+        }
+        else
+        {
+            _reducedFrameCounter = 0;
+        }
+
         InvalidateVisual();
     }
 
     private void ResetAdaptiveQuality()
     {
-        _effectiveQualityLevel = QualityTier.ToLowerInvariant() switch
+        var requestedTier = (QualityTier ?? "balanced").Trim().ToLowerInvariant();
+        _effectiveQualityLevel = requestedTier switch
         {
             "cinematic" => CinematicQualityLevel.Cinematic,
             "lite" => CinematicQualityLevel.Lite,
             "reduced" => CinematicQualityLevel.Reduced,
             _ => CinematicQualityLevel.Balanced
         };
+        _reducedFrameCounter = 0;
         _adaptiveQuality = new AdaptiveQualityController(_effectiveQualityLevel);
         EffectiveQualityChanged?.Invoke(_effectiveQualityLevel);
     }

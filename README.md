@@ -1,8 +1,8 @@
-# SkyLyrics Desktop 2.1 — Preview
+# SkyLyrics Desktop 2.2 — Preview
 
 SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics, cinematic presentation and desktop overlays.
 
-**2.1 status:** active development. This preview is built from the existing 2.0 application foundation. Multi-source playback, the upgraded Lyrics Studio and the Extreme Visual Engine are planned workstreams; they must not be represented as completed integrations until their adapters, UI states and tests are implemented.
+**2.2 status:** active refinement preview on the existing 2.1 foundation. This branch focuses on runtime resilience, adaptive visual-quality recovery, version-consistent packaging and verified Windows builds. Multi-source GSMTC metadata, strict lyric matching, local translation sidecars, desktop modes, Discord IPC and the loopback OBS output are implemented. The ambient waveform remains timeline-driven; audio capture is not part of this build.
 
 ## Current foundation
 
@@ -22,7 +22,7 @@ SkyLyrics Desktop is a native Windows 11 music companion for synchronized lyrics
 - OBS Browser Source served on loopback only.
 - Dark/Light themes, motion preferences and runtime diagnostics.
 
-## SkyLyrics 2.1 upgrade direction
+## SkyLyrics 2.2 refinement direction
 
 - **Multi-source music:** Spotify Desktop, YouTube Music where an identifiable Windows media session is exposed, and Windows Media / other selected GSMTC sessions.
 - **Advanced Lyrics Studio:** original + translation documents, explicit provenance, timestamp calibration, local editor, import/export and library.
@@ -77,3 +77,12 @@ PowerShell:
 Windows CI builds Release, runs unit tests, publishes a self-contained win-x64 application, compiles the Inno Setup installer and generates a SHA-256 checksum. Preview packages are not production releases and may change during the 2.1 upgrade. The installer is unsigned unless a valid code-signing certificate is configured.
 
 A successful CI run proves the tested build and packaging steps completed. It does not replace manual acceptance on a Windows 11 desktop with real Spotify/YouTube Music/Windows Media sessions, Discord IPC, multiple monitors and display scaling.
+
+
+## 2.2 refinement notes
+
+- Adaptive visual quality now steps down after sustained frame intervals above 20 ms and recovers one tier only after three healthy two-second windows at or below 14 ms.
+- Recovery never exceeds the quality tier explicitly selected by the user. An explicitly selected Reduced tier remains locked.
+- When adaptive quality reaches Reduced, the renderer samples frame intervals but repaints only every third display frame, so it can detect recovery without returning to full visual cost.
+- The Windows release workflow resolves one version value for the application, installer and checksum. It also locates the versioned installer filename produced by Inno Setup.
+- Automated Windows CI verifies compilation, tests, self-contained packaging and installer generation. Manual acceptance with actual media sessions and the user's Windows display/GPU remains a separate release gate.
