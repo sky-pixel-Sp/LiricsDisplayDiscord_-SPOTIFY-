@@ -31,8 +31,6 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         _splash = new SplashWindow();
-        _splash.Show();
-        _splash.SetProgress(4d, "Starting SkyLyrics");
         try
         {
             var builder = Host.CreateApplicationBuilder(e.Args);
