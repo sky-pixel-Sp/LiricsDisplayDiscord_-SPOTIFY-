@@ -1,14 +1,16 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+    [Parameter(Mandatory = $true)]
+    [string]$FontOutputDirectory
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $googleFontsCommit = "5026800714d07231937d92eb4cceabf06e05d74e"
-$fontRoot = Join-Path $PSScriptRoot "..\Assets\Fonts"
+$fontRoot = $FontOutputDirectory
 $fonts = @(
     @{
         Uri = "https://raw.githubusercontent.com/google/fonts/$googleFontsCommit/ofl/poppins/Poppins-Regular.ttf"
