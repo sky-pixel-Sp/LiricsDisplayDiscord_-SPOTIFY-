@@ -70,7 +70,7 @@ public partial class SplashWindow : Window
     {
         var autoClose = new System.Windows.Threading.DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(2500d)
+            Interval = TimeSpan.FromMilliseconds(2200d)
         };
         autoClose.Tick += (_, _) =>
         {
