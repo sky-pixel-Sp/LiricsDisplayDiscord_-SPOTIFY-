@@ -101,10 +101,11 @@ public sealed class LyricsServiceTests
         var service = CreateService(provider, cache);
 
         var result = await service.GetExactAsync(
-            new LyricsTrackSignature("Track", "Artist", null, TimeSpan.FromSeconds(100)),
+            CreateSignature(),
             CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.Equal(LyricsLookupSource.Provider, result.Source);
         Assert.Equal(1, provider.ExactCalls);
     }
 
