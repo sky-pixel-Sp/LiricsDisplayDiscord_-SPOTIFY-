@@ -8,6 +8,8 @@ public partial class SplashWindow : Window
 {
     public bool WasSkipped { get; private set; }
 
+    public bool IsDismissed { get; private set; }
+
     public SplashWindow()
     {
         InitializeComponent();
@@ -21,7 +23,7 @@ public partial class SplashWindow : Window
             return;
         }
 
-        if (!IsVisible || WasSkipped)
+        if (!IsVisible || IsDismissed)
         {
             return;
         }
@@ -40,7 +42,14 @@ public partial class SplashWindow : Window
             return;
         }
 
-        if (WasSkipped || !IsVisible)
+        if (IsDismissed)
+        {
+            Close();
+            return;
+        }
+
+        IsDismissed = true;
+        if (!IsVisible)
         {
             Close();
             return;
@@ -151,6 +160,7 @@ public partial class SplashWindow : Window
     private void Skip()
     {
         WasSkipped = true;
+        IsDismissed = true;
         Close();
     }
 }
