@@ -5,7 +5,7 @@
         Width="430" Height="260" MinWidth="340" MinHeight="210"
         WindowStyle="ToolWindow" ResizeMode="CanResizeWithGrip" WindowStartupLocation="Manual"
         ShowInTaskbar="False" Topmost="True" Background="{DynamicResource WindowBackground}"
-        Foreground="{DynamicResource PrimaryText}" FontFamily="Segoe UI Variable Display"
+        Foreground="{DynamicResource PrimaryText}" FontFamily="{StaticResource PoppinsFontFamily}"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Border Margin="7" CornerRadius="22" Background="{DynamicResource PanelBackground}"
             BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Padding="17">
