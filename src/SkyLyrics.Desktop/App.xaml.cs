@@ -106,11 +106,7 @@ public partial class App : System.Windows.Application
                 windowModes.ToggleGameMode,
                 mainWindow.ShowSettings,
                 mainWindow.ShowDiagnostics,
-                () => Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    mainWindow.RequestApplicationExit();
-                    Shutdown();
-                })));
+                () => Dispatcher.BeginInvoke(new Action(mainWindow.RequestApplicationExit)));
         }
         catch (Exception exception)
         {
