@@ -56,6 +56,27 @@ public static class WindowPlacementCalculator
         return new WindowBounds(left, top, width, height);
     }
 
+    public static WindowBounds ConvertPhysicalWorkAreaToLogical(
+        WindowBounds physicalWorkArea,
+        double scaleFactor)
+    {
+        if (!physicalWorkArea.IsValid)
+        {
+            throw new ArgumentOutOfRangeException(nameof(physicalWorkArea));
+        }
+
+        if (!double.IsFinite(scaleFactor) || scaleFactor <= 0d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(scaleFactor));
+        }
+
+        return new WindowBounds(
+            physicalWorkArea.Left / scaleFactor,
+            physicalWorkArea.Top / scaleFactor,
+            physicalWorkArea.Width / scaleFactor,
+            physicalWorkArea.Height / scaleFactor);
+    }
+
     public static bool IsFullyVisibleOnAnyMonitor(
         WindowBounds candidate,
         IEnumerable<WindowBounds> workAreas)
