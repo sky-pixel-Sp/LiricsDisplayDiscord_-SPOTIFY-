@@ -27,7 +27,7 @@ public sealed class LyricsCandidateRankerTests
     }
 
     [Fact]
-    public void DurationOutsideTwoSecondsDoesNotCountAsExactSignatureMatch()
+    public void DurationOutsideThreeSecondsDoesNotCountAsExactSignatureMatch()
     {
         var signature = new LyricsTrackSignature(
             "Song", "Artist", "Album", TimeSpan.FromSeconds(200));
@@ -50,6 +50,22 @@ public sealed class LyricsCandidateRankerTests
             [Make("night drive", "Example Artist", "Midnight Album", 101, 1)]);
 
         Assert.True(ranked[0].IsExactSignatureMatch);
+    }
+
+    [Fact]
+    public void RankedCandidateIncludesValidationReasonAndScore()
+    {
+        var signature = new LyricsTrackSignature(
+            "Song", "Artist", "Album", TimeSpan.FromSeconds(100));
+
+        var ranked = LyricsCandidateRanker.Rank(
+            signature,
+            [Make("Song", "Artist", "Album", 101, 9)]);
+
+        Assert.True(ranked[0].IsExactSignatureMatch);
+        Assert.Equal(100, ranked[0].MatchScore);
+        Assert.Contains("Judul cocok", ranked[0].MatchReason);
+        Assert.Contains("Artis cocok", ranked[0].MatchReason);
     }
 
     [Fact]
