@@ -17,6 +17,7 @@ public sealed record AppPreferences
     public bool SplashEnabled { get; init; } = true;
     public int LyricAnimationLeadMilliseconds { get; init; } = 90;
     public string CinematicQualityTier { get; init; } = "balanced";
+    public bool LetterboxEnabled { get; init; }
     public bool MiniPlayerAlwaysOnTop { get; init; } = true;
     public bool DiscordPresenceEnabled { get; init; }
     public string DiscordApplicationId { get; init; } = string.Empty;
