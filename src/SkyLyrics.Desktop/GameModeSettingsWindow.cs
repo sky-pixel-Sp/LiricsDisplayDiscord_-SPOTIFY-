@@ -48,7 +48,7 @@ public sealed class GameModeSettingsWindow : Window
         ResizeMode = ResizeMode.CanResize;
         Background = Brush("#12161B");
         Foreground = Brush("#F4F5F2");
-        FontFamily = new FontFamily("Segoe UI Variable Display");
+        FontFamily = (System.Windows.Application.Current!.Resources["PoppinsFontFamily"] as System.Windows.Media.FontFamily ?? new System.Windows.Media.FontFamily("Segoe UI Variable Display"));
 
         _widthBox.Text = _initial.Width.ToString("0", CultureInfo.InvariantCulture);
         _heightBox.Text = _initial.Height.ToString("0", CultureInfo.InvariantCulture);
