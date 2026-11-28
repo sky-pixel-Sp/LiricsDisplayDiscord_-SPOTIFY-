@@ -19,6 +19,7 @@ public sealed record AppPreferences
     public string DiscordApplicationId { get; init; } = string.Empty;
     public bool ObsOverlayEnabled { get; init; }
     public GameModePreferences GameMode { get; init; } = new();
+    public WindowGeometryPreference? MainWindowGeometry { get; init; }
     public VisualStudioPreferences Visuals { get; init; } = new();
     public ImmutableArray<LocalTranslationPreference> LocalTranslations { get; init; } =
         ImmutableArray<LocalTranslationPreference>.Empty;
@@ -38,6 +39,7 @@ public sealed record AppPreferences
             DiscordApplicationId = id,
             ObsOverlayPort = Math.Clamp(ObsOverlayPort, 1024, 65535),
             GameMode = (GameMode ?? new GameModePreferences()).Normalize(),
+            MainWindowGeometry = MainWindowGeometry?.Normalize(),
             Visuals = (Visuals ?? new VisualStudioPreferences()).Normalize(),
             LocalTranslations = NormalizeLocalTranslations(LocalTranslations),
             Customization = (Customization ?? new CustomizationPreferences()).Normalize(),
