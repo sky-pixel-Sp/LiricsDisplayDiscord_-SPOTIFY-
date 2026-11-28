@@ -48,21 +48,29 @@ public sealed class LrclibClient : ILyricsProvider
     {
         ValidateSignature(signature);
 
+        // Exact LRCLIB records cannot be verified without a source duration.
+        if (signature.Duration is not { } expectedDuration ||
+            expectedDuration <= TimeSpan.Zero ||
+            expectedDuration > TimeSpan.FromHours(1))
+        {
+            return null;
+        }
+
         if (!string.IsNullOrWhiteSpace(signature.Album) &&
-            signature.Duration is { } cachedDuration &&
-            cachedDuration.TotalSeconds is >= 1 and <= 3600)
+            expectedDuration.TotalSeconds is >= 1 and <= 3600)
         {
             var cachedUri = BuildSignatureUri("api/get-cached", signature, requireAlbumAndDuration: true);
             var cachedRecord = await GetRecordAsync(cachedUri, cancellationToken).ConfigureAwait(false);
-            if (cachedRecord is not null)
+            if (cachedRecord is not null &&
+                ConvertMatchingRecord(cachedRecord, signature) is { } cachedMatch)
             {
-                return ConvertRecord(cachedRecord);
+                return cachedMatch;
             }
         }
 
         var exactUri = BuildSignatureUri("api/get", signature, requireAlbumAndDuration: false);
         var record = await GetRecordAsync(exactUri, cancellationToken).ConfigureAwait(false);
-        return record is null ? null : ConvertRecord(record);
+        return record is null ? null : ConvertMatchingRecord(record, signature);
     }
 
     public async Task<IReadOnlyList<LyricsProviderResult>> SearchAsync(
@@ -124,6 +132,21 @@ public sealed class LrclibClient : ILyricsProvider
             .ConfigureAwait(false);
 
         return record is null ? null : ConvertRecord(record);
+    }
+
+    private LyricsProviderResult? ConvertMatchingRecord(
+        LrclibApiRecord record,
+        LyricsTrackSignature signature)
+    {
+        var result = ConvertRecord(record);
+        if (result is null)
+        {
+            return null;
+        }
+
+        return LyricsMatchValidator.Validate(signature, result.Document).IsMatch
+            ? result
+            : null;
     }
 
     private async Task<LrclibApiRecord?> GetRecordAsync(
