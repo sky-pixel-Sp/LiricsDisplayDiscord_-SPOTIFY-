@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,6 +21,8 @@ using FontFamily = System.Windows.Media.FontFamily;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
 using MessageBox = System.Windows.MessageBox;
+using Orientation = System.Windows.Controls.Orientation;
+using WpfFonts = System.Windows.Media.Fonts;
 
 namespace SkyLyrics.Desktop;
 
@@ -156,7 +159,7 @@ public sealed class CustomizationStudioWindow : Window
         _font.IsEditable = true;
         _font.IsTextSearchEnabled = true;
         _font.MinHeight = 34;
-        _font.ItemsSource = Fonts.SystemFontFamilies
+        _font.ItemsSource = WpfFonts.SystemFontFamilies
             .Select(font => font.Source)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(font => font, StringComparer.OrdinalIgnoreCase)
@@ -260,7 +263,7 @@ public sealed class CustomizationStudioWindow : Window
         }
 
         var fontName = _font.Text.Trim();
-        if (!Fonts.SystemFontFamilies.Any(font =>
+        if (!WpfFonts.SystemFontFamilies.Any(font =>
                 StringComparer.OrdinalIgnoreCase.Equals(font.Source, fontName)))
         {
             _status.Text = "Select a font installed on this Windows device.";
@@ -399,7 +402,7 @@ public sealed class CustomizationStudioWindow : Window
             }
 
             var normalized = profile.Normalize();
-            if (!Fonts.SystemFontFamilies.Any(font =>
+            if (!WpfFonts.SystemFontFamilies.Any(font =>
                     StringComparer.OrdinalIgnoreCase.Equals(font.Source, normalized.FontFamily)))
                 throw new InvalidDataException("The imported font is not installed on this device.");
 

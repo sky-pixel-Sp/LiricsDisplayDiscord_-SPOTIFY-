@@ -671,6 +671,10 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public string ActiveWordText => _sceneState.WordFill?.Word.Text ?? string.Empty;
 
+    public bool HasTimedActiveWord => _sceneState.WordFill is { Word.End: not null };
+
+    public double ActiveWordProgress => _sceneState.WordFill?.Progress ?? 0d;
+
     public string ActiveWordProgressLabel =>
         _sceneState.WordFill is { Word.End: not null } fill
             ? $"{Math.Round(fill.Progress * 100d):0}%"
@@ -849,6 +853,8 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasActiveWord));
         OnPropertyChanged(nameof(StageEmptyStateText));
         OnPropertyChanged(nameof(ActiveWordText));
+        OnPropertyChanged(nameof(HasTimedActiveWord));
+        OnPropertyChanged(nameof(ActiveWordProgress));
         OnPropertyChanged(nameof(ActiveWordProgressLabel));
         OnPropertyChanged(nameof(SyncPositionLabel));
         OnPropertyChanged(nameof(SyncStatusLabel));

@@ -15,7 +15,7 @@ public sealed class GameModePreferencesTests
             Opacity = 0.1
         }.Normalize();
 
-        Assert.Equal(420d, result.Width);
+        Assert.Equal(160d, result.Width);
         Assert.Equal(600d, result.Height);
         Assert.Equal(0.55d, result.Opacity);
     }
@@ -64,5 +64,17 @@ public sealed class GameModePreferencesTests
         Assert.Equal(164d, result.Height);
         Assert.Equal(0.82d, result.Opacity);
         Assert.False(result.AlwaysOnTop);
+    }
+
+    [Theory]
+    [InlineData(30d)]
+    [InlineData(42d)]
+    [InlineData(64d)]
+    public void Normalize_PreservesMicroAndCompactHeights(double height)
+    {
+        var result = new GameModePreferences { Width = 520d, Height = height }.Normalize();
+
+        Assert.Equal(520d, result.Width);
+        Assert.Equal(height, result.Height);
     }
 }

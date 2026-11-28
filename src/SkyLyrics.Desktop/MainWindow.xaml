@@ -132,7 +132,7 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="2" Grid.Column="1" Margin="16,0">
+        <Grid x:Name="MainContentGrid" Grid.Row="2" Grid.Column="1" Margin="16,0">
             <Grid.RowDefinitions><RowDefinition Height="56" /><RowDefinition Height="*" /><RowDefinition Height="164" /></Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <StackPanel VerticalAlignment="Center">
@@ -246,7 +246,7 @@
             </Border>
         </Grid>
 
-        <ScrollViewer Grid.Row="2" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer x:Name="RightSidebar" Grid.Row="2" Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
             <Border Style="{StaticResource PanelCardStyle}" Padding="15">
                 <StackPanel>

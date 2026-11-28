@@ -18,6 +18,9 @@ on:
 permissions:
   contents: read
 
+env:
+  APP_VERSION: 2.1.0.${{ github.run_number }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -44,7 +47,7 @@ jobs:
         run: dotnet restore .\SkyLyrics.sln
 
       - name: Build Release solution
-        run: dotnet build .\SkyLyrics.sln --configuration Release --no-restore
+        run: dotnet build .\SkyLyrics.sln --configuration Release --no-restore -p:Version=${{ env.APP_VERSION }} -p:FileVersion=${{ env.APP_VERSION }} -p:InformationalVersion=${{ env.APP_VERSION }}+${{ github.sha }}
 
       - name: Run unit tests
         run: >-
@@ -69,12 +72,15 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
           -p:PublishTrimmed=false
+          -p:Version=${{ env.APP_VERSION }}
+          -p:FileVersion=${{ env.APP_VERSION }}
+          -p:InformationalVersion=${{ env.APP_VERSION }}+${{ github.sha }}
 
       - name: Compile Windows installer
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\artifacts | Out-Null
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=2.1.0-preview.1" .\installer\windows\SkyLyrics.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=${{ env.APP_VERSION }}" .\installer\windows\SkyLyrics.iss
           if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup failed with exit code $LASTEXITCODE"
           }
@@ -82,13 +88,24 @@ jobs:
       - name: Verify installer and generate SHA-256
         shell: pwsh
         run: |
-          $installer = Get-Item .\artifacts\SkyLyricsDesktop-Setup-win-x64.exe
-          if ($installer.Length -lt 1MB) {
-            throw "Installer is unexpectedly small; package output is not accepted."
+          $installer = Get-ChildItem .\artifacts\SkyLyricsDesktop-Setup-win-x64-*.exe | Select-Object -First 1
+          if ($null -eq $installer -or $installer.Length -lt 1MB) {
+            throw "Versioned installer is missing or unexpectedly small."
           }
+          $app = Get-Item .\publish\SkyLyrics.Desktop.exe
           $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $($installer.Name)" | Set-Content .\artifacts\SHA256SUMS.txt -Encoding ascii
+          [ordered]@{
+            version = "${{ env.APP_VERSION }}"
+            commit = "${{ github.sha }}"
+            workflowRun = ${{ github.run_number }}
+            appBytes = $app.Length
+            installerBytes = $installer.Length
+            sha256 = $hash
+          } | ConvertTo-Json -Depth 4 | Set-Content .\artifacts\BuildManifest.json -Encoding utf8
+          Write-Host "Application EXE size: $($app.Length) bytes"
           Write-Host "Installer size: $($installer.Length) bytes"
+          Write-Host "Version: ${{ env.APP_VERSION }}"
           Write-Host "SHA-256: $hash"
 
       - name: Upload Windows x64 installer

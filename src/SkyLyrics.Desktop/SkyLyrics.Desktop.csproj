@@ -26,6 +26,7 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets/Icons/*.svg" />
+    <Resource Include="Assets/Backgrounds/*.svg" />
     <Resource Include="Assets/SkyLyrics.ico" />
     <EmbeddedResource Include="Assets/obs-overlay.html" />
   </ItemGroup>

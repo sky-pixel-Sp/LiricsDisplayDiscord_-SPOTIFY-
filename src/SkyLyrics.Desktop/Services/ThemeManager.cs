@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using WpfFontFamily = System.Windows.Media.FontFamily;
 using SkyLyrics.Application.Customization;
 
 namespace SkyLyrics.Desktop.Services;
@@ -65,7 +66,7 @@ public static class ThemeManager
         resources["PrimaryText"] = Brush(primary);
         resources["SecondaryText"] = Brush(secondary);
         resources["MutedText"] = Brush(Mix(secondary, background, 0.28d));
-        resources["LyricsFontFamily"] = new FontFamily(selected.FontFamily);
+        resources["LyricsFontFamily"] = new WpfFontFamily(selected.FontFamily);
         resources["LyricsActiveFontSize"] = 66d * selected.FontScale;
         resources["LyricsSecondaryFontSize"] = 24d * selected.FontScale;
         resources["LyricsUpcomingFontSize"] = 22d * selected.FontScale;

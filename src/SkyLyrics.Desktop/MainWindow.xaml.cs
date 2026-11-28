@@ -50,6 +50,7 @@ public partial class MainWindow : Window
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Closing += OnClosing;
         Loaded += OnLoaded;
+        SizeChanged += (_, _) => UpdateResponsiveLayout();
         Closed += (_, _) =>
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -74,10 +75,31 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        UpdateResponsiveLayout();
         var workArea = SystemParameters.WorkArea;
         Width = Math.Min(Width, workArea.Width * 0.94d);
         Height = Math.Min(Height, workArea.Height * 0.90d);
         PlayEntranceAnimation();
+    }
+
+    private void UpdateResponsiveLayout()
+    {
+        if (!IsInitialized || ActualWidth <= 0d) return;
+
+        var width = ActualWidth;
+        var compact = width < 1120d;
+        var narrow = width < 1320d;
+
+        RootGrid.Margin = new Thickness(compact ? 10d : narrow ? 14d : 20d);
+        RootGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 176d : 204d);
+        RootGrid.ColumnDefinitions[2].Width = compact
+            ? new GridLength(0d)
+            : new GridLength(narrow ? 238d : 272d);
+        RightSidebar.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        MainContentGrid.Margin = new Thickness(compact ? 10d : narrow ? 12d : 16d, 0d, compact ? 10d : 16d, 0d);
+
+        ActiveLyricTextBlock.FontSize = compact ? 30d : narrow ? 33d : 36d;
+        ActiveLyricTextBlock.LineHeight = compact ? 39d : narrow ? 43d : 46d;
     }
 
     private void PlayEntranceAnimation()
