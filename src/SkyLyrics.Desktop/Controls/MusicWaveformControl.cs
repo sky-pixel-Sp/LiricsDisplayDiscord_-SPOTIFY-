@@ -207,8 +207,8 @@ public sealed class MusicWaveformControl : FrameworkElement
         for (var wave = 0; wave < waveCount; wave++)
         {
             var alpha = (byte)Math.Clamp(88 - wave * 14, 24, 96);
-            var pen = new Pen(
-                new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)),
+            var pen = new System.Windows.Media.Pen(
+                new SolidColorBrush(System.Windows.Media.Color.FromArgb(alpha, color.R, color.G, color.B)),
                 wave == 0 ? 2.0d : 1.15d);
             pen.Freeze();
 
@@ -229,7 +229,7 @@ public sealed class MusicWaveformControl : FrameworkElement
                             Math.Sin((normalized * Math.PI * 2d * frequency) + phase) * amplitude * envelope +
                             Math.Sin((normalized * Math.PI * 4.3d) - phase * 0.43d) * amplitude * 0.18d;
 
-                    var point = new Point(x, y);
+                    var point = new System.Windows.Point(x, y);
                     if (sample == 0)
                     {
                         context.BeginFigure(point, false, false);
