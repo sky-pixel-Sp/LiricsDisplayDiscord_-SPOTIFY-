@@ -60,6 +60,83 @@ public sealed class SyncSchedulerTests
     }
 
     [Fact]
+    public void RepeatedLyricTextRetainsDistinctSourceLineIndexes()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1)), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("Again", TimeSpan.FromSeconds(1)),
+            new LyricLine("Again", TimeSpan.FromSeconds(2))));
+
+        Assert.Equal("Again", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(0, scheduler.Current.ActiveLineIndex);
+
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(2)), PlaybackSessionChangeKind.TimelineChanged);
+
+        Assert.Equal("Again", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
+    public void IncomingLineEntersNinetyMillisecondsBeforeItsSourceTimestamp()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.Zero), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("First", TimeSpan.FromSeconds(1)),
+            new LyricLine("Second", TimeSpan.FromSeconds(2))));
+
+        time.Advance(TimeSpan.FromMilliseconds(1909));
+        Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(0, scheduler.Current.ActiveLineIndex);
+
+        time.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.Equal("Second", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+
+        time.Advance(TimeSpan.FromMilliseconds(89));
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+
+        time.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
+    public void PauseSuppressesEarlyLineTransitionAndResumeReevaluatesIt()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1.95), PlaybackStatus.Paused), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("First", TimeSpan.FromSeconds(1)),
+            new LyricLine("Second", TimeSpan.FromSeconds(2))));
+
+        Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
+
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1.95), PlaybackStatus.Playing), PlaybackSessionChangeKind.PlaybackChanged);
+
+        Assert.Equal("Second", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(1, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
+    public void ZeroLeadTimeKeepsLyricsOnTheirExactSourceBoundary()
+    {
+        var time = new ManualTimeProvider();
+        using var scheduler = new SyncScheduler(time);
+        scheduler.SetLineAnimationLeadTime(TimeSpan.Zero);
+        scheduler.UpdatePlayback(Snapshot(time, TimeSpan.FromSeconds(1.95)), PlaybackSessionChangeKind.Connected);
+        scheduler.UpdateLyrics(Document(
+            new LyricLine("First", TimeSpan.FromSeconds(1)),
+            new LyricLine("Second", TimeSpan.FromSeconds(2))));
+
+        Assert.Equal("First", scheduler.Current.ActiveLine?.Text);
+        Assert.Equal(0, scheduler.Current.ActiveLineIndex);
+    }
+
+    [Fact]
     public void PauseFreezesPositionAndDisablesBoundaryAdvancement()
     {
         var time = new ManualTimeProvider();
