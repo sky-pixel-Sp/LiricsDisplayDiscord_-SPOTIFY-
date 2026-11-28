@@ -40,6 +40,7 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
     private string _translationStatusText = "No translation attached to this track.";
     private ImmutableArray<byte> _artworkBytes;
     private ImageSource? _albumArtwork;
+    private System.Windows.Media.Color _artworkAccentColor = System.Windows.Media.Color.FromRgb(118, 202, 176);
     private LyricsTrackSignature? _requestedSignature;
     private CancellationTokenSource? _lyricsCancellation;
     private CancellationTokenSource? _candidateSearchCancellation;
@@ -248,6 +249,21 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
     public bool ShowStageEmptyState => !HasActiveLine;
 
+    public bool ShowPlaybackVisual => _snapshot is not null &&
+        (_activeLyricsDocument is null ||
+         _activeLyricsDocument.SyncMode is LyricsSyncMode.Unsynced or LyricsSyncMode.Instrumental ||
+         !HasActiveLine);
+
+    public TimeSpan MusicVisualPosition => _sceneState.Position;
+
+    public bool MusicVisualIsPlaying => _sceneState.PlaybackStatus == PlaybackStatus.Playing;
+
+    public bool MusicVisualMotionEnabled => !_preferences.Current.ReduceMotion;
+
+    public string CinematicQualityTier => _preferences.Current.CinematicQualityTier;
+
+    public System.Windows.Media.Color ArtworkAccentColor => _artworkAccentColor;
+
     public bool HasUpcomingLyric => !string.IsNullOrWhiteSpace(UpcomingLyricText);
 
     public bool HasActiveWord => !string.IsNullOrWhiteSpace(ActiveWordText);
@@ -263,9 +279,11 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
             }
 
             _albumArtwork = value;
+            _artworkAccentColor = ExtractArtworkAccentColor(value);
             OnPropertyChanged(nameof(AlbumArtwork));
             OnPropertyChanged(nameof(HasAlbumArtwork));
             OnPropertyChanged(nameof(ArtworkAvailabilityLabel));
+            OnPropertyChanged(nameof(ArtworkAccentColor));
         }
     }
 
@@ -286,18 +304,15 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
 
             if (_activeLyricsDocument is null)
             {
-                return _lyricsStatusText;
+                return "Lirik tidak tersedia";
             }
 
             return _activeLyricsDocument.SyncMode switch
             {
-                LyricsSyncMode.Unsynced =>
-                    "These lyrics have no source timestamps. Playback highlighting is unavailable.",
-                LyricsSyncMode.Instrumental =>
-                    "Instrumental recording · no vocal lyrics supplied.",
-                _ when _sceneState.NextLine is not null =>
-                    "Waiting for the next source lyric timestamp.",
-                _ => "No lyric line is active at this playback position."
+                LyricsSyncMode.Unsynced => "Lirik tersedia · tanpa timestamp sumber",
+                LyricsSyncMode.Instrumental => "Instrumental",
+                _ when _sceneState.NextLine is not null => "Menunggu baris lirik berikutnya",
+                _ => string.Empty
             };
         }
     }
@@ -807,6 +822,55 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private static System.Windows.Media.Color ExtractArtworkAccentColor(ImageSource? source)
+    {
+        if (source is not BitmapSource bitmap || bitmap.PixelWidth <= 0 || bitmap.PixelHeight <= 0)
+        {
+            return System.Windows.Media.Color.FromRgb(118, 202, 176);
+        }
+
+        try
+        {
+            var converted = new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0d);
+            var stride = checked(converted.PixelWidth * 4);
+            var pixels = new byte[checked(stride * converted.PixelHeight)];
+            converted.CopyPixels(pixels, stride, 0);
+
+            var bestScore = double.MinValue;
+            var best = System.Windows.Media.Color.FromRgb(118, 202, 176);
+            var stepX = Math.Max(1, converted.PixelWidth / 32);
+            var stepY = Math.Max(1, converted.PixelHeight / 32);
+
+            for (var y = stepY; y < converted.PixelHeight - stepY; y += stepY)
+            {
+                for (var x = stepX; x < converted.PixelWidth - stepX; x += stepX)
+                {
+                    var offset = (y * stride) + (x * 4);
+                    var blue = pixels[offset];
+                    var green = pixels[offset + 1];
+                    var red = pixels[offset + 2];
+                    var max = Math.Max(red, Math.Max(green, blue));
+                    var min = Math.Min(red, Math.Min(green, blue));
+                    var saturation = max == 0 ? 0d : (max - min) / (double)max;
+                    var brightness = max / 255d;
+                    var score = (saturation * 0.8d) + (brightness * 0.2d);
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        best = System.Windows.Media.Color.FromRgb(red, green, blue);
+                    }
+                }
+            }
+
+            return best;
+        }
+        catch
+        {
+            return System.Windows.Media.Color.FromRgb(118, 202, 176);
+        }
+    }
+
     private static BitmapImage? DecodeArtwork(ImmutableArray<byte> artworkBytes)
     {
         if (artworkBytes.IsDefaultOrEmpty)
@@ -881,6 +945,11 @@ public sealed class ShellViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasPreviousLyric));
         OnPropertyChanged(nameof(HasActiveLine));
         OnPropertyChanged(nameof(ShowStageEmptyState));
+        OnPropertyChanged(nameof(ShowPlaybackVisual));
+        OnPropertyChanged(nameof(MusicVisualPosition));
+        OnPropertyChanged(nameof(MusicVisualIsPlaying));
+        OnPropertyChanged(nameof(MusicVisualMotionEnabled));
+        OnPropertyChanged(nameof(CinematicQualityTier));
         OnPropertyChanged(nameof(HasUpcomingLyric));
         OnPropertyChanged(nameof(HasActiveWord));
         OnPropertyChanged(nameof(StageEmptyStateText));
