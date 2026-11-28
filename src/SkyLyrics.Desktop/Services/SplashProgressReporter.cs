@@ -12,12 +12,12 @@ public sealed class SplashProgressReporter(
     {
         if (!isEnabled())
         {
-            if (splash.IsVisible)
-            {
-                splash.Close();
-            }
-
             return Task.CompletedTask;
+        }
+
+        if (!splash.IsVisible)
+        {
+            splash.Show();
         }
 
         splash.SetProgress(progress, stage);
