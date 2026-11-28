@@ -222,11 +222,72 @@
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                     <DockPanel Grid.Row="0" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left" Text="LYRICS" Style="{StaticResource EyebrowTextStyle}" />
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding LyricsStatusText}" FontSize="9"
-                                   Foreground="{DynamicResource MutedText}" TextTrimming="CharacterEllipsis" MaxWidth="360" />
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="{Binding CandidateSearchButtonText}"
+                                    Click="SearchLyricsCandidates_Click"
+                                    IsEnabled="{Binding CanSearchLyricsCandidates}"
+                                    Visibility="{Binding CanSearchLyricsCandidates, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Padding="10,5" Margin="0,0,10,0" FontSize="9" FontWeight="SemiBold"
+                                    Background="{DynamicResource AccentSoftBrush}"
+                                    Foreground="{DynamicResource PrimaryText}"
+                                    BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" />
+                            <TextBlock Text="{Binding LyricsStatusText}" FontSize="9"
+                                       Foreground="{DynamicResource MutedText}" TextTrimming="CharacterEllipsis" MaxWidth="300"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
                     </DockPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel>
+                            <TextBlock Text="{Binding CandidateSearchStatus}" FontSize="10"
+                                       Foreground="{DynamicResource MutedText}" TextWrapping="Wrap"
+                                       Margin="0,0,0,9" />
+                            <ItemsControl ItemsSource="{Binding LyricsCandidates}"
+                                          Visibility="{Binding HasLyricsCandidates, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                          Margin="0,0,0,12">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="12" Padding="12" Margin="0,0,0,8"
+                                                Background="{DynamicResource PanelBackgroundRaised}"
+                                                BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Result.Document.Title}" FontSize="12"
+                                                               FontWeight="SemiBold" Foreground="{DynamicResource PrimaryText}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Result.Document.Artist}" FontSize="10"
+                                                               Foreground="{DynamicResource SecondaryText}" Margin="0,3,0,0"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <WrapPanel Margin="0,7,0,0">
+                                                        <TextBlock Text="{Binding ScoreLabel}" FontSize="9"
+                                                                   FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"
+                                                                   Margin="0,0,12,0" />
+                                                        <TextBlock Text="{Binding DurationLabel}" FontSize="9"
+                                                                   Foreground="{DynamicResource MutedText}" />
+                                                        <TextBlock Text="{Binding IsExactSignatureMatch, StringFormat='  ·  Valid: {0}'}"
+                                                                   FontSize="9" Foreground="{DynamicResource MutedText}"
+                                                                   Margin="10,0,0,0" />
+                                                    </WrapPanel>
+                                                    <TextBlock Text="{Binding MatchReason}" FontSize="9"
+                                                               Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap"
+                                                               Margin="0,6,8,0" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Content="Gunakan"
+                                                        Tag="{Binding}" Click="SelectLyricsCandidate_Click"
+                                                        IsEnabled="{Binding IsExactSignatureMatch}"
+                                                        Padding="11,7" Margin="12,0,0,0"
+                                                        VerticalAlignment="Center" FontSize="9" FontWeight="SemiBold"
+                                                        Background="{DynamicResource AccentSoftBrush}"
+                                                        Foreground="{DynamicResource PrimaryText}"
+                                                        BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                             <TextBlock Text="ORIGINAL LYRICS" Style="{StaticResource EyebrowTextStyle}" Margin="0,0,0,6" />
                             <TextBlock Text="{Binding LyricsText}" FontSize="12" LineHeight="19"
                                        Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" />
