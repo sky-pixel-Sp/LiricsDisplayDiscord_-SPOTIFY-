@@ -8,7 +8,7 @@
         Width="1280" Height="800" MinWidth="980" MinHeight="610"
         ResizeMode="CanResize" WindowStyle="SingleBorderWindow"
         WindowStartupLocation="Manual" Background="{DynamicResource WindowBackground}"
-        Foreground="{DynamicResource PrimaryText}" FontFamily="Segoe UI Variable Display"
+        Foreground="{DynamicResource PrimaryText}" FontFamily="{StaticResource PoppinsFontFamily}"
         PreviewKeyDown="Window_PreviewKeyDown">
     <Grid x:Name="RootGrid" Margin="20" Opacity="0">
         <Grid.RenderTransform><TranslateTransform Y="10" /></Grid.RenderTransform>
