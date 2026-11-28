@@ -33,6 +33,18 @@
                         <Button Content="OPEN CUSTOMIZATION STUDIO" Style="{StaticResource QuietActionButtonStyle}"
                                 HorizontalAlignment="Left" Margin="0,11,0,0" Click="OpenCustomizationStudio_Click" />
                         <CheckBox x:Name="ReduceMotionCheck" Content="Reduce application motion" Margin="0,15,0,0" />
+                        <CheckBox x:Name="SplashEnabledCheck" Content="Show cinematic startup screen" Margin="0,10,0,0" />
+                        <TextBlock Text="Lyric transition lead · 60–120 ms" FontSize="11"
+                                   Foreground="{DynamicResource SecondaryText}" Margin="0,13,0,6" />
+                        <TextBox x:Name="LeadTimeBox" Width="110" HorizontalAlignment="Left" />
+                        <TextBlock Text="Visual quality" FontSize="11" Foreground="{DynamicResource SecondaryText}"
+                                   Margin="0,13,0,6" />
+                        <ComboBox x:Name="QualityTierCombo" MinHeight="34" SelectedValuePath="Tag">
+                            <ComboBoxItem Content="Cinematic" Tag="cinematic" />
+                            <ComboBoxItem Content="Balanced" Tag="balanced" />
+                            <ComboBoxItem Content="Lite" Tag="lite" />
+                            <ComboBoxItem Content="Reduced" Tag="reduced" />
+                        </ComboBox>
                         <CheckBox x:Name="MiniPlayerTopmostCheck" Content="Keep Mini Player above other windows" Margin="0,10,0,0" />
                         <Button Content="CONFIGURE GAME MODE" Style="{StaticResource QuietActionButtonStyle}"
                                 HorizontalAlignment="Left" Margin="0,17,0,0" Click="ConfigureGameMode_Click" />
