@@ -29,7 +29,7 @@ public static class LyricsMatchValidator
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ArtistCreditSeparatorRegex = new(
-        @"\s*(?:,|&|;|\+|/|\bfeat(?:uring)?\.?\b|\bft\.?\b|\bwith\b|\band\b|\bx\b)\s*",
+        @"\s*(?:,|&|;|\+|/|\bfeat(?:uring)?\.?\b|\bft\.?\b|\bwith\b|\band\b)\s*",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static LyricsMatchValidationResult Validate(
