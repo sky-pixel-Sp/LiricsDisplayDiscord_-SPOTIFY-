@@ -27,6 +27,8 @@ This is baseline CI evidence only. It is not a claim that the application has be
 - Settings exposes an Automatic or selected detected media-session source and persists the choice. Browser sessions are still not proof that YouTube Music is the website.
 - Discord Rich Presence uses local Discord IPC.
 - OBS output is loopback-only.
+- LRCLIB exact records and cached records are validated against normalized title, artist credits and duration with a ±3 second tolerance. A missing duration is not accepted as an exact match.
+- Manual LRCLIB candidate search uses the candidate ranker, exposes scores and validation reasons, and re-validates a candidate before applying or caching it.
 
 ## Not yet implemented in this preview
 
@@ -47,6 +49,7 @@ These are planned workstreams, not active controls or completed features.
 | 2.1 preview version identity and release metadata | Complete; build, test and package CI passed |
 | Window chrome and window-state QA | Native chrome retained and fullscreen button code fixed; manual device acceptance pending |
 | Multi-source GSMTC recognition and playback adapter | Implemented; Windows CI run 46029075732 passed; device acceptance pending |
+| Strict lyrics identity validation, legacy cache rejection and ranked manual candidate selection | Implemented in working branch; Windows CI and device acceptance pending |
 | Detected media-session source picker and saved selection | Implemented; awaiting Windows CI and device acceptance |
 | Explicit YouTube Music website/source confirmation | Pending |
 | LRC editor, validation and export | Implemented in the working branch; CI and device acceptance pending |
@@ -63,6 +66,19 @@ Local translations are attached per track by a user-selected file and an explici
 The LRC editor exports line-synced and unsynced documents. It deliberately blocks word-synced documents in this editor because the standard LRC format cannot safely preserve per-word timestamps.
 
 Game Mode click-through is optional and reversible with the global shortcut `Ctrl+Alt+Shift+G`; users should keep the main application open to retain a reliable hotkey path while the overlay ignores pointer input.
+
+## Lyrics identity validation
+
+The automatic LRCLIB path validates the provider's exact record before returning it. The service independently validates cache and provider results so an old cache entry or a future provider adapter cannot bypass the same rule.
+
+A result is accepted only when:
+- The normalized title matches after removing supported featuring and release-version annotations and normalizing accents and punctuation.
+- The expected artist credit matches the returned artist credit. A partial artist match is permitted only when both metadata strings explicitly identify collaboration credits.
+- Both expected and returned durations are present and differ by no more than three seconds.
+
+A rejected exact result is not cached or displayed. A previously cached record that fails validation is ignored and deleted when the cache also exposes the library deletion contract.
+
+The manual candidate search uses LRCLIB Search and the shared ranker. Each candidate exposes a score and a reason string. The UI disables selection for candidates that fail the same validator, and the service validates again before a selected candidate is persisted and displayed.
 
 ## Release gates
 
