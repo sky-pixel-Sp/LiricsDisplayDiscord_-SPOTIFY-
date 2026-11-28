@@ -68,6 +68,9 @@ public partial class SettingsWindow : Window
         ThemeProfileCombo.ItemsSource = current.Customization.Profiles;
         ThemeProfileCombo.SelectedValue = current.Customization.ActiveProfileId;
         ReduceMotionCheck.IsChecked = current.ReduceMotion;
+        SplashEnabledCheck.IsChecked = current.SplashEnabled;
+        LeadTimeBox.Text = current.LyricAnimationLeadMilliseconds.ToString(CultureInfo.InvariantCulture);
+        QualityTierCombo.SelectedValue = current.CinematicQualityTier;
         MiniPlayerTopmostCheck.IsChecked = current.MiniPlayerAlwaysOnTop;
         OffsetBox.Text = current.SyncOffsetMilliseconds.ToString(CultureInfo.InvariantCulture);
         DiscordEnabledCheck.IsChecked = current.DiscordPresenceEnabled;
@@ -119,6 +122,13 @@ public partial class SettingsWindow : Window
             return;
         }
 
+        if (!int.TryParse(LeadTimeBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var leadTime) ||
+            leadTime is < 60 or > 120)
+        {
+            StatusText.Text = "Lyric transition lead must be a whole number between 60 and 120 milliseconds.";
+            return;
+        }
+
         var discordId = DiscordApplicationIdBox.Text.Trim();
         if (DiscordEnabledCheck.IsChecked == true && !AppPreferences.IsValidDiscordApplicationId(discordId))
         {
@@ -147,6 +157,9 @@ public partial class SettingsWindow : Window
             Theme = theme,
             Customization = customization,
             ReduceMotion = ReduceMotionCheck.IsChecked == true,
+            SplashEnabled = SplashEnabledCheck.IsChecked == true,
+            LyricAnimationLeadMilliseconds = leadTime,
+            CinematicQualityTier = QualityTierCombo.SelectedValue as string ?? "balanced",
             MiniPlayerAlwaysOnTop = MiniPlayerTopmostCheck.IsChecked == true,
             SyncOffsetMilliseconds = offset,
             DiscordPresenceEnabled = DiscordEnabledCheck.IsChecked == true,
@@ -159,6 +172,9 @@ public partial class SettingsWindow : Window
         {
             await _preferences.SaveAsync(updated);
             _scheduler.SetOffset(TimeSpan.FromMilliseconds(offset));
+            _scheduler.SetLineAnimationLeadTime(updated.ReduceMotion
+                ? TimeSpan.Zero
+                : TimeSpan.FromMilliseconds(updated.LyricAnimationLeadMilliseconds));
             ThemeManager.Apply(theme);
             var activeProfile = updated.Customization.Normalize().Profiles
                 .First(profile => string.Equals(profile.Id, customization.ActiveProfileId, StringComparison.OrdinalIgnoreCase));
