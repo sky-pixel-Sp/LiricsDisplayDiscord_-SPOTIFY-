@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         SizeChanged += (_, _) =>
         {
             UpdateResponsiveLayout();
+            UpdateLetterboxBars();
             ScheduleGeometrySave();
         };
         StateChanged += (_, _) => ScheduleGeometrySave();
@@ -176,6 +177,7 @@ public partial class MainWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         UpdateResponsiveLayout();
+        UpdateLetterboxBars();
         PlayEntranceAnimation();
         ApplyAmbientMotionPreferences();
         ApplyCinematicEffects();
@@ -230,6 +232,25 @@ public partial class MainWindow : Window
         {
             _geometrySaveGate.Release();
         }
+    }
+
+    private void UpdateLetterboxBars()
+    {
+        if (!IsInitialized || LyricStageBorder.ActualWidth <= 0d || LyricStageBorder.ActualHeight <= 0d)
+        {
+            return;
+        }
+
+        var bars = LetterboxCalculator.Calculate(
+            LyricStageBorder.ActualWidth,
+            LyricStageBorder.ActualHeight,
+            _preferences.Current.LetterboxEnabled);
+
+        LetterboxTopBar.Height = bars.Height;
+        LetterboxBottomBar.Height = bars.Height;
+        var visibility = bars.Height > 0d ? Visibility.Visible : Visibility.Collapsed;
+        LetterboxTopBar.Visibility = visibility;
+        LetterboxBottomBar.Visibility = visibility;
     }
 
     private void UpdateResponsiveLayout()
@@ -389,6 +410,7 @@ public partial class MainWindow : Window
                 ApplyAmbientMotionPreferences();
                 ApplyCinematicEffects();
                 AnimateArtwork();
+                UpdateLetterboxBars();
             }));
         }
     }
@@ -501,6 +523,44 @@ public partial class MainWindow : Window
         _grainPhase = 0d;
     }
 
+    private void StartBokehMotion()
+    {
+        if (BokehTexture.RenderTransform is not ScaleTransform scale)
+        {
+            return;
+        }
+
+        scale.BeginAnimation(
+            ScaleTransform.ScaleXProperty,
+            new DoubleAnimation(1d, 1.08d, TimeSpan.FromSeconds(11d))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
+        scale.BeginAnimation(
+            ScaleTransform.ScaleYProperty,
+            new DoubleAnimation(1d, 1.08d, TimeSpan.FromSeconds(11d))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
+    }
+
+    private void StopBokehMotion()
+    {
+        if (BokehTexture.RenderTransform is not ScaleTransform scale)
+        {
+            return;
+        }
+
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        scale.ScaleX = 1d;
+        scale.ScaleY = 1d;
+    }
+
     private void ApplyAmbientMotionPreferences()
     {
         var settings = _preferences.Current;
@@ -510,6 +570,7 @@ public partial class MainWindow : Window
             StopFloatingNote(FloatingNoteOne);
             StopFloatingNote(FloatingNoteTwo);
             StopFloatingNote(FloatingNoteThree);
+            StopBokehMotion();
             return;
         }
 
@@ -531,6 +592,15 @@ public partial class MainWindow : Window
         else
         {
             StopFloatingNote(FloatingNoteThree);
+        }
+
+        if (_effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced)
+        {
+            StartBokehMotion();
+        }
+        else
+        {
+            StopBokehMotion();
         }
     }
 
