@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
         xmlns:controls="clr-namespace:SkyLyrics.Desktop.Controls"
+        xmlns:effects="clr-namespace:SkyLyrics.Desktop.Effects"
         Title="SkyLyrics Desktop" Icon="/SkyLyrics.Desktop;component/Assets/SkyLyrics.ico"
         Width="1280" Height="800" MinWidth="980" MinHeight="610"
         ResizeMode="CanResize" WindowStyle="SingleBorderWindow"
@@ -173,6 +174,9 @@
                            RenderOptions.BitmapScalingMode="LowQuality"
                            Visibility="{Binding HasAlbumArtwork, Converter={StaticResource BooleanToVisibilityConverter}}"
                            RenderTransformOrigin="0.5,0.5">
+                        <Image.Effect>
+                            <effects:ChromaticAberrationShaderEffect Amount="0.18" />
+                        </Image.Effect>
                         <Image.RenderTransform><ScaleTransform ScaleX="1" ScaleY="1" /></Image.RenderTransform>
                     </Image>
                     <Rectangle>
@@ -188,8 +192,13 @@
                                       Stretch="Fill" Opacity=".15" IsHitTestVisible="False" />
                     <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/light-leak.svg"
                                       Stretch="Fill" Opacity=".13" IsHitTestVisible="False" />
-                    <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/grain.svg"
-                                      Stretch="Fill" Opacity=".12" IsHitTestVisible="False" />
+                    <svgc:SvgViewbox x:Name="GrainTextureLayer"
+                                      Source="/SkyLyrics.Desktop;component/Assets/Textures/grain.svg"
+                                      Stretch="Fill" Opacity=".12" IsHitTestVisible="False">
+                        <svgc:SvgViewbox.Effect>
+                            <effects:GrainShaderEffect Intensity="0.018" />
+                        </svgc:SvgViewbox.Effect>
+                    </svgc:SvgViewbox>
                     <svgc:SvgViewbox Source="/SkyLyrics.Desktop;component/Assets/Textures/vignette.svg"
                                       Stretch="Fill" Opacity=".55" IsHitTestVisible="False" />
                     <controls:MusicWaveformControl
