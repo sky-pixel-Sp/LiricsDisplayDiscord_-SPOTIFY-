@@ -41,6 +41,26 @@ public sealed class AdaptiveQualityControllerTests
         Assert.InRange(monitor.LastWindowAverageMilliseconds, 15d, 17d);
     }
 
+    [Fact]
+    public void DowngradesFromBalancedToLiteAndReducedOnSustainedSlowFrames()
+    {
+        var time = new ManualTimeProvider();
+        var monitor = new AdaptiveQualityController(CinematicQualityLevel.Balanced, time);
+
+        Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        time.Advance(TimeSpan.FromSeconds(2));
+        Assert.True(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        Assert.Equal(CinematicQualityLevel.Lite, monitor.Level);
+
+        time.Advance(TimeSpan.FromSeconds(2));
+        Assert.True(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
+
+        time.Advance(TimeSpan.FromSeconds(2));
+        Assert.False(monitor.ObserveFrame(TimeSpan.FromMilliseconds(30)));
+        Assert.Equal(CinematicQualityLevel.Reduced, monitor.Level);
+    }
+
     private sealed class ManualTimeProvider : TimeProvider
     {
         private DateTimeOffset _now = new(2026, 11, 28, 0, 0, 0, TimeSpan.Zero);
