@@ -11,6 +11,7 @@ public partial class SplashWindow : Window
     public bool WasSkipped { get; private set; }
 
     private readonly SplashDismissalState _dismissal = new();
+    private System.Windows.Threading.DispatcherTimer? _autoCloseTimer;
     private bool _motionEnabled = true;
 
     public bool IsDismissed => _dismissal.IsDismissed;
@@ -54,11 +55,16 @@ public partial class SplashWindow : Window
 
         if (!_dismissal.TryDismiss())
         {
-            Close();
+            StopAutoCloseTimer();
+            if (IsVisible)
+            {
+                Close();
+            }
             return;
         }
 
-        if (!IsVisible)
+        StopAutoCloseTimer();
+        if (!IsVisible || !_motionEnabled)
         {
             Close();
             return;
@@ -86,6 +92,13 @@ public partial class SplashWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        _autoCloseTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(2200d)
+        };
+        _autoCloseTimer.Tick += (_, _) => Finish();
+        _autoCloseTimer.Start();
+
         if (!_motionEnabled)
         {
             BrandLogo.Opacity = 1d;
@@ -103,20 +116,6 @@ public partial class SplashWindow : Window
 
             return;
         }
-
-        var autoClose = new System.Windows.Threading.DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(2200d)
-        };
-        autoClose.Tick += (_, _) =>
-        {
-            autoClose.Stop();
-            if (IsVisible)
-            {
-                Finish();
-            }
-        };
-        autoClose.Start();
 
         var easing = new QuinticEase { EasingMode = EasingMode.EaseOut };
         BrandLogo.BeginAnimation(
@@ -184,8 +183,20 @@ public partial class SplashWindow : Window
         e.Handled = true;
     }
 
+    private void StopAutoCloseTimer()
+    {
+        if (_autoCloseTimer is null)
+        {
+            return;
+        }
+
+        _autoCloseTimer.Stop();
+        _autoCloseTimer = null;
+    }
+
     private void Skip()
     {
+        StopAutoCloseTimer();
         WasSkipped = true;
         _dismissal.TryDismiss();
         Close();
