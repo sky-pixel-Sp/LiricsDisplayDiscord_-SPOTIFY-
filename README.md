@@ -46,6 +46,10 @@ The main workspace, Focus/Karaoke, Mini Player, Game Mode and external outputs c
 
 - Never invent lyric text, translations, artwork, track metadata or timestamps.
 - Unsynchronized lyrics remain visibly unsynchronized. Word highlighting requires source word timestamps.
+- Automatic LRCLIB results require normalized title and artist agreement plus a source duration within ±3 seconds. Missing duration is not treated as a verified match.
+- Title normalization removes featuring annotations, remaster-year suffixes, (Versions) and (Live) tags while preserving the independent duration check. Accent and punctuation differences are normalized.
+- Previously cached records that fail the current signature check are ignored and deleted when the cache exposes library deletion.
+- When automatic lookup finds no valid record, the user can search LRCLIB candidates. Candidate cards show a 0–100 score and validation reasons; only candidates passing the same title, artist and duration validator can be selected.
 - No Spotify private endpoints, DRM circumvention, credential scraping or hidden browser automation.
 - Audio-reactive modes require an explicitly enabled and visible audio-session input. GSMTC metadata alone is not audio data.
 - Discord uses local desktop IPC and a public Application ID; no bot or user token is requested.
