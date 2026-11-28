@@ -87,6 +87,11 @@ public partial class App : System.Windows.Application
             await _host.StartAsync();
 
             var preferences = _host.Services.GetRequiredService<IAppPreferencesStore>();
+            var syncScheduler = _host.Services.GetRequiredService<SyncScheduler>();
+            syncScheduler.SetLineAnimationLeadTime(
+                preferences.Current.ReduceMotion
+                    ? TimeSpan.Zero
+                    : TimeSpan.FromMilliseconds(preferences.Current.LyricAnimationLeadMilliseconds));
             ThemeManager.Apply(preferences.Current.Theme);
             var activeProfile = preferences.Current.Customization.Profiles
                 .First(profile => string.Equals(
