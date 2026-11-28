@@ -22,6 +22,7 @@ using Brushes = System.Windows.Media.Brushes;
 using Cursors = System.Windows.Input.Cursors;
 using Orientation = System.Windows.Controls.Orientation;
 using Panel = System.Windows.Controls.Panel;
+using ProgressBar = System.Windows.Controls.ProgressBar;
 using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace SkyLyrics.Desktop;
