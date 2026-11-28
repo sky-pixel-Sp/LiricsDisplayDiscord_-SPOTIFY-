@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _geometrySaveTimer;
     private DispatcherTimer? _grainJitterTimer;
     private double _grainPhase;
+    private CinematicQualityLevel _effectiveQualityLevel = CinematicQualityLevel.Balanced;
     private readonly SemaphoreSlim _geometrySaveGate = new(1, 1);
     private bool _closeSavePending;
     private bool _allowCloseAfterSave;
@@ -60,6 +61,8 @@ public partial class MainWindow : Window
         _playbackSource = playbackSource ?? throw new ArgumentNullException(nameof(playbackSource));
         _lyricsLibrary = lyricsLibrary ?? throw new ArgumentNullException(nameof(lyricsLibrary));
         InitializeComponent();
+        _effectiveQualityLevel = ResolveQualityLevel(_preferences.Current.CinematicQualityTier);
+        MusicWaveform.EffectiveQualityChanged += OnEffectiveQualityChanged;
         ApplyInitialWindowPlacement();
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -80,6 +83,7 @@ public partial class MainWindow : Window
             _geometrySaveTimer.Stop();
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _preferences.PreferencesChanged -= OnPreferencesChanged;
+            MusicWaveform.EffectiveQualityChanged -= OnEffectiveQualityChanged;
             StopGrainJitter();
             _windowModes.CloseAuxiliaryWindows();
             if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
@@ -381,6 +385,29 @@ public partial class MainWindow : Window
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
+                _effectiveQualityLevel = ResolveQualityLevel(preferences.CinematicQualityTier);
+                ApplyAmbientMotionPreferences();
+                ApplyCinematicEffects();
+            }));
+        }
+    }
+
+    private static CinematicQualityLevel ResolveQualityLevel(string quality) =>
+        quality.ToLowerInvariant() switch
+        {
+            "cinematic" => CinematicQualityLevel.Cinematic,
+            "lite" => CinematicQualityLevel.Lite,
+            "reduced" => CinematicQualityLevel.Reduced,
+            _ => CinematicQualityLevel.Balanced
+        };
+
+    private void OnEffectiveQualityChanged(CinematicQualityLevel level)
+    {
+        _effectiveQualityLevel = level;
+        if (!Dispatcher.HasShutdownStarted && !Dispatcher.HasShutdownFinished)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
                 ApplyAmbientMotionPreferences();
                 ApplyCinematicEffects();
             }));
@@ -390,9 +417,25 @@ public partial class MainWindow : Window
     private void ApplyCinematicEffects()
     {
         var preferences = _preferences.Current;
-        var active = preferences.CinematicQualityTier is "cinematic" or "balanced" &&
+        var active = _effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced &&
                      !preferences.ReduceMotion &&
                      SystemParameters.ClientAreaAnimation;
+
+        BokehTexture.Opacity = _effectiveQualityLevel switch
+        {
+            CinematicQualityLevel.Cinematic => 0.15d,
+            CinematicQualityLevel.Balanced => 0.08d,
+            _ => 0d
+        };
+        LightLeakTexture.Opacity = _effectiveQualityLevel == CinematicQualityLevel.Cinematic ? 0.13d : 0d;
+        GrainTextureLayer.Opacity = _effectiveQualityLevel switch
+        {
+            CinematicQualityLevel.Cinematic => 0.12d,
+            CinematicQualityLevel.Balanced => 0.08d,
+            CinematicQualityLevel.Lite => 0.04d,
+            _ => 0d
+        };
+        VignetteTexture.Opacity = _effectiveQualityLevel == CinematicQualityLevel.Reduced ? 0.25d : 0.55d;
 
         if (active)
         {
@@ -461,9 +504,7 @@ public partial class MainWindow : Window
     {
         var settings = _preferences.Current;
         var motionEnabled = SystemParameters.ClientAreaAnimation && !settings.ReduceMotion;
-        var quality = settings.CinematicQualityTier;
-
-        if (!motionEnabled || quality is "lite" or "reduced")
+        if (!motionEnabled || _effectiveQualityLevel == CinematicQualityLevel.Reduced)
         {
             StopFloatingNote(FloatingNoteOne);
             StopFloatingNote(FloatingNoteTwo);
@@ -471,9 +512,18 @@ public partial class MainWindow : Window
             return;
         }
 
-        StartFloatingNote(FloatingNoteOne, -22d, TimeSpan.FromSeconds(3.8d));
-        StartFloatingNote(FloatingNoteTwo, 18d, TimeSpan.FromSeconds(4.7d));
-        if (quality == "cinematic")
+        if (_effectiveQualityLevel is CinematicQualityLevel.Cinematic or CinematicQualityLevel.Balanced)
+        {
+            StartFloatingNote(FloatingNoteOne, -22d, TimeSpan.FromSeconds(3.8d));
+            StartFloatingNote(FloatingNoteTwo, 18d, TimeSpan.FromSeconds(4.7d));
+        }
+        else
+        {
+            StartFloatingNote(FloatingNoteOne, -14d, TimeSpan.FromSeconds(5.2d));
+            StopFloatingNote(FloatingNoteTwo);
+        }
+
+        if (_effectiveQualityLevel == CinematicQualityLevel.Cinematic)
         {
             StartFloatingNote(FloatingNoteThree, -15d, TimeSpan.FromSeconds(5.2d));
         }
