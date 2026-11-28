@@ -416,6 +416,13 @@ public partial class MainWindow : Window
                 ApplyCinematicEffects();
                 AnimateArtwork();
                 UpdateLetterboxBars();
+                if (preferences.ReduceMotion || !SystemParameters.ClientAreaAnimation)
+                {
+                    ResetAnimationElement(ActiveLyricTextBlock);
+                    ResetAnimationElement(PreviousLyricTextBlock);
+                    ResetAnimationElement(UpcomingLyricTextBlock);
+                    ResetAnimationElement(LyricsPanel);
+                }
             }));
         }
     }
