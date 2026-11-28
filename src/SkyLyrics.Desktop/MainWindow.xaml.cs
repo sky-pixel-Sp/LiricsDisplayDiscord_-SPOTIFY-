@@ -1,9 +1,11 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using MessageBox = System.Windows.MessageBox;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Input;
+using System.Windows.Threading;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Microsoft.Win32;
 using SkyLyrics.Desktop.ViewModels;
@@ -29,6 +31,15 @@ public partial class MainWindow : Window
     private WindowState _restoreWindowState;
     private WindowStyle _restoreWindowStyle;
     private ResizeMode _restoreResizeMode;
+    private readonly DispatcherTimer _geometrySaveTimer;
+    private readonly SemaphoreSlim _geometrySaveGate = new(1, 1);
+    private bool _closeSavePending;
+    private bool _allowCloseAfterSave;
+
+    private const double InitialWindowWidth = 1280d;
+    private const double InitialWindowHeight = 800d;
+    private const double MinimumWindowWidth = 980d;
+    private const double MinimumWindowHeight = 610d;
 
     public MainWindow(
         ShellViewModel viewModel,
@@ -46,13 +57,23 @@ public partial class MainWindow : Window
         _playbackSource = playbackSource ?? throw new ArgumentNullException(nameof(playbackSource));
         _lyricsLibrary = lyricsLibrary ?? throw new ArgumentNullException(nameof(lyricsLibrary));
         InitializeComponent();
+        ApplyInitialWindowPlacement();
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _geometrySaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450d) };
+        _geometrySaveTimer.Tick += GeometrySaveTimer_Tick;
         Closing += OnClosing;
         Loaded += OnLoaded;
-        SizeChanged += (_, _) => UpdateResponsiveLayout();
+        LocationChanged += (_, _) => ScheduleGeometrySave();
+        SizeChanged += (_, _) =>
+        {
+            UpdateResponsiveLayout();
+            ScheduleGeometrySave();
+        };
+        StateChanged += (_, _) => ScheduleGeometrySave();
         Closed += (_, _) =>
         {
+            _geometrySaveTimer.Stop();
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             _windowModes.CloseAuxiliaryWindows();
             if (System.Windows.Application.Current is { Dispatcher.HasShutdownStarted: false })
@@ -60,26 +81,142 @@ public partial class MainWindow : Window
         };
     }
 
-    private void OnClosing(object? sender, CancelEventArgs e)
+    private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        // Do not hijack the close button into a hide-to-tray action.
+        // Keep the close path alive until the latest normal geometry is safely persisted.
+        if (_allowCloseAfterSave)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        if (_closeSavePending)
+        {
+            return;
+        }
+
+        _closeSavePending = true;
+        _geometrySaveTimer.Stop();
         _windowModes.CloseAuxiliaryWindows();
+
+        try
+        {
+            await PersistWindowGeometryAsync();
+        }
+        finally
+        {
+            _allowCloseAfterSave = true;
+            Close();
+        }
     }
 
     public void RequestApplicationExit()
     {
         _windowModes.CloseAuxiliaryWindows();
         Close();
-        System.Windows.Application.Current?.Shutdown();
+    }
+
+    private void ApplyInitialWindowPlacement()
+    {
+        var workAreas = MonitorWorkAreaProvider.GetWorkAreas();
+        var saved = _preferences.Current.MainWindowGeometry?.Normalize();
+        WindowBounds? restoredBounds = null;
+        WindowBounds? restoredWorkArea = null;
+
+        if (saved is not null)
+        {
+            var candidate = saved.ToBounds();
+            foreach (var area in workAreas)
+            {
+                if (!WindowPlacementCalculator.IsFullyVisibleOnAnyMonitor(candidate, [area]))
+                {
+                    continue;
+                }
+
+                restoredBounds = candidate;
+                restoredWorkArea = area;
+                break;
+            }
+        }
+
+        var primaryWorkArea = MonitorWorkAreaProvider.GetPrimaryWorkArea();
+        var selectedArea = restoredWorkArea ?? primaryWorkArea;
+        var initialBounds = restoredBounds ??
+            WindowPlacementCalculator.CenterAndClamp(
+                new WindowBounds(0d, 0d, InitialWindowWidth, InitialWindowHeight),
+                primaryWorkArea,
+                MinimumWindowWidth,
+                MinimumWindowHeight);
+
+        MinWidth = Math.Min(MinimumWindowWidth, selectedArea.Width);
+        MinHeight = Math.Min(MinimumWindowHeight, selectedArea.Height);
+        if (restoredBounds is { } savedBounds)
+        {
+            MinWidth = Math.Min(MinWidth, savedBounds.Width);
+            MinHeight = Math.Min(MinHeight, savedBounds.Height);
+        }
+
+        Width = initialBounds.Width;
+        Height = initialBounds.Height;
+        Left = initialBounds.Left;
+        Top = initialBounds.Top;
+        WindowStartupLocation = WindowStartupLocation.Manual;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         UpdateResponsiveLayout();
-        var workArea = SystemParameters.WorkArea;
-        Width = Math.Min(Width, workArea.Width * 0.94d);
-        Height = Math.Min(Height, workArea.Height * 0.90d);
         PlayEntranceAnimation();
+    }
+
+    private void ScheduleGeometrySave()
+    {
+        if (!IsLoaded || _isFullscreen || WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        _geometrySaveTimer.Stop();
+        _geometrySaveTimer.Start();
+    }
+
+    private async void GeometrySaveTimer_Tick(object? sender, EventArgs e)
+    {
+        _geometrySaveTimer.Stop();
+        await PersistWindowGeometryAsync();
+    }
+
+    private async Task PersistWindowGeometryAsync()
+    {
+        var savedBounds = WindowState == WindowState.Normal
+            ? new WindowBounds(Left, Top, Width, Height)
+            : new WindowBounds(RestoreBounds.Left, RestoreBounds.Top, RestoreBounds.Width, RestoreBounds.Height);
+
+        if (!savedBounds.IsValid)
+        {
+            return;
+        }
+
+        await _geometrySaveGate.WaitAsync();
+        try
+        {
+            var geometry = new WindowGeometryPreference(
+                savedBounds.Left,
+                savedBounds.Top,
+                savedBounds.Width,
+                savedBounds.Height);
+
+            await _preferences.SaveAsync(
+                _preferences.Current with { MainWindowGeometry = geometry });
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Main window geometry could not be saved: {exception}");
+        }
+        finally
+        {
+            _geometrySaveGate.Release();
+        }
     }
 
     private void UpdateResponsiveLayout()
