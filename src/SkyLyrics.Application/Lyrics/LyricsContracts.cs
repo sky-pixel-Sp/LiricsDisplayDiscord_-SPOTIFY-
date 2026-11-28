@@ -82,6 +82,8 @@ public sealed record LyricsSearchCandidate(
 
     public string ScoreLabel => $"Skor {MatchScore}/100";
 
+    public string MatchStatusLabel => IsExactSignatureMatch ? "LAYAK DIPILIH" : "DITOLAK VALIDATOR";
+
     public string DurationLabel => Result.Document.Duration is { } duration
         ? $"{(long)duration.TotalMinutes:00}:{duration.Seconds:00}"
         : "Durasi tidak tersedia";
