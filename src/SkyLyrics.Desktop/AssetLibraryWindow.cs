@@ -6,6 +6,11 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using SkyLyrics.Application.Settings;
 using SkyLyrics.Infrastructure.Assets;
+using Button = System.Windows.Controls.Button;
+using ComboBox = System.Windows.Controls.ComboBox;
+using Image = System.Windows.Controls.Image;
+using ListBox = System.Windows.Controls.ListBox;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace SkyLyrics.Desktop;
 
