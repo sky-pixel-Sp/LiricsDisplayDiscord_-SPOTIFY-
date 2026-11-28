@@ -46,6 +46,7 @@ public sealed class AppPreferencesStoreTests
                 SplashEnabled = false,
                 LyricAnimationLeadMilliseconds = 110,
                 CinematicQualityTier = "cinematic",
+                LetterboxEnabled = true,
                 ObsOverlayEnabled = true,
                 ObsOverlayPort = 43822,
                 Customization = new CustomizationPreferences
@@ -77,6 +78,7 @@ public sealed class AppPreferencesStoreTests
             Assert.False(restored.Current.SplashEnabled);
             Assert.Equal(110, restored.Current.LyricAnimationLeadMilliseconds);
             Assert.Equal("cinematic", restored.Current.CinematicQualityTier);
+            Assert.True(restored.Current.LetterboxEnabled);
             Assert.True(restored.Current.ObsOverlayEnabled);
             Assert.Equal(43822, restored.Current.ObsOverlayPort);
             Assert.Equal("my-night", restored.Current.Customization.ActiveProfileId);
