@@ -11,7 +11,7 @@ public sealed class SplashProgressReporter(
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!isEnabled())
+        if (!isEnabled() || splash.IsDismissed)
         {
             return;
         }
@@ -28,6 +28,11 @@ public sealed class SplashProgressReporter(
 
     private void ShowProgress()
     {
+        if (splash.IsDismissed)
+        {
+            return;
+        }
+
         if (!splash.IsVisible)
         {
             splash.Show();
