@@ -33,7 +33,29 @@
     <Resource Include="Assets/Branding/*.svg" />
     <Resource Include="Assets/Notes/*.svg" />
     <Resource Include="Assets/Textures/*.svg" />
+    <Resource Include="Assets/Fonts/Poppins/OFL.txt" />
+    <Resource Include="Assets/Fonts/BebasNeue/OFL.txt" />
     <Resource Include="Assets/SkyLyrics.ico" />
     <EmbeddedResource Include="Assets/obs-overlay.html" />
   </ItemGroup>
+  <Target Name="CompileSkyLyricsPixelShaders"
+          BeforeTargets="PrepareResources"
+          Condition="'$(OS)' == 'Windows_NT'">
+    <PropertyGroup>
+      <SkyLyricsFxcPath Condition="'$(SkyLyricsFxcPath)' == ''">$(WindowsSdkDir)bin\$(WindowsSDKVersion)x64\fxc.exe</SkyLyricsFxcPath>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SkyLyricsFxcPath)')"
+           Text="The Windows SDK fxc.exe compiler is required to build SkyLyrics pixel shaders. Install the Windows 10/11 SDK or set SkyLyricsFxcPath." />
+    <MakeDir Directories="$(IntermediateOutputPath)Assets\Effects" />
+    <Exec Command="&quot;$(SkyLyricsFxcPath)&quot; /nologo /T ps_3_0 /E main /Fo &quot;$(IntermediateOutputPath)Assets\Effects\Grain.ps&quot; &quot;$(MSBuildProjectDirectory)\Assets\Effects\grain.hlsl&quot;" />
+    <Exec Command="&quot;$(SkyLyricsFxcPath)&quot; /nologo /T ps_3_0 /E main /Fo &quot;$(IntermediateOutputPath)Assets\Effects\ChromaticAberration.ps&quot; &quot;$(MSBuildProjectDirectory)\Assets\Effects\chromatic-aberration.hlsl&quot;" />
+    <ItemGroup>
+      <Resource Include="$(IntermediateOutputPath)Assets\Effects\Grain.ps">
+        <Link>Assets/Effects/Grain.ps</Link>
+      </Resource>
+      <Resource Include="$(IntermediateOutputPath)Assets\Effects\ChromaticAberration.ps">
+        <Link>Assets/Effects/ChromaticAberration.ps</Link>
+      </Resource>
+    </ItemGroup>
+  </Target>
 </Project>
